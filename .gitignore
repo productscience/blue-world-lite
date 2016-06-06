@@ -1,6 +1,7 @@
-.ve3
-db.sqlite3
-blueworld/local_settings.py
-__pycache__
 .env
+.env.sh
+.ve3
+__pycache__
+blueworld/local_settings.py
 blueworld/staticfiles/
+db.sqlite3
