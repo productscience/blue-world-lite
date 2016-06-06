@@ -2,3 +2,5 @@
 db.sqlite3
 blueworld/local_settings.py
 __pycache__
+.env
+blueworld/staticfiles/
