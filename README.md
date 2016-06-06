@@ -18,3 +18,9 @@ The `features` directory contains a `behave` environment for testing the
 product via a web browser using selenium.
 
 
+For Heroku you must also run::
+
+heroku config:set DJANGO_SETTINGS_MODULE=blueworld.settings
+heroku config:set DEBUG=False
+heroku config:set DATABASE_URL=...
+
