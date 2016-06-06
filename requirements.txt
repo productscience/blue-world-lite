@@ -3,3 +3,6 @@ Django==1.9.7
 gunicorn==19.6.0
 psycopg2==2.6.1
 dj-database-url==0.4.1
+django-allauth==0.25.2
+django-hijack==2.1.1
+django-hijack-admin==2.1.1
