@@ -55,7 +55,8 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 
 # For Hijack
-HIJACK_LOGIN_REDIRECT_URL = '/profile/'  # Where admins are redirected to after hijacking a user
+HIJACK_LOGIN_REDIRECT_URL = '/accounts/profile/'  # Where admins are redirected to after hijacking a user
+LOGIN_REDIRECT_URL = '/accounts/profile'  # Where admins are redirected to after hijacking a user
 HIJACK_LOGOUT_REDIRECT_URL = '/admin/auth/user/'
 # Needed for hijack-admin to work (but maybe not a great idea?)
 HIJACK_ALLOW_GET_REQUESTS = True

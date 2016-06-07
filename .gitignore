@@ -3,5 +3,6 @@
 .ve3
 __pycache__
 blueworld/local_settings.py
+blueworld/static/foundation/
 blueworld/staticfiles/
 db.sqlite3
