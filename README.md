@@ -146,6 +146,42 @@ heroku apps:list
 heroku drains:add syslog+tls://logs2.papertrailapp.com:49245 --app blue-world-lite
 ```
 
+# Setting up SendGrid
+
+Heroku offers a sendgrid starter addon that sets up a SendGrid account for you and uses the API to send email. It requires a credit card to be added. You don't need the add-on, it is easier to sign up for a SendGrid account and use it directly.
+
+You'll need to add the following settings to your `.env`, `.env.sh` and production configs:
+
+```
+EMAIL_HOST='smtp.sendgrid.net'
+EMAIL_HOST_USER='sendgrid_username'
+EMAIL_HOST_PASSWORD='sendgrid_password'
+EMAIL_PORT=587
+EMAIL_USE_TLS='True'
+DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+SERVER_EMAIL='error@blueworld.example.com'
+```
+
+```
+heroku config:set EMAIL_HOST='smtp.sendgrid.net'
+heroku config:set EMAIL_HOST_USER='user_password'
+heroku config:set EMAIL_HOST_PASSWORD='smtp_password'
+heroku config:set EMAIL_PORT=587
+heroku config:set EMAIL_USE_TLS='True'
+heroku config:set DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+heroku config:set SERVER_EMAIL='error@blueworld.example.com'
+```
+
+```
+export EMAIL_HOST='smtp.sendgrid.net'
+export EMAIL_HOST_USER='user_password'
+export EMAIL_HOST_PASSWORD='smtp_password'
+export EMAIL_PORT=587
+export EMAIL_USE_TLS='True'
+export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+export SERVER_EMAIL='error@blueworld.example.com'
+```
+
 ## Setting up `maildump`
 
 Todo.

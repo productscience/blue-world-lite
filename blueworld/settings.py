@@ -160,12 +160,11 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-EMAIL_HOST = 'smtp.webfaction.com'
-# EMAIL_PORT =
-EMAIL_HOST_USER = 'threeaims01'
+EMAIL_HOST = os.environ['EMAIL_HOST']
+EMAIL_PORT = int(os.environ['EMAIL_PORT'])
+EMAIL_HOST_USER = os.environ['EMAIL_HOST_USER']
 EMAIL_HOST_PASSWORD = os.environ['EMAIL_HOST_PASSWORD']
-EMAIL_USE_TLS = True
+EMAIL_USE_TLS = os.environ['EMAIL_USE_TLS'].lower() == 'true'
 # EMAIL_USE_SSL = True
-DEFAULT_FROM_EMAIL = 'james@3aims.com'
-SERVER_EMAIL = 'admin@blueworld.example.com'
-
+DEFAULT_FROM_EMAIL = os.environ['DEFAULT_FROM_EMAIL']
+SERVER_EMAIL = os.environ['SERVER_EMAIL']
