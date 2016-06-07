@@ -23,7 +23,7 @@ Set up a database:
 psql (9.5.2)
 CREATE USER "blueworld-lite" WITH PASSWORD 'blueworld-lite';
 CREATE DATABASE "blueworld-lite";
-GRANT ALL PRIVILEGES ON DATABASE "blueworld-lite" to "blueworld-lite";
+GRANT ALL PRIVILEGES ON DATABASE "blueworld-lite" TO "blueworld-lite";
 ```
 
 Set up environment variables:
@@ -148,9 +148,16 @@ heroku drains:add syslog+tls://logs2.papertrailapp.com:49245 --app blue-world-li
 
 # Setting up SendGrid
 
-Heroku offers a sendgrid starter addon that sets up a SendGrid account for you and uses the API to send email. It requires a credit card to be added. You don't need the add-on, it is easier to sign up for a SendGrid account and use it directly.
+Heroku offers a sendgrid starter addon that sets up a SendGrid account for you
+and uses the API to send email. It requires a credit card to be added. You
+don't need the add-on, it is easier to sign up for a SendGrid account and use
+it directly.
 
-You'll need to add the following settings to your `.env`, `.env.sh` and production configs:
+Once you've created your account you can set up new credentials so that you
+don't have to use your main username and password.
+
+You'll need to add the following settings to your `.env`, `.env.sh` and
+production configs:
 
 ```
 EMAIL_HOST='smtp.sendgrid.net'
@@ -183,6 +190,14 @@ export SERVER_EMAIL='error@blueworld.example.com'
 ```
 
 ## Setting up `maildump`
+
+Todo.
+
+## Setting up Travis
+
+Todo.
+
+## Setting up PaperTrail
 
 Todo.
 
