@@ -1,6 +1,7 @@
 # Blueworld Lite
 
-![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg)
+[![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg?branch=master)](https://travis-ci.org/productscience/blue-world-lite)
+[![License: Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 This is a Django project that handles management and billing of a Growing
 Commuinities veg box scheme. It handles user registration and self-service,
