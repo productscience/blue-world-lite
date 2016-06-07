@@ -17,16 +17,72 @@ The codebase exists as a different apps all found in the `apps` directory. Each 
 The `features` directory contains a `behave` environment for testing the
 product via a web browser using selenium.
 
+Set up a database:
 
-For Heroku you must also run::
+```
+psql (9.5.2)
+CREATE USER "blueworld-lite" WITH PASSWORD 'blueworld-lite';
+CREATE DATABASE "blueworld-lite";
+GRANT ALL PRIVILEGES ON DATABASE "blueworld-lite" to "blueworld-lite";
+```
 
+Set up environment variables:
+
+```
+export DJANGO_SETTINGS_MODULE='blueworld.settings'
+export DATABASE_URL='postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite'
+export DEBUG='True'
+export EMAIL_HOST_PASSWORD='xxx'
+```
+
+Set up a virtual environment and install run dependencies:
+
+```
+pyvenv-3.5 .ve3
+. .ve3/bin/activate
+pip install -r requirements.txt
+```
+
+Set up Django:
+
+```
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+Run the server:
+
+```
+python manage.py runserver
+```
+
+or (if you have the Heroku toolbelt installed), first create a `.env` file with all the environment variables:
+
+```
+export DJANGO_SETTINGS_MODULE='blueworld.settings'
+export DATABASE_URL='postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite'
+export DEBUG='True'
+export EMAIL_HOST_PASSWORD='xxx'
+```
+
+then run:
+
+```
+heroku local
+```
+
+For Heroku production you must also run:
+
+```
 heroku config:set DJANGO_SETTINGS_MODULE=blueworld.settings
 heroku config:set DEBUG=False
 heroku config:set DATABASE_URL=...
+```
 
 Then run:
 
-~~~
+```
 $ heroku run python manage.py migrate
 Running python manage.py migrate on ⬢ gentle-citadel-81843... up, run.3758
 Operations to perform:
@@ -49,7 +105,17 @@ $  heroku run python manage.py createsuperuser
 Running python manage.py createsuperuser on ⬢ gentle-citadel-81843... up, run.4591
 Username (leave blank to use 'u37612'): thejimmyg
 Email address: james@3aims.com
-Password: 
-Password (again): 
+Password:
+Password (again):
 Superuser created successfully.
-~~~
+```
+
+After loging into the admin, change the site name from example.com to whatever
+you like. This will be used in the emails sent by the registration system.
+
+
+## Setting up `maildump`
+
+Todo.
+
+
