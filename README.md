@@ -57,22 +57,41 @@ Run the server:
 python manage.py runserver
 ```
 
-or (if you have the Heroku toolbelt installed), first create a `.env` file with all the environment variables:
+
+## Heroku
+
+### Local
+
+Make sure you have the Heroku toolbelt installed then create a `.env` file with all the environment variables from earlier (without the `export` in front):
 
 ```
-export DJANGO_SETTINGS_MODULE='blueworld.settings'
-export DATABASE_URL='postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite'
-export DEBUG='True'
-export EMAIL_HOST_PASSWORD='xxx'
+DJANGO_SETTINGS_MODULE='blueworld.settings'
+DATABASE_URL='postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite'
+DEBUG='True'
+EMAIL_HOST_PASSWORD='xxx'
 ```
 
-then run:
+Now run like this:
 
 ```
 heroku local
 ```
 
-For Heroku production you must also run:
+### Production
+
+
+```
+heroku apps:create blue-world-lite
+```
+
+Get the branch you want to deploy and push it:
+
+```
+git checkout <branch>
+git push heroku HEAD:master
+```
+
+Then set up the production config by running:
 
 ```
 heroku config:set DJANGO_SETTINGS_MODULE=blueworld.settings
@@ -110,12 +129,29 @@ Password (again):
 Superuser created successfully.
 ```
 
-After loging into the admin, change the site name from example.com to whatever
+You should be able to see your app at the correct domain now.
+
+After loging into the admin at `/admin`, change the site name from example.com to whatever
 you like. This will be used in the emails sent by the registration system.
 
+If you forget the name of your app:
+
+```
+heroku apps:list
+```
+
+#### Setting up logging
+
+```
+heroku drains:add syslog+tls://logs2.papertrailapp.com:49245 --app blue-world-lite
+```
 
 ## Setting up `maildump`
 
 Todo.
 
+## Dev and Test
 
+```
+pip install -r requirements/dev.txt
+```
