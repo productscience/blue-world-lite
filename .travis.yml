@@ -1,15 +1,14 @@
 language: python
 python:
 - "3.5"
-install: "pip install -r requirements.txt requirements/dev.txt"
+install: "pip install -r requirements.txt -r requirements/dev.txt"
 env:
-- DJANGO_SETTINGS_MODULE='blueworld.settings'
-- DATABASE_URL='postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite'
+- DJANGO_SETTINGS_MODULE=blueworld.settings
+- DATABASE_URL=postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite
 - DEBUG=True
-- EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
-- DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
-- SERVER_EMAIL='error@blueworld.example.com'
-script: rm -r test_dir; behave
+- EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend
+- DEFAULT_FROM_EMAIL=no-reply@blueworld.example.com
+- SERVER_EMAIL=error@blueworld.example.com
 services:
 - postgresql
 before_script:
@@ -20,3 +19,4 @@ before_script:
 - python manage.py makemigrations
 - python manage.py migrate
 - echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@3aims.com', '123123ab')" | python manage.py shell
+script: rm -r test_dir; behave
