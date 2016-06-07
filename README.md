@@ -1,5 +1,7 @@
 # Blueworld Lite
 
+![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg)
+
 This is a Django project that handles management and billing of a Growing
 Commuinities veg box scheme. It handles user registration and self-service,
 pickup list generation and billing.
@@ -21,16 +23,16 @@ Set up a database:
 
 ```
 psql (9.5.2)
-CREATE USER "blueworld-lite" WITH PASSWORD 'blueworld-lite';
-CREATE DATABASE "blueworld-lite";
-GRANT ALL PRIVILEGES ON DATABASE "blueworld-lite" TO "blueworld-lite";
+CREATE USER blueworld WITH PASSWORD 'blueworld';
+CREATE DATABASE blueworld;
+GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;
 ```
 
 Set up environment variables:
 
 ```
 export DJANGO_SETTINGS_MODULE='blueworld.settings'
-export DATABASE_URL='postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite'
+export DATABASE_URL='postgres://blueworld:blueworld@localhost:5432/blueworld'
 export DEBUG='True'
 export EMAIL_HOST_PASSWORD='xxx'
 ```
@@ -66,7 +68,7 @@ Make sure you have the Heroku toolbelt installed then create a `.env` file with 
 
 ```
 DJANGO_SETTINGS_MODULE='blueworld.settings'
-DATABASE_URL='postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite'
+DATABASE_URL='postgres://blueworld:blueworld@localhost:5432/blueworld'
 DEBUG='True'
 EMAIL_HOST_PASSWORD='xxx'
 ```
@@ -81,7 +83,7 @@ heroku local
 
 
 ```
-heroku apps:create blue-world-lite
+heroku apps:create blueworld
 ```
 
 Get the branch you want to deploy and push it:
@@ -143,7 +145,7 @@ heroku apps:list
 #### Setting up logging
 
 ```
-heroku drains:add syslog+tls://logs2.papertrailapp.com:49245 --app blue-world-lite
+heroku drains:add syslog+tls://logs2.papertrailapp.com:49245 --app blueworld
 ```
 
 # Setting up SendGrid
@@ -198,7 +200,7 @@ Todo.
 You need to configure the following environment variables in the Travis interface:
 
 * `DJANGO_SETTINGS_MODULE` blueworld.settings
-* `DATABASE_URL` postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite
+* `DATABASE_URL` postgres://blueworld:blueworld@localhost:5432/blueworld
 * `DEBUG` False
 * `EMAIL_BACKEND` django.core.mail.backends.locmem.EmailBackend
 * `DEFAULT_FROM_EMAIL` no-reply@blueworld.example.com

@@ -5,4 +5,4 @@ __pycache__
 blueworld/local_settings.py
 blueworld/static/foundation/
 blueworld/staticfiles/
-db.sqlite3
+ghostdriver.log

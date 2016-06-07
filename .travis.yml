@@ -6,11 +6,11 @@ install: "pip install -r requirements.txt -r requirements/dev.txt"
 services:
 - postgresql
 before_script:
-- psql -c 'CREATE DATABASE "blue-world-lite";' -U postgres
-- psql -c 'CREATE USER "blue-world-lite" with password \'blue-world-lite\';' -U postgres
-- psql -c 'GRANT ALL PRIVILEGES ON DATABASE "blueworld-lite" TO "blueworld-lite";' -U postgres
+- psql -c 'CREATE DATABASE blueworld;' -U postgres
+- psql -c "CREATE USER blueworld with password 'blueworld'" -U postgres
+- psql -c 'GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;' -U postgres
 - python manage.py makemigrations
 - python manage.py migrate
 - echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@3aims.com', '123123ab')" | python manage.py shell
 - python manage.py runserver 0.0.0.0:8000 &
-script: rm -r test_dir; behave
+script: behave
