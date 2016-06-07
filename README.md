@@ -195,7 +195,16 @@ Todo.
 
 ## Setting up Travis
 
-Todo.
+You need to configure the following environment variables in the Travis interface:
+
+* `DJANGO_SETTINGS_MODULE` blueworld.settings
+* `DATABASE_URL` postgres://blueworld-lite:blueworld-lite@localhost:5432/blueworld-lite
+* `DEBUG` False
+* `EMAIL_BACKEND` django.core.mail.backends.locmem.EmailBackend
+* `DEFAULT_FROM_EMAIL` no-reply@blueworld.example.com
+* `SERVER_EMAIL` error@blueworld.example.com
+* `ALLOWED_HOSTS` localhost, 127.0.0.1
+
 
 ## Setting up PaperTrail
 
