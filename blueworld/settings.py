@@ -49,10 +49,25 @@ INSTALLED_APPS = [
     'hijack_admin',
 ]
 
+# Sentry
+if 'RAVEN_DSN' in os.environ:
+    INSTALLED_APPS.append('raven.contrib.django.raven_compat')
+
 # For allauth
 SITE_ID = 1
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+#ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+#ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory" #="optional" # Mandatory?
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_SESSION_REMEMBER = False
+
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_SIGNUP_PASSWORD_VERIFICATION = False
+
+
 
 # For Hijack
 HIJACK_LOGIN_REDIRECT_URL = '/accounts/profile/'  # Where admins are redirected to after hijacking a user
@@ -175,3 +190,16 @@ SERVER_EMAIL = os.environ['SERVER_EMAIL']
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 if os.environ.get('ALLOWED_HOSTS'):
     ALLOWED_HOSTS += [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
+
+
+# Raven
+
+if 'RAVEN_DSN' in os.environ:
+    import raven
+    # print(raven.fetch_git_sha(os.path.dirname(__file__)))
+    RAVEN_CONFIG = {
+        'dsn': os.environ['RAVEN_DSN'],
+        # If you are using git, you can also automatically configure the
+        # release based on the git info.
+        # 'release': raven.fetch_git_sha(os.path.dirname(__file__)),
+    }

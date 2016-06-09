@@ -43,6 +43,7 @@ export EMAIL_PORT=587
 export EMAIL_USE_TLS='True'
 export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 export SERVER_EMAIL='error@blueworld.example.com'
+export ALLOWED_HOSTS='localhost, 127.0.0.1'
 ```
 
 Set up a virtual environment and install run dependencies:
@@ -85,6 +86,7 @@ EMAIL_PORT=587
 EMAIL_USE_TLS='True'
 DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 SERVER_EMAIL='error@blueworld.example.com'
+export ALLOWED_HOSTS='localhost, 127.0.0.1'
 ```
 
 Now run like this:
@@ -112,6 +114,7 @@ Then set up the production config by running similar commands for each of the se
 ```
 heroku config:set DJANGO_SETTINGS_MODULE=blueworld.settings
 heroku config:set DEBUG=False
+heroku config:set ALLOWED_HOSTS='xxx.herokuapp.com'
 heroku config:set DATABASE_URL=...
 ... 
 ```
@@ -306,4 +309,18 @@ heroku drains:add syslog+tls://logs2.papertrailapp.com:<YOURPORT> --app blueworl
 
 ```
 pip install -r requirements.txt -r requirements/dev.txt -r requirements/test.txt
+```
+
+## Sentry
+
+Send a test command like this:
+
+```
+python manage.py raven test
+```
+
+Set the DSN like this:
+
+```
+export RAVEN_DSN='...'
 ```
