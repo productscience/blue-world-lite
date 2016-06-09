@@ -1,6 +1,7 @@
 # Blueworld Lite
 
 [![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg?branch=master)](https://travis-ci.org/productscience/blue-world-lite)
+[![Requirements Status](https://requires.io/github/productscience/blue-world-lite/requirements.svg?branch=feature%2Fjoin)](https://requires.io/github/productscience/blue-world-lite/requirements/?branch=feature%2Fjoin)
 [![License: Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 This is a Django project that handles management and billing of a Growing
@@ -192,9 +193,120 @@ export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 export SERVER_EMAIL='error@blueworld.example.com'
 ```
 
-## Setting up `maildump`
+## Setting up `maildump` (deprecated)
 
-Todo.
+You need Python 2 for this.
+
+```
+virtualenv .ve2
+.ve2/bin/pip install maildump
+.ve2/bin/maildump --help
+```
+
+You can get started like this:
+
+```
+$ .ve2/bin/maildump 
+[2016-06-09 10:08:46]  NOTICE    maildump: Starting web server on http://127.0.0.1:1080
+[2016-06-09 10:08:46]  NOTICE    maildump: Starting smtp server on 127.0.0.1:1025
+[2016-06-09 10:08:46]  INFO      maildump.db: Using database :memory:
+...
+```
+
+Set up Django by setting these environment variables and restarting the server:
+
+```
+export EMAIL_HOST='localhost'
+export EMAIL_HOST_USER=''
+export EMAIL_HOST_PASSWORD=''
+export EMAIL_PORT=1025
+export EMAIL_USE_TLS='False'
+export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+export SERVER_EMAIL='error@blueworld.example.com'
+```
+
+Now emails sent from Django will appear in the web interface at http://127.0.0.1:1080
+
+There is also a fairly RESTFul API allowing you to download a list of messages in JSON from /messages, each message's metadata with /messages/:id.json, and then the pertinent parts with /messages/:id.html and /messages/:id.plain for the default HTML and plain text version, /messages/:id/:cid for individual attachments by CID, or the whole message with /messages/:id.source.
+
+
+## Setting up `lathermail`
+
+```
+lathermail --db-uri sqlite:////$D/lathermail.db
+```
+
+Set up Django by setting these environment variables and restarting the server:
+
+```
+export EMAIL_HOST='localhost'
+export EMAIL_HOST_USER='user'
+export EMAIL_HOST_PASSWORD='password'
+export EMAIL_PORT=2525
+export EMAIL_USE_TLS='False'
+export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+export SERVER_EMAIL='error@blueworld.example.com'
+```
+
+Latermail has a concept of different inboxes based on SMTP logins. Above we used `user` and `password` so lathermail sets up an inbox with these when it receives the first mail.
+
+Now emails sent from Django will appear in the web interface at http://127.0.0.1:5000. 
+
+To use the API you need to set some headers for the inbox you are after like this:
+
+```
+$ curl -0 -H "X-Mail-Password: password" http://127.0.0.1:5000/api/0/inboxes/
+{
+    "inbox_list": [
+        "user"
+    ],
+    "inbox_count": 1
+}
+$ curl -0 -H "X-Mail-Password: password" http://127.0.0.1:5000/api/0/messages/
+{
+    "message_count": 1,
+    "message_list": [
+        {
+            "recipients": [
+                {
+                    "address": "james@jimmyg.org",
+                    "name": ""
+                }
+            ],
+            "read": true,
+            "recipients_raw": "james@jimmyg.org",
+            "created_at": "2016-06-09T10:32:29.489615+00:00",
+            "sender": {
+                "address": "no-reply@blueworld.example.com",
+                "name": ""
+            },
+            "subject": "[example.com] Please Confirm Your E-mail Address",
+            "inbox": "user",
+            "sender_raw": "no-reply@blueworld.example.com",
+            "password": "password",
+            "message_raw": ...
+            "parts": [
+                {
+                    "type": "text/plain",
+                    "size": 337,
+                    "filename": null,
+                    "charset": "utf-8",
+                    "index": 0,
+                    "is_attachment": false,
+                    "body": ...
+                }
+            ],
+            "_id": "0c110b02-ac30-4d1a-b181-27f6f9526f23"
+        }
+    ]
+}
+$ curl -0 -H "X-Mail-Password: password" http://127.0.0.1:5000/api/0/messages/0c110b02-ac30-4d1a-b181-27f6f9526f23
+... Same content as the message above ...
+```
+
+You can also get attachments, and delete messages. See https://github.com/reclosedev/lathermail.
+
+With the config described above, the data is stored in an SQLite database too.
 
 ## Setting up Travis
 

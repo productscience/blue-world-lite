@@ -1,0 +1,4 @@
+behave==1.2.5
+selenium==2.53.4
+browserstep==0.1.0
+lathermail==0.2.0
