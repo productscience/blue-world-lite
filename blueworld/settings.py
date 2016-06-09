@@ -190,10 +190,12 @@ SERVER_EMAIL = os.environ['SERVER_EMAIL']
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 if os.environ.get('ALLOWED_HOSTS'):
     ALLOWED_HOSTS += [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
+ADMINS = []
+if os.environ.get('ADMINS'):
+    ADMINS += [email.strip() for email in os.environ['ADMINS'].split(',')]
 
 
 # Raven
-
 if 'RAVEN_DSN' in os.environ:
     import raven
     # print(raven.fetch_git_sha(os.path.dirname(__file__)))

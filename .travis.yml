@@ -10,6 +10,7 @@ before_script:
 - psql -c 'CREATE DATABASE blueworld;' -U postgres
 - psql -c "CREATE USER blueworld with password 'blueworld'" -U postgres
 - psql -c 'GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;' -U postgres
+- "python manage.py collectstatic --noinput"
 - python manage.py makemigrations
 - python manage.py migrate
 - echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@3aims.com', '123123ab')" | python manage.py shell
