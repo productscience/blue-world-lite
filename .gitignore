@@ -6,3 +6,4 @@ blueworld/local_settings.py
 blueworld/static/foundation/
 blueworld/staticfiles/
 ghostdriver.log
+lathermail.db

@@ -1,6 +1,7 @@
 # Blueworld Lite
 
-[![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg?branch=master)](https://travis-ci.org/productscience/blue-world-lite)
+[![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg)](https://travis-ci.org/productscience/blue-world-lite)
+[![Requirements Status](https://requires.io/github/productscience/blue-world-lite/requirements.svg?branch=feature%2Fjoin)](https://requires.io/github/productscience/blue-world-lite/requirements/?branch=feature%2Fjoin)
 [![License: Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 This is a Django project that handles management and billing of a Growing
@@ -35,7 +36,13 @@ Set up environment variables:
 export DJANGO_SETTINGS_MODULE='blueworld.settings'
 export DATABASE_URL='postgres://blueworld:blueworld@localhost:5432/blueworld'
 export DEBUG='True'
+export EMAIL_HOST='smtp.sendgrid.net'
+export EMAIL_HOST_USER='blue-world-lite'
 export EMAIL_HOST_PASSWORD='xxx'
+export EMAIL_PORT=587
+export EMAIL_USE_TLS='True'
+export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+export SERVER_EMAIL='error@blueworld.example.com'
 ```
 
 Set up a virtual environment and install run dependencies:
@@ -71,7 +78,13 @@ Make sure you have the Heroku toolbelt installed then create a `.env` file with 
 DJANGO_SETTINGS_MODULE='blueworld.settings'
 DATABASE_URL='postgres://blueworld:blueworld@localhost:5432/blueworld'
 DEBUG='True'
+EMAIL_HOST='smtp.sendgrid.net'
+EMAIL_HOST_USER='blue-world-lite'
 EMAIL_HOST_PASSWORD='xxx'
+EMAIL_PORT=587
+EMAIL_USE_TLS='True'
+DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+SERVER_EMAIL='error@blueworld.example.com'
 ```
 
 Now run like this:
@@ -94,12 +107,13 @@ git checkout <branch>
 git push heroku HEAD:master
 ```
 
-Then set up the production config by running:
+Then set up the production config by running similar commands for each of the settings in `.env`. e.g.:
 
 ```
 heroku config:set DJANGO_SETTINGS_MODULE=blueworld.settings
 heroku config:set DEBUG=False
 heroku config:set DATABASE_URL=...
+... 
 ```
 
 Then run:
@@ -192,9 +206,83 @@ export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 export SERVER_EMAIL='error@blueworld.example.com'
 ```
 
-## Setting up `maildump`
+## Setting up `lathermail`
 
-Todo.
+```
+lathermail --db-uri sqlite:////$D/lathermail.db
+```
+
+Set up Django by setting these environment variables and restarting the server:
+
+```
+export EMAIL_HOST='localhost'
+export EMAIL_HOST_USER='user'
+export EMAIL_HOST_PASSWORD='password'
+export EMAIL_PORT=2525
+export EMAIL_USE_TLS='False'
+export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+export SERVER_EMAIL='error@blueworld.example.com'
+```
+
+Latermail has a concept of different inboxes based on SMTP logins. Above we used `user` and `password` so lathermail sets up an inbox with these when it receives the first mail.
+
+Now emails sent from Django will appear in the web interface at http://127.0.0.1:5000. 
+
+To use the API you need to set some headers for the inbox you are after like this:
+
+```
+$ curl -0 -H "X-Mail-Password: password" http://127.0.0.1:5000/api/0/inboxes/
+{
+    "inbox_list": [
+        "user"
+    ],
+    "inbox_count": 1
+}
+$ curl -0 -H "X-Mail-Password: password" http://127.0.0.1:5000/api/0/messages/
+{
+    "message_count": 1,
+    "message_list": [
+        {
+            "recipients": [
+                {
+                    "address": "james@jimmyg.org",
+                    "name": ""
+                }
+            ],
+            "read": true,
+            "recipients_raw": "james@jimmyg.org",
+            "created_at": "2016-06-09T10:32:29.489615+00:00",
+            "sender": {
+                "address": "no-reply@blueworld.example.com",
+                "name": ""
+            },
+            "subject": "[example.com] Please Confirm Your E-mail Address",
+            "inbox": "user",
+            "sender_raw": "no-reply@blueworld.example.com",
+            "password": "password",
+            "message_raw": ...
+            "parts": [
+                {
+                    "type": "text/plain",
+                    "size": 337,
+                    "filename": null,
+                    "charset": "utf-8",
+                    "index": 0,
+                    "is_attachment": false,
+                    "body": ...
+                }
+            ],
+            "_id": "0c110b02-ac30-4d1a-b181-27f6f9526f23"
+        }
+    ]
+}
+$ curl -0 -H "X-Mail-Password: password" http://127.0.0.1:5000/api/0/messages/0c110b02-ac30-4d1a-b181-27f6f9526f23
+... Same content as the message above ...
+```
+
+You can also get attachments, and delete messages. See https://github.com/reclosedev/lathermail.
+
+With the config described above, the data is stored in an SQLite database too.
 
 ## Setting up Travis
 
@@ -203,7 +291,6 @@ You need to configure the following environment variables in the Travis interfac
 * `DJANGO_SETTINGS_MODULE` blueworld.settings
 * `DATABASE_URL` postgres://blueworld:blueworld@localhost:5432/blueworld
 * `DEBUG` False
-* `EMAIL_BACKEND` django.core.mail.backends.locmem.EmailBackend
 * `DEFAULT_FROM_EMAIL` no-reply@blueworld.example.com
 * `SERVER_EMAIL` error@blueworld.example.com
 * `ALLOWED_HOSTS` localhost, 127.0.0.1
@@ -211,10 +298,12 @@ You need to configure the following environment variables in the Travis interfac
 
 ## Setting up PaperTrail
 
-Todo.
+```
+heroku drains:add syslog+tls://logs2.papertrailapp.com:<YOURPORT> --app blueworld`
+```
 
 ## Dev and Test
 
 ```
-pip install -r requirements/dev.txt
+pip install -r requirements.txt -r requirements/dev.txt -r requirements/test.txt
 ```

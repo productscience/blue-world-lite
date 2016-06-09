@@ -172,6 +172,6 @@ EMAIL_USE_TLS = not str(os.environ.get('EMAIL_USE_TLS')).lower() == 'false'
 # EMAIL_USE_SSL = True
 DEFAULT_FROM_EMAIL = os.environ['DEFAULT_FROM_EMAIL']
 SERVER_EMAIL = os.environ['SERVER_EMAIL']
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.filebased.EmailBackend')
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 if os.environ.get('ALLOWED_HOSTS'):
     ALLOWED_HOSTS += [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]

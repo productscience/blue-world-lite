@@ -1,5 +1,2 @@
-behave==1.2.5
 docutils==0.12
-selenium==2.53.2
 Sphinx==1.4.3
-browserstep==0.1.0
