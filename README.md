@@ -1,6 +1,6 @@
 # Blueworld Lite
 
-[![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg?branch=master)](https://travis-ci.org/productscience/blue-world-lite)
+[![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg)](https://travis-ci.org/productscience/blue-world-lite)
 [![Requirements Status](https://requires.io/github/productscience/blue-world-lite/requirements.svg?branch=feature%2Fjoin)](https://requires.io/github/productscience/blue-world-lite/requirements/?branch=feature%2Fjoin)
 [![License: Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
@@ -36,7 +36,13 @@ Set up environment variables:
 export DJANGO_SETTINGS_MODULE='blueworld.settings'
 export DATABASE_URL='postgres://blueworld:blueworld@localhost:5432/blueworld'
 export DEBUG='True'
+export EMAIL_HOST='smtp.sendgrid.net'
+export EMAIL_HOST_USER='blue-world-lite'
 export EMAIL_HOST_PASSWORD='xxx'
+export EMAIL_PORT=587
+export EMAIL_USE_TLS='True'
+export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+export SERVER_EMAIL='error@blueworld.example.com'
 ```
 
 Set up a virtual environment and install run dependencies:
@@ -72,7 +78,13 @@ Make sure you have the Heroku toolbelt installed then create a `.env` file with 
 DJANGO_SETTINGS_MODULE='blueworld.settings'
 DATABASE_URL='postgres://blueworld:blueworld@localhost:5432/blueworld'
 DEBUG='True'
+EMAIL_HOST='smtp.sendgrid.net'
+EMAIL_HOST_USER='blue-world-lite'
 EMAIL_HOST_PASSWORD='xxx'
+EMAIL_PORT=587
+EMAIL_USE_TLS='True'
+DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
+SERVER_EMAIL='error@blueworld.example.com'
 ```
 
 Now run like this:
@@ -95,12 +107,13 @@ git checkout <branch>
 git push heroku HEAD:master
 ```
 
-Then set up the production config by running:
+Then set up the production config by running similar commands for each of the settings in `.env`. e.g.:
 
 ```
 heroku config:set DJANGO_SETTINGS_MODULE=blueworld.settings
 heroku config:set DEBUG=False
 heroku config:set DATABASE_URL=...
+... 
 ```
 
 Then run:
@@ -193,43 +206,6 @@ export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 export SERVER_EMAIL='error@blueworld.example.com'
 ```
 
-## Setting up `maildump` (deprecated)
-
-You need Python 2 for this.
-
-```
-virtualenv .ve2
-.ve2/bin/pip install maildump
-.ve2/bin/maildump --help
-```
-
-You can get started like this:
-
-```
-$ .ve2/bin/maildump 
-[2016-06-09 10:08:46]  NOTICE    maildump: Starting web server on http://127.0.0.1:1080
-[2016-06-09 10:08:46]  NOTICE    maildump: Starting smtp server on 127.0.0.1:1025
-[2016-06-09 10:08:46]  INFO      maildump.db: Using database :memory:
-...
-```
-
-Set up Django by setting these environment variables and restarting the server:
-
-```
-export EMAIL_HOST='localhost'
-export EMAIL_HOST_USER=''
-export EMAIL_HOST_PASSWORD=''
-export EMAIL_PORT=1025
-export EMAIL_USE_TLS='False'
-export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
-export SERVER_EMAIL='error@blueworld.example.com'
-```
-
-Now emails sent from Django will appear in the web interface at http://127.0.0.1:1080
-
-There is also a fairly RESTFul API allowing you to download a list of messages in JSON from /messages, each message's metadata with /messages/:id.json, and then the pertinent parts with /messages/:id.html and /messages/:id.plain for the default HTML and plain text version, /messages/:id/:cid for individual attachments by CID, or the whole message with /messages/:id.source.
-
-
 ## Setting up `lathermail`
 
 ```
@@ -315,7 +291,6 @@ You need to configure the following environment variables in the Travis interfac
 * `DJANGO_SETTINGS_MODULE` blueworld.settings
 * `DATABASE_URL` postgres://blueworld:blueworld@localhost:5432/blueworld
 * `DEBUG` False
-* `EMAIL_BACKEND` django.core.mail.backends.locmem.EmailBackend
 * `DEFAULT_FROM_EMAIL` no-reply@blueworld.example.com
 * `SERVER_EMAIL` error@blueworld.example.com
 * `ALLOWED_HOSTS` localhost, 127.0.0.1
@@ -323,10 +298,12 @@ You need to configure the following environment variables in the Travis interfac
 
 ## Setting up PaperTrail
 
-Todo.
+```
+heroku drains:add syslog+tls://logs2.papertrailapp.com:<YOURPORT> --app blueworld`
+```
 
 ## Dev and Test
 
 ```
-pip install -r requirements/dev.txt
+pip install -r requirements.txt -r requirements/dev.txt -r requirements/test.txt
 ```
