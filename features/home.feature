@@ -2,9 +2,9 @@ Feature: Homepage
 
   Scenario: Visit homepage
      When I navigate to /
-     Then I see "Login" within "body"
-      And I see "Register" within "body"
-      And I see "Staff Login" within "body"
+     Then I see "Login" in "body"
+      And I see "Register" in "body"
+      And I see "Staff Login" in "body"
 
   Scenario: Follow the "Login" link
      Given I navigate to /
