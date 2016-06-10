@@ -1,0 +1,17 @@
+{% extends "base_join.html" %}
+
+{% block head_title %}Join{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block menu %}{% endblock %}
+{% block content %}
+  <h1>Which bags do you want to pick up each week?</h1>
+  <form action="{% url 'join_choose_bags' %}" method="post">
+    <input type="text" size="2"> small veg box<br>
+    <input type="text" size="2"> large veg box<br>
+    <br>
+    {% csrf_token %}
+    <input type="submit" name="action" value="Next">
+  </form>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}

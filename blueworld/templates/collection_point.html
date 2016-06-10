@@ -1,0 +1,20 @@
+{% extends "base_join.html" %}
+
+{% block head_title %}Join{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block menu %}{% endblock %}
+{% block content %}
+  <h1>Where do you want to pick up your bag from?</h1>
+ 
+  <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d39696.91748585319!2d-0.09553839804747107!3d51.548847512570475!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761cefef8e8c05%3A0xc5b1fb59d8196f2c!2sLondon+Borough+of+Hackney%2C+Greater+London!5e0!3m2!1sen!2suk!4v1465560067568" width="600" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
+
+  <form action="{% url 'join_collection_point' %}" method="post">
+    {% csrf_token %}
+    <input type="radio" name="first"> Collection point 1<br>
+    <input type="radio" size="second"> Collection point 2<br>
+    <br>
+    <input type="submit" value="Next">
+  </form>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}

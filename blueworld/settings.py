@@ -49,12 +49,16 @@ INSTALLED_APPS = [
     'hijack_admin',
 ]
 
+if DEBUG:
+    INSTALLED_APPS.append('django_extensions')
 # Sentry
 if 'RAVEN_DSN' in os.environ:
     INSTALLED_APPS.append('raven.contrib.django.raven_compat')
 
 # For allauth
 SITE_ID = 1
+LOGIN_REDIRECT_URL = '/dashboard/'  # Where admins are redirected to after hijacking a user
+
 ACCOUNT_EMAIL_REQUIRED = True
 #ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 #ACCOUNT_EMAIL_REQUIRED = True
@@ -67,11 +71,14 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_SIGNUP_PASSWORD_VERIFICATION = False
 
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = LOGIN_REDIRECT_URL
+ACCOUNT_LOGIN_REDIRECT_URL = LOGIN_REDIRECT_URL
 
+# TODO: Discuss this one
+ACCOUNT_LOGOUT_ON_GET = True
 
 # For Hijack
-HIJACK_LOGIN_REDIRECT_URL = '/accounts/profile/'  # Where admins are redirected to after hijacking a user
-LOGIN_REDIRECT_URL = '/accounts/profile'  # Where admins are redirected to after hijacking a user
+HIJACK_LOGIN_REDIRECT_URL = LOGIN_REDIRECT_URL  # Where admins are redirected to after hijacking a user
 HIJACK_LOGOUT_REDIRECT_URL = '/admin/auth/user/'
 # Needed for hijack-admin to work (but maybe not a great idea?)
 HIJACK_ALLOW_GET_REQUESTS = True

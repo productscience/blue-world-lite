@@ -15,12 +15,16 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
-from join import views
+import join.views
+
 
 urlpatterns = [
+    url(r'^$', join.views.home, name='home'),
+    url(r'^join/$', join.views.join, name='join'),
+    url(r'^join/choose-bags/$', join.views.choose_bags, name='join_choose_bags'),
+    url(r'^join/collection-point/$', join.views.collection_point, name='join_collection_point'),
     url(r'^admin/', admin.site.urls),
-    url(r'^accounts/', include('allauth.urls')),
+    url(r'^account/', include('allauth.urls')),
     url(r'^hijack/', include('hijack.urls')),
-    url(r'^$', views.home, name='home'),
-    url(r'^accounts/profile$', views.dashboard, name='dashboard'),
+    url(r'^dashboard/$', join.views.dashboard, name='dashboard'),
 ]

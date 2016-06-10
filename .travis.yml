@@ -14,6 +14,7 @@ before_script:
 - python manage.py makemigrations
 - python manage.py migrate
 - echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@3aims.com', '123123ab')" | python manage.py shell
+- echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save()" | python manage.py shell
 - "python manage.py runserver 0.0.0.0:8000 > log_runserver.txt 2>&1 &"
 - "curl -0 -H 'X-Mail-Password: password' http://127.0.0.1:5000/api/0/messages/"
 - sleep 8
