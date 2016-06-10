@@ -10,12 +10,16 @@ def before_all(context):
     #     raise Exception('Test directory already exists')
     # os.mkdir(context.config.userdata['cwd'])
     if context.config.userdata.get('driver', 'phantomjs').lower() == 'chrome':
-        context.browser = webdriver.Chrome()
+        context.admin_browser = webdriver.Chrome()
+        context.user_browser = webdriver.Chrome()
     else:
-        context.browser = webdriver.PhantomJS()
-        context.browser.set_window_size(1120, 550)
+        context.admin_browser = webdriver.PhantomJS()
+        context.admin_browser.set_window_size(1120, 550)
+        context.user_browser = webdriver.PhantomJS()
+        context.user_browser.set_window_size(1120, 550)
     # os.environ['TEST_DIR'] = context.config.userdata['cwd']
     # os.environ['TEST_PROJECT_NAME'] = 'myproject'
+    context.browser = context.user_browser
     context.failed = False
 
 

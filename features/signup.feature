@@ -1,11 +1,12 @@
 Feature: Sign up
 
    Scenario: Navigate to sign up
-     Given I navigate to /accounts/signup/
+     Given I'm using the user browser
+       And I navigate to /accounts/signup/
        And I see "Sign Up" in "h1"
        And I see "Already have an account? Then please sign in" in "body"
-     Given I navigate to /accounts/signup
-       And I see "Sign Up" in "h1"
+      When I navigate to /accounts/signup
+      Then I see "Sign Up" in "h1"
        And I see "Already have an account? Then please sign in" in "body"
 
    Scenario: Can navigate to log in page
