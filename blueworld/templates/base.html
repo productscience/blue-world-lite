@@ -5,17 +5,19 @@
 <html>
   <head>
     <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
+    <link rel="stylesheet" type="text/css" href="http://patternlab.growingcommunities.org/css/style.css" />
+
+    <link rel="stylesheet" type="text/css" href="{% static 'collected.css' %}" />
     <title>{% block head_title %}{% endblock %}</title>
     {% block extra_head %}
     {% endblock %}
   </head>
   <body>
+    <div class="page" id="page">
+
     <!-- Directly after <body> -->
     {% hijack_notification %}
-    <div>
-      <div><a href="{% url 'home' %}">Logo</a></div>
-      <div>Organic Fruit &amp; Veg Scheme</div>
-    </div>
+    {% include "partials/header.html" %}
     {% block body %}
 
       {% if messages %}
@@ -47,5 +49,9 @@
     {% endblock %}
     {% block extra_body %}
     {% endblock %}
+    </div>
+
+    {% include "partials/footer.html" %}
+
   </body>
 </html>
