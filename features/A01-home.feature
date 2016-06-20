@@ -3,7 +3,7 @@ Feature: Home screen
   Scenario: Visit the homepage and choose "Join the scheme"
     Given I'm using the user browser
       And I navigate to /
-     When I click the "Sign Up" button
+     When I click the "Join the scheme" button
      Then the browser moves to /join/choose-bags/
       And I see "Which bags do you want to pick up each week?" in "h3"
 
