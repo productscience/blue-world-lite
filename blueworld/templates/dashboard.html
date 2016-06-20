@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block head_title %}Dashboard{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block menu %}{% endblock %}
+{% block content %}
+   <h1>Dashboard</h1>
+
+   <ul>
+   <li>If no verified email - needs to ask you to confirm.</li>
+   <li>If no no GoCardless - needs to ask you to set that up.</li>
+   <li>Otherwise, show the main dashboard</li>
+   </ul>
+   <a href="/accounts/logout">Log out</a>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}

@@ -1,23 +1,41 @@
-from django.shortcuts import render
-from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.core.urlresolvers import reverse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 
 
 def home(request):
-    return HttpResponse('''
-      <h1>Home</h1>
+    if request.method == 'GET':
+        return render(request, 'home.html')
+    elif request.method == 'POST':
+        if request.POST.get('join-scheme', False):
+            return redirect(reverse("join_choose_bags"))
+        elif request.POST.get('login', False):
+            return redirect(reverse("account_login"))
+    return HttpResponseBadRequest()
 
-      <a href="/accounts/login">Login</a>
-      <a href="/accounts/signup">Register</a>
-      <a href="/admin/">Staff Login</a>
-    ''')
+
+def join(request):
+    return redirect(reverse("join_choose_bags"))
+
+
+def choose_bags(request):
+    if request.method == 'GET':
+        return render(request, 'choose_bags.html')
+    elif request.method == 'POST':
+        return redirect(reverse("join_collection_point"))
+    return HttpResponseBadRequest()
+
+
+def collection_point(request):
+    if request.method == 'GET':
+        return render(request, 'collection_point.html')
+    elif request.method == 'POST':
+        return redirect(reverse("account_signup"))
+    return HttpResponseBadRequest()
+
 
 def dashboard(request):
     if request.user.username:
-        return HttpResponse('''
-          <h1>Dashboard</h1>
-
-          <a href="/accounts/logout">Log out</a>
-        ''')
+        return render(request, 'dashboard.html')
     else:
-        return HttpResponse('''Not logged in''')
-
+        return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')

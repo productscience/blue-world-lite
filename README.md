@@ -43,6 +43,8 @@ export EMAIL_PORT=587
 export EMAIL_USE_TLS='True'
 export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 export SERVER_EMAIL='error@blueworld.example.com'
+export ADMINS='send-errors-here@example.com'
+export ALLOWED_HOSTS='localhost, 127.0.0.1'
 ```
 
 Set up a virtual environment and install run dependencies:
@@ -85,6 +87,8 @@ EMAIL_PORT=587
 EMAIL_USE_TLS='True'
 DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 SERVER_EMAIL='error@blueworld.example.com'
+ADMINS='send-errors-here@example.com'
+ALLOWED_HOSTS='localhost, 127.0.0.1'
 ```
 
 Now run like this:
@@ -112,6 +116,7 @@ Then set up the production config by running similar commands for each of the se
 ```
 heroku config:set DJANGO_SETTINGS_MODULE=blueworld.settings
 heroku config:set DEBUG=False
+heroku config:set ALLOWED_HOSTS='xxx.herokuapp.com'
 heroku config:set DATABASE_URL=...
 ... 
 ```
@@ -140,7 +145,7 @@ Running migrations:
 $  heroku run python manage.py createsuperuser
 Running python manage.py createsuperuser on ⬢ gentle-citadel-81843... up, run.4591
 Username (leave blank to use 'u37612'): thejimmyg
-Email address: james@3aims.com
+Email address: send-errors-here@example.com
 Password:
 Password (again):
 Superuser created successfully.
@@ -184,6 +189,8 @@ EMAIL_PORT=587
 EMAIL_USE_TLS='True'
 DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 SERVER_EMAIL='error@blueworld.example.com'
+ADMINS='send-errors-here@example.com'
+ALLOWED_HOSTS='localhost, 127.0.0.1'
 ```
 
 ```
@@ -194,6 +201,8 @@ heroku config:set EMAIL_PORT=587
 heroku config:set EMAIL_USE_TLS='True'
 heroku config:set DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 heroku config:set SERVER_EMAIL='error@blueworld.example.com'
+heroku config:set ADMINS='send-errors-here@example.com'
+heroku config:set ALLOWED_HOSTS='blueworld.example.com'
 ```
 
 ```
@@ -204,6 +213,8 @@ export EMAIL_PORT=587
 export EMAIL_USE_TLS='True'
 export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 export SERVER_EMAIL='error@blueworld.example.com'
+export ADMINS='send-errors-here@example.com'
+export ALLOWED_HOSTS='localhost, 127.0.0.1'
 ```
 
 ## Setting up `lathermail`
@@ -222,6 +233,8 @@ export EMAIL_PORT=2525
 export EMAIL_USE_TLS='False'
 export DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 export SERVER_EMAIL='error@blueworld.example.com'
+export ADMINS='send-errors-here@example.com'
+export ALLOWED_HOSTS='localhost, 127.0.0.1'
 ```
 
 Latermail has a concept of different inboxes based on SMTP logins. Above we used `user` and `password` so lathermail sets up an inbox with these when it receives the first mail.
@@ -294,6 +307,7 @@ You need to configure the following environment variables in the Travis interfac
 * `DEFAULT_FROM_EMAIL` no-reply@blueworld.example.com
 * `SERVER_EMAIL` error@blueworld.example.com
 * `ALLOWED_HOSTS` localhost, 127.0.0.1
+* `ADMINS` send-errors-here@example.com
 
 
 ## Setting up PaperTrail
@@ -306,4 +320,18 @@ heroku drains:add syslog+tls://logs2.papertrailapp.com:<YOURPORT> --app blueworl
 
 ```
 pip install -r requirements.txt -r requirements/dev.txt -r requirements/test.txt
+```
+
+## Sentry
+
+Send a test command like this:
+
+```
+python manage.py raven test
+```
+
+Set the DSN like this:
+
+```
+export RAVEN_DSN='...'
 ```

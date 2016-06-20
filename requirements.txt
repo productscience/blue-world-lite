@@ -6,3 +6,5 @@ dj-database-url==0.4.1
 django-allauth==0.25.2
 django-hijack==2.1.1
 django-hijack-admin==2.1.1
+django-extensions==1.6.7
+raven==5.20.0

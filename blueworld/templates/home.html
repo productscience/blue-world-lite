@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block head_title %}Home{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block menu %}{% endblock %}
+{% block content %}
+    <div class="main" role="main">
+
+    <div class="row">
+      <h3 class="font-text">Join our fruit and veg bag scheme, and enjoy fresh, local, seasons fruit and veg, while supporting local organic farmers. </h3>
+      <h3 class="font-text">Prices start at £8 a week, with convenient collection points all over Hackney</h3>
+    </div>
+
+    <div class="row">
+        <div class="action-group">
+          <form action="{% url 'home' %}" method="post">
+              {% csrf_token %}
+              <h4>
+                <input type="submit" name="join-scheme" class="button font-display primary large" value="Sign Up">
+              </h4>
+          </form>
+
+          <form action="{% url 'home' %}" method="post">
+              {% csrf_token %}
+              <input type="submit" name="login" value="Login">
+          </form>
+
+            <p>(<a href="{% url 'admin:login' %}">Staff Login</a>)</p>
+
+        </div>
+
+    </div>
+
+    </div>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}
