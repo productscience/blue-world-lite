@@ -9,14 +9,14 @@ Feature: Join in one go
 
   Scenario: Choose bag (without placing an order for now)
     Given I navigate to /join/choose-bags/
-      And I see "Which bags do you want to pick up each week?" in "h1"
-     When I click the "Next" button
+      And I see "Which bags do you want to pick up each week?" in "h3"
+     When I click the "Choose collection point" button
      Then the browser moves to /join/collection-point/
-      And I see "Where do you want to pick up your bag from?" in "h1"
+      And I see "Where do you want to pick up your bag from?" in "h3"
 
   Scenario: Choose collection point (not real data for now)
     Given I navigate to /join/collection-point/
-      And I see "Where do you want to pick up your bag from?" in "h1"
+      And I see "Where do you want to pick up your bag from?" in "h3"
      When I click the "Next" button
      Then the browser moves to /account/signup/
       And I see "Sign Up" in "h1"
@@ -48,6 +48,3 @@ Feature: Join in one go
      Then the browser moves to /dashboard/
       And I see "Dashboard" in "h1"
       And I see "Successfully signed in as a01_join_user." in "ul"
-
-
-
