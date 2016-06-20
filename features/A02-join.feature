@@ -26,7 +26,7 @@ Feature: Join in one go
       And I navigate to /account/signup/
       And I type "a01_join_user@example.com" into "#id_email"
       And I type "123123ab" into "#id_password1"
-     When I click the "Sign Up »" button
+     When I click the "Sign Up" button
      Then the browser moves to /account/confirm-email/
       And I see "Verify Your E-mail Address" in "h1"
       And 1 email has been sent

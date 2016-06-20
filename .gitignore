@@ -1,13 +1,14 @@
+*.pyc
 .env
 .env.sh
 .ve3
-
-*.pyc
 __pycache__
-
 blueworld/local_settings.py
 blueworld/static/foundation/
 blueworld/staticfiles/
 ghostdriver.log
 lathermail.db
+log_lathermail.txt
+log_runserver.txt
 node_modules
+run-tests.sh

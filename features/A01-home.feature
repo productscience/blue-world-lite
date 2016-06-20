@@ -11,7 +11,7 @@ Feature: Home screen
     Given I navigate to /
      When I click the "Login" button
      Then the browser moves to /account/login/
-      And I see "Sign In"
+      And I see "Sign In" in "h1"
 
   Scenario: Follow the "Staff Login" link
     Given I navigate to /

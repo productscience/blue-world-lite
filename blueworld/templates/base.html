@@ -1,13 +1,12 @@
-<!-- At the top -->
-{% load staticfiles %}
-{% load hijack_tags %}
 <!DOCTYPE html>
-<html>
+<html lang="en-GB">
+  {% load staticfiles %}
+  {% load hijack_tags %}
   <head>
+    <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
     <link rel="stylesheet" type="text/css" href="http://patternlab.growingcommunities.org/css/style.css" />
-
-    <link rel="stylesheet" type="text/css" href="{% static 'collected.css' %}" />
+    {#<link rel="stylesheet" type="text/css" href="{% static 'collected.css' %}" />#}
     <title>{% block head_title %}{% endblock %}</title>
     {% block extra_head %}
     {% endblock %}
