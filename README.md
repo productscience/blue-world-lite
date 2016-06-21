@@ -340,7 +340,7 @@ sleep 1
 echo "done."
 
 echo "Running tests ..."
-behave "$@"
+behave "$@" || echo "++++++++++++++++++++++++++++++ FAILED ++++++++++++++++++++++++++++++++"
 echo "done"
 
 echo "Stopping lathermail ..."

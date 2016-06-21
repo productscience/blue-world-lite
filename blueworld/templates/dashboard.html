@@ -12,7 +12,11 @@
      <li>Otherwise, show the main dashboard</li>
    </ul>
 
-   <p><a href="/accounts/logout">Log out</a></p>
+   <p>
+     <a href="{% url 'account_logout' %}">Log out</a>
+     <a href="{% url 'dashboard_change_order' %}">Change order</a>
+     <a href="{% url 'dashboard_change_collection_point' %}">Change collection point</a>
+   </p>
 {% endblock %}
 {% block extra_body %}
 {% endblock %}

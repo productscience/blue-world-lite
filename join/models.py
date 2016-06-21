@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 
 class CollectionPoint(models.Model):
@@ -29,3 +30,49 @@ class BagType(models.Model):
     class Meta:
         ordering = ['display_order']
 
+
+class Customer(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+    full_name = models.CharField(max_length=255)
+    nickname = models.CharField(max_length=30)
+    mobile = models.CharField(max_length=30)
+
+
+class CollectionPointChange(models.Model):
+    changed = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+    collection_point = models.ForeignKey(
+        CollectionPoint,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+
+
+class OrderChange(models.Model):
+    changed = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+
+class BagQuantity(models.Model):
+    order_change = models.ForeignKey(
+        OrderChange,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+    bag_type = models.ForeignKey(
+        BagType,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+    quantity = models.IntegerField()

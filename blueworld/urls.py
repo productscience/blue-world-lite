@@ -28,6 +28,8 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^hijack/', include('hijack.urls')),
     url(r'^dashboard/$', join.views.dashboard, name='dashboard'),
+    url(r'^dashboard/change-order/$', join.views.dashboard_change_order, name='dashboard_change_order'),
+    url(r'^dashboard/change-collection-point/$', join.views.dashboard_change_collection_point, name='dashboard_change_collection_point'),
 
     #url(r'^account/', include('allauth.urls')),
     url(r"^login/$", account_views.login, name="account_login"),

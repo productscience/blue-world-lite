@@ -106,11 +106,18 @@ Feature: Join in one go
      When I click the "Next" button
      Then the browser moves to /join/signup/
 
+
+  # Check that we get the correct errors when things we've selected are deleted or deactivated
+
+
   Scenario: Sign up
     Given I clear any sent emails
       And I navigate to /join/signup/
       And I type "a01_join_user@example.com" into "#id_email"
       And I type "123123ab" into "#id_password1"
+      And I type "User's Full Name" into "#id_full_name"
+      And I type "Nickname" into "#id_nickname"
+      And I type "01234 567890" into "#id_mobile"
      When I click the "Sign Up" button
      Then the browser moves to /confirm-email/
       And I see "Verify Your E-mail Address" in "h1"
@@ -134,3 +141,38 @@ Feature: Join in one go
      Then the browser moves to /dashboard/
       And I see "Dashboard" in "h1"
       And I see "Successfully signed in as a01_join_user." in "ul"
+
+
+  Scenario Outline: Can't visit join pages now I've joined an am signed in
+    Given I'm using the user browser
+      And I navigate to <url>
+      And I see "You cannot join if you are already a signed in user" in "h3"
+     When I follow the "visit the dashboard" link
+     Then the browser moves to /dashboard/
+
+   Examples: Pages that should link back to home
+     | url                     |
+     | /join/choose-bags/      |
+     | /join/collection-point/ |
+     | /join/signup/           |
+
+  Scenario Outline: Dashboard Links
+    Given I'm using the user browser
+     And I navigate to /dashboard/
+     When I follow the "<link>" link
+     Then the browser moves to <url>
+      And I see "This functionality is not implemented yet" in "p"
+
+   Examples: Dashboard links
+     | link                    | url                                 |
+     | Change order            | /dashboard/change-order/            |
+     | Change collection point | /dashboard/change-collection-point/ |
+
+
+  Scenario: I can logout from the dashboard
+    Given I'm using the user browser
+      And I navigate to /dashboard/
+     When I follow the "Log out" link
+     Then the browser moves to /
+      # Messages
+      And I see "You have signed out." in "ul"

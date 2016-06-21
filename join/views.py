@@ -63,6 +63,13 @@ def join(request):
     return redirect(reverse("join_choose_bags"))
 
 
+def user_not_signed_in(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.username:
+            return HttpResponse('<html><h3>You cannot join if you are already a signed in user</h3> <p>To change your order or collection point, please <a href="{}">visit the dashboard</a>.</p></html>'.format(reverse("dashboard")))
+        return func(request, *args, **kwargs)
+    return _decorated
+
 def valid_collection_point_in_session(func):
     def _decorated(request, *args, **kwargs):
         if not request.session.get('collection_point'):
@@ -81,12 +88,32 @@ def valid_bag_type_in_session(func):
     return _decorated
 
 
+@user_not_signed_in
 @valid_bag_type_in_session
 @valid_collection_point_in_session
 def signup(request):
     return allauth_signup(request)
 
+# import allauth.account.signals
+# from django.dispatch import receiver
+# from django.contrib.auth.models import User
+#
+#
+# @receiver(allauth.account.signals.user_signed_up, sender=User)
+# def on_signup(request, user, **kwargs):
+#     pass
+#     # import pdb; pdb.set_trace()
+#     # Serialise session
+#
 
+
+
+
+# A successful signup fires this trigger which we use to save the user's session choices.
+# allauth.account.signals.user_signed_up(request, user)
+
+
+@user_not_signed_in
 def choose_bags(request):
     OrderFormSet = formset_factory(QuantityForm, extra=0, formset=BaseOrderFormSet)
     choices = []
@@ -114,6 +141,7 @@ def choose_bags(request):
     return render(request, 'choose_bags.html', {'formset': formset})
 
 
+@user_not_signed_in
 @valid_bag_type_in_session
 def collection_point(request):
     # if this is a POST request we need to process the form data
@@ -135,3 +163,16 @@ def dashboard(request):
         return render(request, 'dashboard.html')
     else:
         return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
+
+def dashboard_change_order(request):
+    if request.user.username:
+        return HttpResponse('<html><body><h1>Change Order</h1><p>This functionality is not implemented yet</p></body></html>')
+    else:
+        return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
+
+def dashboard_change_collection_point(request):
+    if request.user.username:
+        return HttpResponse('<html><body><h1>Change Collection Point</h1><p>This functionality is not implemented yet</p></body></html>')
+    else:
+        return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
+
