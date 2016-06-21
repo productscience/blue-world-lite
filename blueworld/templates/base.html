@@ -16,7 +16,11 @@
 
     <!-- Directly after <body> -->
     {% hijack_notification %}
+
+    {% block header %}
     {% include "partials/header.html" %}
+    {% endblock %}
+
     {% block body %}
 
       {% if messages %}

@@ -122,6 +122,57 @@ echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); 
 It is a good idea to keep the password and name set above, because they are
 used in the tests.
 
+
+### Data Migrations
+
+#### Export Existing Data
+
+You can export PostgreSQL data from another database by setting
+`PATH_TO_VAGRANT_DIR` to be the path of the VM running the PostgreSQL instance
+to migrate from and then running a `migrate.sh` script like this:
+
+```
+#!/bin/bash
+
+set -e
+
+CUR_DIR=$PWD
+mkdir -p $CUR_DIR/data
+
+pushd $PATH_TO_VAGRANT_DIR
+echo "Migrating bag type ..."
+vagrant ssh -c "sudo -u postgres psql grocom -c \"COPY (select name,active,\\\"order\\\",round((price*12)/52, 2) as weekly_cost from joinforms_bagtype where group_id=1) to '/tmp/bag_type.csv' with csv\"";
+vagrant ssh -c "cat /tmp/bag_type.csv" > $CUR_DIR/data/bag_type.csv
+echo "done."
+
+echo "Migrating collection points ..."
+vagrant ssh -c "sudo -u postgres psql grocom -c \"COPY (select name,\\\"where\\\",latitude,longitude,available,display_order from joinforms_pickuppoint where group_id=1) to '/tmp/collection_point.csv' with CSV\"";
+vagrant ssh -c "cat /tmp/collection_point.csv" > $CUR_DIR/data/collection_point.csv
+echo "done."
+popd
+```
+
+You'll end up with a set of `.csv` files in the `data` directory. You can adjust them as you like.
+
+#### Load Data
+
+You can reset the database and load data from the `data` directory you've created with a script like this:
+
+```
+#!/bin/bash
+
+psql -c 'DROP DATABASE blueworld;'
+psql -c 'CREATE DATABASE blueworld;'
+psql -c 'GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;'
+python manage.py makemigrations
+python manage.py migrate
+echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', '123123ab')" | python manage.py shell
+echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save()" | python manage.py shell
+
+psql blueworld -c "COPY join_bagtype(name,active,display_order,weekly_cost) from '$PWD/data/bag_type.csv' with csv;"
+psql blueworld -c "COPY join_collectionpoint(name,location,latitude,longitude,active,display_order) from '$PWD/data/collection_point.csv' with csv"
+```
+
 ## Running Locally
 
 ### Run the server
@@ -252,7 +303,11 @@ behave
 
 You'll need to reset the DB and lathermail on each test run. 
 
-If you prefer not to do this manually in the three terminals, on Mac OS a script like this can help, as long as you aren't running other similar processes that might be accidentally killed:
+If you prefer not to do this manually in the three terminals, on Mac OS a
+script like this can help, as long as you aren't running other similar
+processes that might be accidentally killed.
+
+This script also loads the `load.sh` script described above to reset the database:
 
 ```
 #!/bin/bash
@@ -275,25 +330,31 @@ rm lathermail.db
 echo "done."
 
 echo "Resetting Django database ..."
-psql -c 'DROP DATABASE blueworld;'
-psql -c 'CREATE DATABASE blueworld;'
-psql -c 'GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;'
-python manage.py makemigrations
-python manage.py migrate
-echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', '123123ab')" | python manage.py shell
-echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save()" | python manage.py shell
+. load.sh
 echo "done ..."
 
 echo "Starting the servers in the background ..."
 python manage.py runserver > log_lathermail.txt 2>&1 &
 lathermail --db-uri sqlite:////$PWD/lathermail.db > log_runserver.txt 2>&1 &
-sleep 3
+sleep 1
 echo "done."
 
 echo "Running tests ..."
-behave
+behave "$@"
+echo "done"
+
+echo "Stopping lathermail ..."
+pkill -f ython lathermail.db
+echo "done."
+
+echo "Stopping Django ..."
+pkill -f ython manage.py runserver
+echo "done"
+
 echo "Suceess"
 ```
+
+If you just pass this script specific feature file paths, it will just run them.
 
 ## Travis
 
@@ -301,6 +362,19 @@ There is a `.travis.yml` file in the repo that performs similar steps to the
 local install above. It will set up a running Django server and a Lathermail
 instance. All you need to do is set up the config options using the Travis web
 interface. `DEBUG` should be set to `False` for Travis testing.
+
+If you plan to use Travis, I highly recommend you download version 1.9.7 and
+use that for local testing, since that's the version Travis uses and you don't
+want to be trying to track down differences with the Travis build.
+
+On Mac OS X with phantom in the root of the directory, you can put the specific
+version in your path like this:
+
+```
+export PATH=$PWD/phantomjs-1.9.7-macosx/bin/:$PATH
+```
+
+If you are using `.env.sh`, you might like to put the line above in there.
 
 ## Heroku
 

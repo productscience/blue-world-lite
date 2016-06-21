@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'hijack',
     'compat',
     'hijack_admin',
+    # Our apps
+    'join',
 ]
 
 if DEBUG:

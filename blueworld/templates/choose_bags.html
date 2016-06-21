@@ -1,44 +1,62 @@
-{% extends "base_join.html" %} {% block head_title %}Join{% endblock %} {% block extra_head %}{% endblock %} {% block menu %}{% endblock %} {% block content %}
-<div class="main" role="main">
-
+{% extends "base_join.html" %}
+{% block head_title %}Join{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block menu %}{% endblock %}
+{% block content %}
+  <div class="main" role="main">
     <div class="row">
-
-        <h3 class="font-text">Which bags do you want to pick up each week?</h3>
-
-        <form action="{% url 'join_choose_bags' %}" method="post">
-
-            <table class="stack">
-                <thead>
-                    <tr>
-                        <th width="100">Qty</th>
-                        <th>Bag Type</th>
-                        <th>Cost per week</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <input type="text" name="name" value="0">
-                        </td>
-                        <td>Small Veg bag</td>
-                        <td>£8</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <input type="text" name="name" value="0">
-                        </td>
-                        <td>Large Veg bag</td>
-                        <td>£16</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="row">
-                {% csrf_token %}
-                <div class="action-group column">
-                     <input type="submit" name="action" value="Choose collection point" class="button font-display primary large">
-                    <a href="#" class="">back</a>
-                </div>
-            </div>
-        </form>
+      <h3 class="font-text">Which bags do you want to pick up each week?</h3>
+      <div id="errors">
+      {{ formset.non_form_errors }}
+      </div>
+      <form action="{% url 'join_choose_bags' %}" method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <table class="stack">
+          <thead>
+            <tr>
+              <th width="100">Qty</th>
+              <th>Bag Type</th>
+              <th>Cost per week</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for form in formset %}
+            {% if form.errors.quantity %}
+            <tr class="error" style="background: #fcc">
+              <td colspan="3">
+                {% for error in form.errors.quantity %}
+                  {{ error }}
+                {% endfor %}
+              </td>
+            </tr>
+            {% endif %}
+            <tr class="{% cycle row1 row2 %}">
+              <td>
+              {% for field in form.visible_fields %}
+              {# Include the hidden fields in the form #}
+              {% if forloop.first %}
+                {% for hidden in form.hidden_fields %}
+                {{ hidden }}
+                {% endfor %}
+              {% endif %}
+              {{ field }}
+              {% endfor %}
+              </td>
+              <td>{{ form.initial.name }}</td>
+              <td>£{{ form.initial.weekly_cost }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="row">
+          <div class="action-group column">
+            <input type="submit" name="action" value="Choose collection point" class="button font-display primary large">
+            {#  <a href="#" class="">back</a> #}
+          </div>
+        </div>
+      </form>
     </div>
-    {% endblock %} {% block extra_body %} {% endblock %}
+  </div>
+{% endblock %}
+{% block extra_body %}{% endblock %}

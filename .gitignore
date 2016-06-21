@@ -11,4 +11,8 @@ lathermail.db
 log_lathermail.txt
 log_runserver.txt
 node_modules
+phantomjs-1.9.7-macosx
 run-tests.sh
+data
+migrate.sh
+load.sh

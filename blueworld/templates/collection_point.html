@@ -5,45 +5,39 @@
 {% block menu %}{% endblock %}
 {% block content %}
   <div class="main" role="main">
-
     <div class="row">
+      <h3 class="font-text">Where do you want to pick up your bag from?</h3>
 
-    <h3 class="font-text">Where do you want to pick up your bag from?</h3>
+      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d39696.91748585319!2d-0.09553839804747107!3d51.548847512570475!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761cefef8e8c05%3A0xc5b1fb59d8196f2c!2sLondon+Borough+of+Hackney%2C+Greater+London!5e0!3m2!1sen!2suk!4v1465560067568" width="600" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
 
-    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d39696.91748585319!2d-0.09553839804747107!3d51.548847512570475!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761cefef8e8c05%3A0xc5b1fb59d8196f2c!2sLondon+Borough+of+Hackney%2C+Greater+London!5e0!3m2!1sen!2suk!4v1465560067568" width="600" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
-
-    <form action="{% url 'join_collection_point' %}" method="post">
-      {% csrf_token %}
-
-      <fieldset class="columns collection-points">
+      <div id="errors">
+      {{ form.non_form_errors }}
+      {{ form.errors }}
+      </div>
+      <form action="{% url 'join_collection_point' %}" method="post">
+        {% csrf_token %}
+        <fieldset class="columns collection-points">
           <legend>Choose one collection point</legend>
           <ul class="row">
+          {% for radio in form.collection_point %}
             <li class="column">
-              <input type="radio" name="first" value="Red" id="collectionRed">
-              <label for="collectionRed">The Old Fire Station, <small>61 Leswin Road, N16 7NX</small></label>
-              <p><small>(Self Service: Thu: 13:00-20:30, Fri: 08:00-20:30) </small></p>
+              {{ radio.tag }}
+              <label for="{{ radio.id_for_label }}">
+                  {{ radio.choice_label }}
+              </label>
             </li>
-
-            <li class="column">
-              <input type="radio" name="second" value="2" id="collection2" >
-              <label for="collectionRed">St Peters - De Beauvoir Town<small> , Northchurch Terrace, De Beauvoir Town, N1 4DA</small></label>
-              <p><small>(Self Service: Thu: 13:00-20:30, Fri: 08:00-20:30) </small></p>
-            </li>
+          {% endfor %}
           </ul>
-
-
-      <div class="column">
-       <div class="row">
-         <div class="action-group">
-           <input type="submit" class="button font-display primary large" value="Next">
-           <h4><a href="#" class="">back</a></h4>
-         </div>
-       </div>
-     </div>
-   </div>
-
-
-    </form>
+        </fieldset>
+        <div class="column">
+          <div class="row">
+            <div class="action-group">
+              <input type="submit" class="button font-display primary large" value="Next">
+              {# <h4><a href="#" class="">back</a></h4> #}
+            </div>
+          </div> 
+        </div>
+      </form>
     </div>
   </div>
 {% endblock %}

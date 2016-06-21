@@ -2,9 +2,9 @@ Feature: Staff login
 
   Scenario: Log into Django Admin
     Given I'm using the user browser
-      And I navigate to /account/logout/
+      And I navigate to /logout/
       And I switch to the admin browser
-      And I navigate to /account/logout/
+      And I navigate to /logout/
       And I switch to the user browser
       And I navigate to /admin
       And the browser moves to /admin/login/?next=/admin/
