@@ -13,11 +13,13 @@ before_script:
 - "python manage.py collectstatic --noinput"
 - python manage.py makemigrations
 - python manage.py migrate
+- psql -c "COPY join_bagtype(name,active,display_order,weekly_cost) from '$PWD/data/bag_type.csv' with csv;" blueworld
+- psql -c "COPY join_collectionpoint(name,location,latitude,longitude,active,display_order) from '$PWD/data/collection_point.csv' with csv" blueworld
 - echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', '123123ab')" | python manage.py shell
 - echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save()" | python manage.py shell
 - "python manage.py runserver 0.0.0.0:8000 > log_runserver.txt 2>&1 &"
 - "curl -0 -H 'X-Mail-Password: password' http://127.0.0.1:5000/api/0/messages/"
-- sleep 8
+- sleep 5
 script: behave
 after_script:
 - cat log_runserver.txt

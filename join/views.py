@@ -15,6 +15,7 @@ class QuantityForm(forms.Form):
     id = forms.IntegerField(widget=forms.HiddenInput())
     quantity = forms.IntegerField(min_value=0, max_value=100, widget=forms.widgets.TextInput())
 
+
 class BaseOrderFormSet(BaseFormSet):
     def clean(self):
         """Checks that at least one bag has been ordered"""
@@ -28,9 +29,13 @@ class BaseOrderFormSet(BaseFormSet):
         if total_bags < 1:
             raise forms.ValidationError("Please choose at least one bag to order.")
 
+
 class CollectionPointModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return format_html("{} <small>{}</small>", obj.name, obj.location)
+        if obj.location:
+            return format_html("{} <small>{}</small>", obj.name, obj.location)
+        else:
+            return format_html("{}", obj.name)
 
 
 class CollectionPointForm(forms.Form):

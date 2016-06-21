@@ -25,7 +25,8 @@ Feature: Join in one go
   Scenario: Choose bags then go back to edit your previous selection
     Given I navigate to /join/choose-bags/
       And I see "Which bags do you want to pick up each week?" in "h3"
-      And there are 10 "input" elements in "form"
+      # One of the inputs from the test data is active=False so is excluded
+      And there are 3 "input" elements in "form"
       And the value of "#id_form-1-quantity" is "0"
       And the value of "#id_form-2-quantity" is "0"
       And I type "1" into "#id_form-2-quantity"
@@ -34,14 +35,14 @@ Feature: Join in one go
     Given I navigate to /join/choose-bags/
       And the value of "#id_form-1-quantity" is "0"
       And the value of "#id_form-2-quantity" is "1"
-      And there are 10 "input" elements in "form"
+      And there are 3 "input" elements in "form"
       And I type "2" into "#id_form-2-quantity"
      When I click the "Choose collection point" button
      Then the browser moves to /join/collection-point/
     Given I navigate to /join/choose-bags/
       And the value of "#id_form-1-quantity" is "0"
       And the value of "#id_form-2-quantity" is "2"
-      And there are 10 "input" elements in "form"
+      And there are 3 "input" elements in "form"
      When I click the "Choose collection point" button
      Then the browser moves to /join/collection-point/
 
@@ -59,8 +60,10 @@ Feature: Join in one go
   Scenario: Choose bags, and collection points then go back to edit your previous selection
     Given I navigate to /join/collection-point/
       And I see "Where do you want to pick up your bag from?" in "h3"
-      And there are 16 "input" elements in "form"
+      # One of the inputs from the test data is active=False so is excluded
+      And there are 4 "input" elements in "form"
       And there are 0 "input[selected]" elements in "form"
+      # Springfield has no location entered so has no <small> tag
       And I click the "The Old Fire Station" label
      When I click the "Next" button
      Then the browser moves to /join/signup/
@@ -68,9 +71,9 @@ Feature: Join in one go
     Given I navigate to /join/choose-bags/
      Then the value of "#id_form-1-quantity" is "0"
       And the value of "#id_form-2-quantity" is "2"
-      And there are 10 "input" elements in "form"
+      And there are 3 "input" elements in "form"
      When I navigate to /join/collection-point/
-     Then there are 16 "input" elements in "form"
+     Then there are 4 "input" elements in "form"
       And there is 1 "input[selected]" element in "form"
       And the value of "input[name=collection_point]" is "1"
 
