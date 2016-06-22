@@ -15,11 +15,10 @@ Feature: Join - Verify Email Address Later
       And I type "Join Verify Later" into "#id_full_name"
       And I type "join-verify-later" into "#id_nickname"
       And I type "01234 567890" into "#id_mobile"
-      And I click the "Sign Up" button
-      And the browser moves to /confirm-email
+     When I click the "Sign Up" button
+     Then the browser moves to /confirm-email
       And I see "Verify Your E-mail Address" in "h1"
-     When I navigate to /logout
-     Then the browser moves to /
+    Given I navigate to /logout
 
     Given 1 email has been sent
       And I fetch the first sent email

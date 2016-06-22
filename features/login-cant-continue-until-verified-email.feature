@@ -18,9 +18,7 @@ Feature: Login - Can't continue until verified email
       And I click the "Sign Up" button
       And the browser moves to /confirm-email
       And I see "Verify Your E-mail Address" in "h1"
-     When I navigate to /logout
-     Then the browser moves to /
-
+    Given I navigate to /logout
       And I navigate to /login
       And I type "login-unverified@example.com" into "#id_login"
       And I type "123123ab" into "#id_password"

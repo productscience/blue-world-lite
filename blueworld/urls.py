@@ -29,10 +29,12 @@ urlpatterns = [
     url(r"^confirm-email$", account_views.email_verification_sent, name="account_email_verification_sent"),
     url(r"^login$", account_views.login, name="account_login"),
     url(r"^logout$", account_views.logout, name="account_logout"),
+    url(r"^logged-out$", join.views.logged_out, name="account_logged_out"),
     url(r'^admin/', admin.site.urls),
     url(r'^hijack/', include('hijack.urls')),
-    url(r'^dashboard$', join.views.dashboard, name='dashboard'),
     url(r'^go-cardless-callback$', join.views.go_cardless_callback, name='go_cardless_callback'),
+    url(r'^dashboard$', join.views.dashboard, name='dashboard'),
+    url(r'^dashboard/bank-details$', join.views.bank_details, name='dashboard_bank_details'),
     url(r'^dashboard/change-order$', join.views.dashboard_change_order, name='dashboard_change_order'),
     url(r'^dashboard/change-collection-point$', join.views.dashboard_change_collection_point, name='dashboard_change_collection_point'),
 

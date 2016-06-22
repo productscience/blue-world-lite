@@ -101,24 +101,6 @@ def valid_bag_type_in_session(func):
 def signup(request):
     return allauth_signup(request)
 
-# import allauth.account.signals
-# from django.dispatch import receiver
-# from django.contrib.auth.models import User
-#
-#
-# @receiver(allauth.account.signals.user_signed_up, sender=User)
-# def on_signup(request, user, **kwargs):
-#     pass
-#     # import pdb; pdb.set_trace()
-#     # Serialise session
-#
-
-
-
-
-# A successful signup fires this trigger which we use to save the user's session choices.
-# allauth.account.signals.user_signed_up(request, user)
-
 
 @user_not_signed_in
 def choose_bags(request):
@@ -165,20 +147,32 @@ def collection_point(request):
     return render(request, 'collection_point.html', {'form': form})
 
 
+def not_staff(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.is_superuser:
+            return HttpResponseForbidden('<html><body><h1>Staff don\'t have a dashboard</h1></body></html>')
+        return func(request, *args, **kwargs)
+    return _decorated
+
+def gocardless_is_set_up(func):
+    def _decorated(request, *args, **kwargs):
+        if not request.user.customer.go_cardless:
+            return render(request, 'dashboard/set-up-go-cardless.html')
+        return func(request, *args, **kwargs)
+    return _decorated
+
+
+
 @login_required
+@not_staff
+@gocardless_is_set_up
 def dashboard(request):
-    if request.user.is_superuser:
-        return HttpResponseForbidden('<html><body><h1>Super users don\'t have a dashboard</h1></body></html>')
-    if not request.user.customer.go_cardless:
-        return HttpResponse('<html><body><h1>Set up Go Cardless</h1><p><a href="{}">Skip</a></p></body></html>'.format(reverse("go_cardless_callback")))
-
-
     latest_collection_point_change = CollectionPointChange.objects.order_by('changed').filter(customer=request.user.customer)[:1]
     latest_order_change = OrderChange.objects.order_by('changed').filter(customer=request.user.customer)[:1]
     bag_quantities = BagQuantity.objects.filter(order_change=latest_order_change).all()
     return render(
         request,
-        'dashboard.html',
+        'dashboard/index.html',
         {
             'collection_point': latest_collection_point_change[0].collection_point,
             'bag_quantities': bag_quantities,
@@ -187,6 +181,7 @@ def dashboard(request):
 
 
 @login_required
+@not_staff
 def go_cardless_callback(request):
     if request.user.customer.go_cardless:
          return HttpResponseForbidden('<html><body><h1>Already set up</h1></body></html>')
@@ -197,10 +192,29 @@ def go_cardless_callback(request):
 
 
 @login_required
+@not_staff
+@gocardless_is_set_up
 def dashboard_change_order(request):
-    return HttpResponse('<html><body><h1>Change Order</h1><p>This functionality is not implemented yet</p></body></html>')
+    return render(request, 'dashboard/change-order.html')
 
 
 @login_required
+@not_staff
+@gocardless_is_set_up
 def dashboard_change_collection_point(request):
-    return HttpResponse('<html><body><h1>Change Collection Point</h1><p>This functionality is not implemented yet</p></body></html>')
+    return render(request, 'dashboard/change-collection-point.html')
+
+def logged_out(request):
+    if request.user.username:
+        return redirect(reverse("account_logout"))
+    return render(
+        request,
+        'account/logged_out.html',
+    )
+
+
+@login_required
+@not_staff
+@gocardless_is_set_up
+def bank_details(request):
+    return render(request, 'dashboard/bank-details.html')

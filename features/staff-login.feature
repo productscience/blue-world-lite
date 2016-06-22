@@ -27,10 +27,17 @@ Feature: Staff login
      When I navigate to /
      Then the browser moves to /admin/
 
-  Scenario: Can't access dashboard as staff
-    Given I'm using the user browser
-     When I navigate to /dashboard
-     Then I see "Super users don't have a dashboard" in "h1"
+  Scenario Outline: Can't access dashboard as staff
+     When I navigate to <url>
+     Then I see "Staff don't have a dashboard" in "h1"
+
+   Examples: Customer-only URLs
+     | url                                |
+     | /dashboard                        |
+     | /dashboard/change-order            |
+     | /dashboard/change-collection-point |
+     | /dashboard/bank-details            |
+     | /go-cardless-callback    |
 
   Scenario: Logout
     Given I'm using the user browser
