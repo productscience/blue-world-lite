@@ -17,10 +17,20 @@ Feature: Staff login
      Then the browser moves to /admin/
       And I see "superuser" in "#user-tools"
 
-  Scenario: Log into Django Admin
+  Scenario: Admin browser is still logged out
     Given I'm using the admin browser
       And I navigate to /admin/
       And the browser moves to /admin/login/?next=/admin/
+
+  Scenario: Visit home page
+    Given I'm using the user browser
+     When I navigate to /
+     Then the browser moves to /admin/
+
+  Scenario: Can't access dashboard as staff
+    Given I'm using the user browser
+     When I navigate to /dashboard
+     Then I see "Super users don't have a dashboard" in "h1"
 
   Scenario: Logout
     Given I'm using the user browser

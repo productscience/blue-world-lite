@@ -50,6 +50,8 @@ class CollectionPointForm(forms.Form):
 
 def home(request):
     if request.user.username:
+        if request.user.is_staff:
+            return redirect(reverse("admin:index"))
         return redirect(reverse("dashboard"))
     if request.method == 'GET':
         return render(request, 'home.html')
@@ -165,9 +167,8 @@ def collection_point(request):
 
 @login_required
 def dashboard(request):
-    # if not request.user.username:
-    #     return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
-    # customer = Customer.objects.get(user=request.user)
+    if request.user.is_superuser:
+        return HttpResponseForbidden('<html><body><h1>Super users don\'t have a dashboard</h1></body></html>')
     if not request.user.customer.go_cardless:
         return HttpResponse('<html><body><h1>Set up Go Cardless</h1><p><a href="{}">Skip</a></p></body></html>'.format(reverse("go_cardless_callback")))
     return render(request, 'dashboard.html')

@@ -410,6 +410,12 @@ git push heroku HEAD:master
 heroku run python manage.py migrate
 ```
 
+You'll need a superuser so you can add data:
+
+```
+heroku run python manage.py createsuperuser
+```
+
 You should be able to see your app at the correct domain now.
 
 If you forget the name of your app:
