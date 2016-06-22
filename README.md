@@ -463,3 +463,15 @@ Set the DSN like this:
 ```
 export RAVEN_DSN='...'
 ```
+### Internationalisation
+
+```
+$ mkdir locale
+$ PATH=/usr/local/Cellar/gettext/0.19.7/bin/:$PATH python manage.py makemessages -l en
+```
+
+Edit `django.po`. Then:
+
+```
+$ PATH=/usr/local/Cellar/gettext/0.19.7/bin/:$PATH python manage.py compilemessages
+```

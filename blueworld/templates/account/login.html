@@ -1,4 +1,3 @@
-
 {% extends "base_join.html" %}
 
 {% load i18n %}
@@ -43,7 +42,7 @@
     {% if redirect_field_value %}
     <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
     {% endif %}
-    <input class="button primary" type="submit" value={% trans "Sign In" %} />
+    <input class="button primary" type="submit" value="{% trans "Sign in" %}" />
 
     <p>
       <a class="secondary" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>

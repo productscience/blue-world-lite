@@ -47,6 +47,8 @@ class CollectionPointForm(forms.Form):
 
 
 def home(request):
+    if request.user.username:
+        return redirect(reverse("dashboard"))
     if request.method == 'GET':
         return render(request, 'home.html')
     elif request.method == 'POST':
@@ -69,6 +71,7 @@ def user_not_signed_in(func):
             return HttpResponse('<html><h3>You cannot join if you are already a signed in user</h3> <p>To change your order or collection point, please <a href="{}">visit the dashboard</a>.</p></html>'.format(reverse("dashboard")))
         return func(request, *args, **kwargs)
     return _decorated
+
 
 def valid_collection_point_in_session(func):
     def _decorated(request, *args, **kwargs):
