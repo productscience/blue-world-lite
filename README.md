@@ -1,7 +1,7 @@
 # Blueworld Lite
 
 [![Build Status](https://travis-ci.org/productscience/blue-world-lite.svg)](https://travis-ci.org/productscience/blue-world-lite)
-[![Requirements Status](https://requires.io/github/productscience/blue-world-lite/requirements.svg?branch=feature%2Fjoin)](https://requires.io/github/productscience/blue-world-lite/requirements/?branch=feature%2Fjoin)
+[![Requirements Status](https://requires.io/github/productscience/blue-world-lite/requirements.svg)](https://requires.io/github/productscience/blue-world-lite/requirements/)
 [![License: Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 This is a Django project that handles management and billing of a Growing
