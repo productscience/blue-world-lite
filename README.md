@@ -407,22 +407,44 @@ git checkout <branch>
 python manage.py makemigrations
 # Commit the migrations
 git push heroku HEAD:master
-heroku run python manage.py migrate
 ```
 
-You'll need a superuser so you can add data:
+To reset all the data you can use a script like the one below. You'll need some info though.
 
-```
-heroku run python manage.py createsuperuser
-```
-
-You should be able to see your app at the correct domain now.
-
-If you forget the name of your app:
+To get the APP_NAME:
 
 ```
 heroku apps:list
 ```
+
+To get the DATABASE_ADD_ON_NAME:
+
+```
+heroku pg:info | grep "Add-on"
+```
+
+To get the info to pass to `psql` look at the database URL you used in your settings.
+
+Here's the script (you'll need to change the superuser password):
+
+```
+#!/bin/bash
+
+heroku pg:reset DATABASE_ADD_ON_NAME --confirm APP_NAME
+python manage.py makemigrations
+heroku run python manage.py migrate
+
+echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', 'superuserpassword'); exit()" | heroku run python manage.py shell
+
+echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save(); exit()" | heroku run python manage.py shell
+
+cat "$PWD/data/bag_type.csv" | PGPASSWORD=password psql -h host -U username database -c "COPY join_bagtype(name,active,display_order,weekly_cost) from stdin with csv;"
+
+cat "$PWD/data/collection_point.csv" | PGPASSWORD=password psql -h host -U username database -c "COPY join_collectionpoint(name,location,latitude,longitude,active,display_order) from stdin with csv"
+```
+
+You should be able to see your app at the correct domain now with the sample data loaded.
+
 
 ### Setting up SendGrid on Heroku
 
