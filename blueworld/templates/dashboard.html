@@ -2,19 +2,20 @@
 
 {% block head_title %}Dashboard{% endblock %}
 {% block extra_head %}{% endblock %}
-{% block menu %}{% endblock %}
 {% block content %}
-  <div class="main" role="main">
     <div class="row">
       <h1>Dashboard</h1>
 
-      <p>
-        <a href="{% url 'account_logout' %}">Log out</a>
-        <a href="{% url 'dashboard_change_order' %}">Change order</a>
-        <a href="{% url 'dashboard_change_collection_point' %}">Change collection point</a>
-      </p>
+      <p>Welcome {{ request.user.customer.nickname }}!</p>
+
+      <p>Your collection point is: {{ collection_point.name }}</p>
+      <p>The bags you are collecting are:</p>
+      <ul>
+      {% for bag_quantity in bag_quantities %}
+        <li>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</li>
+      {% endfor %}
+      </ul>
     </div>
-  </div>
 {% endblock %}
 {% block extra_body %}
 {% endblock %}

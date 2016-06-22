@@ -16,12 +16,12 @@ Feature: Dashboard
 
    Examples: Dashboard links
      | link                    | url                                |
-     | Change order            | /dashboard/change-order            |
-     | Change collection point | /dashboard/change-collection-point |
+     | Change Order            | /dashboard/change-order            |
+     | Change Collection Point | /dashboard/change-collection-point |
 
   Scenario: I can logout from the dashbaord
     Given I navigate to /dashboard
-     When I follow the "Log out" link
+     When I follow the "Log Out" link
      Then the browser moves to /
       And I see "You have signed out" in "ul"
      When I navigate to /dashboard

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
-from .models import CollectionPoint, BagType, Customer
+from .models import CollectionPoint, BagType, Customer, CollectionPointChange, OrderChange, BagQuantity
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
@@ -171,7 +171,19 @@ def dashboard(request):
         return HttpResponseForbidden('<html><body><h1>Super users don\'t have a dashboard</h1></body></html>')
     if not request.user.customer.go_cardless:
         return HttpResponse('<html><body><h1>Set up Go Cardless</h1><p><a href="{}">Skip</a></p></body></html>'.format(reverse("go_cardless_callback")))
-    return render(request, 'dashboard.html')
+
+
+    latest_collection_point_change = CollectionPointChange.objects.order_by('changed').filter(customer=request.user.customer)[:1]
+    latest_order_change = OrderChange.objects.order_by('changed').filter(customer=request.user.customer)[:1]
+    bag_quantities = BagQuantity.objects.filter(order_change=latest_order_change).all()
+    return render(
+        request,
+        'dashboard.html',
+        {
+            'collection_point': latest_collection_point_change[0].collection_point,
+            'bag_quantities': bag_quantities,
+        }
+    )
 
 
 @login_required

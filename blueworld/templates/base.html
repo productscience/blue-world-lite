@@ -23,38 +23,40 @@
 
     {% block body %}
 
-      {% if messages %}
-      <div>
-        <strong>Messages:</strong>
-        <ul>
-          {% for message in messages %}
-          <li>{{message}}</li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
+      <div class="main" role="main">
 
       {% block menu %}
-      {% if user.is_authenticated %}
-      <div>
-        <strong>Menu:</strong>
-        <ul>
-          <li><a href="{% url 'account_email' %}">Change E-mail</a></li>
-          <li><a href="{% url 'account_logout' %}">Sign Out</a></li>
-          <li><a href="{% url 'account_login' %}">Sign In</a></li>
-          <li><a href="{% url 'account_signup' %}">Sign Up</a></li>
-        </ul>
-      </div>
-      {% endif %}
+        {% if user.is_authenticated %}
+        <div class="row">
+          <strong>Navigation:</strong>
+          <ul>
+            <li><a href="{% url 'account_email' %}">Change E-mail</a></li>
+            <li><a href="{% url 'account_change_password' %}">Change Password</a></li>
+            <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
+            <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
+            <li><a href="{% url 'account_logout' %}">Log Out</a></li>
+          </ul>
+        </div>
+        {% endif %}
       {% endblock %}
+      {% if messages %}
+        <div class="row">
+          <strong>Messages:</strong>
+          <ul>
+            {% for message in messages %}
+            <li>{{message}}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
       {% block content %}
       {% endblock %}
     {% endblock %}
     {% block extra_body %}
     {% endblock %}
+
     </div>
-
+  </div>
     {% include "partials/footer.html" %}
-
   </body>
 </html>
