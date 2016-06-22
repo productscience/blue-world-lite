@@ -59,7 +59,7 @@ if 'RAVEN_DSN' in os.environ:
 
 # For allauth
 SITE_ID = 1
-LOGIN_REDIRECT_URL = '/dashboard/'  # Where admins are redirected to after hijacking a user
+LOGIN_REDIRECT_URL = '/dashboard'  # Where admins are redirected to after hijacking a user
 
 ACCOUNT_EMAIL_REQUIRED = True
 #ACCOUNT_AUTHENTICATION_METHOD = "username_email"

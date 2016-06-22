@@ -2,11 +2,11 @@ Feature: Staff login
 
   Scenario: Log into Django Admin
     Given I'm using the user browser
-      And I navigate to /logout/
+      And I navigate to /logout
       And I switch to the admin browser
-      And I navigate to /logout/
+      And I navigate to /logout
       And I switch to the user browser
-      And I navigate to /admin
+      And I navigate to /admin/
       And the browser moves to /admin/login/?next=/admin/
       And I see "Django administration" in "h1"
       And I see "Username" in "body"
