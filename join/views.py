@@ -1,7 +1,9 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
-from .models import CollectionPoint, BagType
+from .models import CollectionPoint, BagType, Customer
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 
 from allauth.account.views import signup as allauth_signup
 
@@ -161,21 +163,31 @@ def collection_point(request):
     return render(request, 'collection_point.html', {'form': form})
 
 
+@login_required
 def dashboard(request):
-    if request.user.username:
-        return render(request, 'dashboard.html')
-    else:
-        return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
+    # if not request.user.username:
+    #     return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
+    # customer = Customer.objects.get(user=request.user)
+    if not request.user.customer.go_cardless:
+        return HttpResponse('<html><body><h1>Set up Go Cardless</h1><p><a href="{}">Skip</a></p></body></html>'.format(reverse("go_cardless_callback")))
+    return render(request, 'dashboard.html')
 
+
+@login_required
+def go_cardless_callback(request):
+    if request.user.customer.go_cardless:
+         return HttpResponseForbidden('<html><body><h1>Already set up</h1></body></html>')
+    request.user.customer.go_cardless = 'done'
+    request.user.customer.save()
+    messages.add_message(request, messages.INFO, 'Successfully set up Go Cardless.')
+    return redirect(reverse("dashboard"))
+
+
+@login_required
 def dashboard_change_order(request):
-    if request.user.username:
-        return HttpResponse('<html><body><h1>Change Order</h1><p>This functionality is not implemented yet</p></body></html>')
-    else:
-        return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
+    return HttpResponse('<html><body><h1>Change Order</h1><p>This functionality is not implemented yet</p></body></html>')
 
+
+@login_required
 def dashboard_change_collection_point(request):
-    if request.user.username:
-        return HttpResponse('<html><body><h1>Change Collection Point</h1><p>This functionality is not implemented yet</p></body></html>')
-    else:
-        return HttpResponseForbidden('<html><body><h1>Not logged in</h1></body></html>')
-
+    return HttpResponse('<html><body><h1>Change Collection Point</h1><p>This functionality is not implemented yet</p></body></html>')

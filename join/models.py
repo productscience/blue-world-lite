@@ -40,6 +40,7 @@ class Customer(models.Model):
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
     mobile = models.CharField(max_length=30)
+    go_cardless = models.CharField(max_length=30, default='')
 
 
 class CollectionPointChange(models.Model):

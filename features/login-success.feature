@@ -12,3 +12,8 @@ Feature: Log in
   Scenario: Visiting /login redirects to dashboard
      When I navigate to /login
      Then the browser moves to /dashboard
+
+  Scenario: Visiting /logout redirects to home
+     When I navigate to /logout
+     Then the browser moves to /
+      And I see "You have signed out." in "ul"

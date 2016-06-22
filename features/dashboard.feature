@@ -5,7 +5,7 @@ Feature: Dashboard
       And I create user "Dashboard", "dashboard", "dashboard@example.com" with password "123123ab"
       And I navigate to /logout
      When I navigate to /dashboard
-     Then I see "Not logged in" in "body"
+     Then the browser moves to /login?next=/dashboard
 
   Scenario Outline: Dashboard Links
     Given I login with "dashboard@example.com" and "123123ab"
@@ -25,4 +25,13 @@ Feature: Dashboard
      Then the browser moves to /
       And I see "You have signed out" in "ul"
      When I navigate to /dashboard
-     Then I see "Not logged in" in "body"
+     Then the browser moves to /login?next=/dashboard
+
+  Scenario Outline: Protected dashboard URLs
+     When I navigate to <url>
+     Then the browser moves to /login?next=<url>
+
+   Examples: Protected URLs
+     | url                                |
+     | /dashboard/change-order            |
+     | /dashboard/change-collection-point |

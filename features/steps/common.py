@@ -20,7 +20,6 @@ def step_impl(context):
     )
 
 
-
 @step('I choose one large veg box to collect from the Old Fire Station')
 def step_impl(context):
     context.execute_steps(
@@ -63,6 +62,9 @@ def step_impl(context, fullname, nickname, email, password):
           And I navigate to the formatted url /confirm-email/{{key}}/
           And I click the "Confirm" button
          Then the browser moves to /dashboard
+          And I see "Set up Go Cardless" in "h1"
+          And I follow the "Skip" link
+          And the browser is still at /dashboard
           And I see "Dashboard" in "h1"
           And I navigate to /logout
         '''.format(
@@ -89,3 +91,8 @@ def step_impl(context, login, password):
      Then the browser moves to /dashboard
         '''.format(login=login, password=password)
     )
+
+
+@step('I debug')
+def step_impl(context):
+    import pdb; pdb.set_trace()
