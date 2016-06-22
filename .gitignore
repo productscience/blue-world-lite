@@ -15,4 +15,3 @@ phantomjs-1.9.7-macosx
 run-tests.sh
 migrate.sh
 load.sh
-migrations

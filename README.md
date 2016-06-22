@@ -404,13 +404,10 @@ Use this command to deploy a particular branch:
 
 ```
 git checkout <branch>
+python manage.py makemigrations
+# Commit the migrations
 git push heroku HEAD:master
-```
-
-Once your app is pushed you'll need to run:
-
-```
-$ heroku run python manage.py migrate
+heroku run python manage.py migrate
 ```
 
 You should be able to see your app at the correct domain now.
