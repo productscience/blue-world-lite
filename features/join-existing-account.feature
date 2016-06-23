@@ -1,7 +1,7 @@
 Feature: Join - Existing Account
 
-  Scenario: Can't join the scheme up with the same email as an existing account
-    Given I create user "Join Existing Account", "join-existing-account", "join-existing-account@example.com" with password "123123ab"
+  Scenario: Can't join the scheme with the same email as an existing account
+    Given I create an email verified user "Join Existing Account", "join-existing-account", "join-existing-account@example.com" with password "123123ab"
       And I choose one large veg box to collect from the Old Fire Station
       And the browser is still at /join/login-details
       And I type "join-existing-account@example.com" into "#id_email"

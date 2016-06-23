@@ -1,7 +1,7 @@
 Feature: Log in
   Scenario: Successful log in
     Given I switch to the user browser
-      And I create user "Login Success", "login-success", "login-success@example.com" with password "123123ab"
+      And I create a started user "Login Success", "login-success", "login-success@example.com" with password "123123ab"
       And I navigate to /login
       And I see "Log In" in "h1"
       And I type "login-success@example.com" into "#id_login"

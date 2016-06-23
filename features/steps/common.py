@@ -35,10 +35,7 @@ def step_impl(context):
     )
 
 
-@step('I create user "{fullname}", "{nickname}", "{email}" with password "{password}"')
-def step_impl(context, fullname, nickname, email, password):
-    context.execute_steps(
-        '''
+CREATE_USER_STEPS = '''
         Given I switch to the user browser
           And I navigate to /logout
           And I choose one large veg box to collect from the Old Fire Station
@@ -61,13 +58,45 @@ def step_impl(context, fullname, nickname, email, password):
         Given I switch to the user browser
           And I navigate to the formatted url /confirm-email/{{key}}/
           And I click the "Confirm" button
-         Then the browser moves to /dashboard
-          And I see "Set up Go Cardless" in "h1"
-          And I follow the "Skip" link
-          And the browser is still at /dashboard
-          And I see "Dashboard" in "h1"
-          And I navigate to /logout
-        '''.format(
+'''
+
+
+# # Users have these states:
+# * email verified
+# * Go Cardless
+# * Started
+# * Membership Status
+
+@step('I create an email verified user "{fullname}", "{nickname}", "{email}" with password "{password}"')
+def step_impl(context, fullname, nickname, email, password):
+    context.execute_steps(
+        (
+            CREATE_USER_STEPS + '''
+            And I navigate to /logout
+            '''
+        ).format(
+            fullname=fullname,
+            nickname=nickname,
+            email=email,
+            password=password,
+            email_username=email.split('@')[0],
+        )
+    )
+
+@step('I create a started user "{fullname}", "{nickname}", "{email}" with password "{password}"')
+def step_impl(context, fullname, nickname, email, password):
+    context.execute_steps(
+        (
+             CREATE_USER_STEPS + '''
+             Then the browser moves to /dashboard
+              And I see "Set up Go Cardless" in "h1"
+              And I follow the "Skip" link
+              And the browser is still at /dashboard
+              And I see "Dashboard" in "h1"
+              And I navigate to /logout
+            '''
+        )
+        .format(
             fullname=fullname,
             nickname=nickname,
             email=email,

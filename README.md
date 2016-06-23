@@ -226,7 +226,7 @@ Lathermail has a concept of different inboxes based on SMTP logins. We set an
 `EMAIL_USERNAME` and `EMAIL_PASSWORD` in the email configuration so lathermail
 sets up an inbox with these credentials when receives the first mail.
 
-Now any emails sent from Django will appear in the web interface at http://127.0.0.1:5000. 
+Now any emails sent from Django will appear in the web interface at http://127.0.0.1:5000.
 
 To use the API you need to set some headers for the inbox you are after like
 this. Make sure you specify the password configured in your email settings:
@@ -301,7 +301,7 @@ Then run this command to run the tests:
 behave
 ```
 
-You'll need to reset the DB and lathermail on each test run. 
+You'll need to reset the DB and lathermail on each test run.
 
 If you prefer not to do this manually in the three terminals, on Mac OS a
 script like this can help, as long as you aren't running other similar
@@ -354,7 +354,36 @@ echo "done"
 echo "Suceess"
 ```
 
-If you just pass this script specific feature file paths, it will just run them.
+You can run all the tests with Phantom JS like this:
+
+```
+chmod +x run-tests.sh
+./run-tests.sh
+```
+
+If you just pass this script specific feature file paths, it will just run
+them. It will also pass any extra flags onto the `behave` command.
+
+When implementing a specific feature you can overrride the browser to `chrome`
+using the `BROWSER` environment variable then run individual tests in debug
+mode like this (make sure you have chromedriver installed):
+
+```
+BROWSER=chrome TEST_DEBUG=True ./run-tests.sh --no-capture features/dashboard.feature
+```
+
+If the test fails, it will stop with a pdb prompt in the test and with the
+browsers at the point the test failed.
+
+You can also debug without the `TEST_DEBUG` environment variable by adding an
+explicit step like this in the feature file:
+
+```
+Given I debug
+```
+
+Just press `c` and enter to continue when you are done debugging.
+
 
 ## Travis
 

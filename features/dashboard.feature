@@ -2,7 +2,7 @@ Feature: Dashboard
 
   Scenario: Visit dashboard when not signed in
     Given I'm using the user browser
-      And I create user "Dashboard", "dashboard", "dashboard@example.com" with password "123123ab"
+      And I create a started user "Dashboard", "dashboard", "dashboard@example.com" with password "123123ab"
       And I navigate to /logout
      When I navigate to /dashboard
      Then the browser moves to /login?next=/dashboard
