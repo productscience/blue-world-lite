@@ -2,6 +2,7 @@ Feature: Home - Navigation
 
   Scenario: Logo links to homepage
     Given I'm using the user browser
+      And I navigate to /logout
       And I navigate to /
      When I follow the "Members Home" link
      Then the browser is still at /

@@ -16,14 +16,14 @@ Feature: Log in
   Scenario: Visiting /logout redirects to /logged-out
      When I navigate to /logout
      Then the browser moves to /logged-out
-      And I see "You have signed out." in "ul"
+      And I see "You have signed out." in "#messages"
       And I see "Logged Out" in "h1"
       And I see "Thanks for visiting." in "p"
 
   Scenario: Visiting /logged-out while logged in logs me out too
     Given I login with "login-success@example.com" and "123123ab"
      When I navigate to /logged-out
-     Then I see "You have signed out." in "ul"
+     Then I see "You have signed out." in "#messages"
       And I see "Logged Out" in "h1"
       And I see "Thanks for visiting." in "p"
      When I navigate to /dashboard

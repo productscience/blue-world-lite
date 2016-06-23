@@ -154,6 +154,7 @@ def not_staff(func):
         return func(request, *args, **kwargs)
     return _decorated
 
+
 def gocardless_is_set_up(func):
     def _decorated(request, *args, **kwargs):
         if not request.user.customer.go_cardless:

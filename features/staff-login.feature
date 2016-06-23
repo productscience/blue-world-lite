@@ -33,11 +33,11 @@ Feature: Staff login
 
    Examples: Customer-only URLs
      | url                                |
-     | /dashboard                        |
+     | /dashboard                         |
      | /dashboard/change-order            |
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
-     | /go-cardless-callback    |
+     | /go-cardless-callback              |
 
   Scenario: Logout
     Given I'm using the user browser
