@@ -31,13 +31,17 @@
         <div class="row">
           <strong>Navigation:</strong>
           <ul>
+            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
             <li><a href="{% url 'account_email' %}">Change E-mail</a></li>
             <li><a href="{% url 'account_change_password' %}">Change Password</a></li>
             <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
+            <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
             {% if user.customer.go_cardless %}
             <li><a href="{% url 'dashboard_bank_details' %}">Bank Details</a></li>
+              {% if not user.customer.has_left %}
+                <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
+              {% endif %}
             {% endif %}
-            <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
             <li><a href="{% url 'account_logout' %}">Log Out</a></li>
           </ul>
         </div>

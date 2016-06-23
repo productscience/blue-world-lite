@@ -42,6 +42,13 @@ class Customer(models.Model):
     mobile = models.CharField(max_length=30)
     go_cardless = models.CharField(max_length=30, default='')
 
+    def latest_account_status(self):
+        latest_account_status = AccountStatusChange.objects.order_by('-changed').filter(customer=self)[:1][0]
+        return latest_account_status.status
+
+    def has_left(self):
+        return self.latest_account_status() == AccountStatusChange.LEFT
+
 
 class AccountStatusChange(models.Model):
     AWAITING_DIRECT_DEBIT = 'AWAITING_DIRECT_DEBIT'

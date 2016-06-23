@@ -7,10 +7,12 @@ from django.contrib import messages
 
 from allauth.account.views import signup as allauth_signup
 
-from django.utils.html import format_html
+from django.utils.html import format_html, escape
 from django import forms
 from django.forms import formset_factory
 from django.forms import BaseFormSet
+
+import json
 
 
 class QuantityForm(forms.Form):
@@ -144,7 +146,13 @@ def collection_point(request):
     # if a GET (or any other method) we'll create a blank form
     else:
         form = CollectionPointForm(initial={'collection_point': request.session.get('collection_point')})
-    return render(request, 'collection_point.html', {'form': form})
+    locations = {}
+    for i, collection_point in enumerate(form.fields['collection_point'].queryset.all()):
+         locations['id_collection_point_{}'.format(i)] = {
+             "longitude": escape(collection_point.longitude),
+             "latitude": escape(collection_point.latitude),
+         }
+    return render(request, 'collection_point.html', {'form': form, 'locations': json.dumps(locations)})
 
 
 def not_staff(func):
@@ -163,13 +171,28 @@ def gocardless_is_set_up(func):
     return _decorated
 
 
+def have_not_left_scheme(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.customer.latest_account_status() == AccountStatusChange.LEFT:
+            return HttpResponseForbidden('<html><body><h1>You have left the scheme</h1></body></html>')
+        return func(request, *args, **kwargs)
+    return _decorated
+
+
+def have_left_scheme(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.customer.latest_account_status() != AccountStatusChange.LEFT:
+            return redirect(reverse('dashboard'))
+        return func(request, *args, **kwargs)
+    return _decorated
+
 
 @login_required
 @not_staff
 @gocardless_is_set_up
 def dashboard(request):
-    latest_collection_point_change = CollectionPointChange.objects.order_by('changed').filter(customer=request.user.customer)[:1]
-    latest_order_change = OrderChange.objects.order_by('changed').filter(customer=request.user.customer)[:1]
+    latest_collection_point_change = CollectionPointChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
+    latest_order_change = OrderChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
     bag_quantities = BagQuantity.objects.filter(order_change=latest_order_change).all()
     return render(
         request,
@@ -228,6 +251,50 @@ def logged_out(request):
 def bank_details(request):
     return render(request, 'dashboard/bank-details.html')
 
+
+# def get_account_status(customer):
+#     latest_account_status = AccountStatusChange.objects.order_by('-changed').filter(customer=customer)[:1][0]
+#     return latest_account_status.status
+
+
+
+LEAVE_REASON_CHOICES = (
+    ('moving', 'Moving away from the area'),
+)
+
+class LeaveReasonForm(forms.Form):
+    reason = forms.ChoiceField(label="Reason", choices=LEAVE_REASON_CHOICES, required=False)
+    comments = forms.CharField(label="Any other comments?", widget=forms.Textarea, required=False)
+
+
+@login_required
+@not_staff
+@gocardless_is_set_up
+@have_not_left_scheme
+def dashboard_leave(request):
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = LeaveReasonForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            account_status_change = AccountStatusChange(
+                customer=request.user.customer,
+                status=AccountStatusChange.LEFT,
+            )
+            account_status_change.save()
+            return redirect(reverse('dashboard_bye'))
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = LeaveReasonForm()
+    return render(request, 'dashboard/leave.html', {'form': form})
+
+
+@login_required
+@not_staff
+@have_left_scheme
+def dashboard_bye(request):
+    return render(request, 'dashboard/bye.html')
 
 
 

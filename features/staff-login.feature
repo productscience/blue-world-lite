@@ -37,6 +37,7 @@ Feature: Staff login
      | /dashboard/change-order            |
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
+     | /dashboard/leave                   |
      | /go-cardless-callback              |
 
   Scenario: Logout

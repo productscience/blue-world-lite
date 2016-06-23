@@ -1,7 +1,14 @@
 {% extends "base_join.html" %}
 
 {% block head_title %}Join{% endblock %}
-{% block extra_head %}{% endblock %}
+{% block extra_head %}
+<script>
+if (typeof GC === "undefined") {
+    var GC = {};
+}
+GC.locations = {{ locations|safe }}
+</script>
+{% endblock %}
 {% block menu %}{% endblock %}
 {% block content %}
     <div class="row">

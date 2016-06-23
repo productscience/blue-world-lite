@@ -14,10 +14,11 @@ Feature: Dashboard
       And I see "<expected>" in "p"
 
    Examples: Dashboard links
-     | link                    | url                                | expected                                   |
-     | Change Order            | /dashboard/change-order            | This functionality is not implemented yet  |
-     | Change Collection Point | /dashboard/change-collection-point | This functionality is not implemented yet  |
-     | Bank Details            | /dashboard/bank-details            | change your bank direct debit details      |
+     | link                    | url                                | expected                                         |
+     | Change Order            | /dashboard/change-order            | This functionality is not implemented yet        |
+     | Change Collection Point | /dashboard/change-collection-point | This functionality is not implemented yet        |
+     | Bank Details            | /dashboard/bank-details            | change your bank direct debit details            |
+     | Leave                   | /dashboard/leave                   | tell us why you have decided to leave the scheme |
 
   Scenario: I can logout from the dashbaord
     Given I navigate to /dashboard
@@ -38,6 +39,7 @@ Feature: Dashboard
      | /dashboard/change-order            |
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
+     | /dashboard/leave                   |
      | /go-cardless-callback              |
 
   Scenario: Create a user without GoCardless
@@ -55,6 +57,7 @@ Feature: Dashboard
      | /dashboard/change-order            |
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
+     | /dashboard/leave                   |
 
    #  | /go-cardless-callback              |
 

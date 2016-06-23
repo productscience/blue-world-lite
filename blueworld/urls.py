@@ -37,6 +37,8 @@ urlpatterns = [
     url(r'^dashboard/bank-details$', join.views.bank_details, name='dashboard_bank_details'),
     url(r'^dashboard/change-order$', join.views.dashboard_change_order, name='dashboard_change_order'),
     url(r'^dashboard/change-collection-point$', join.views.dashboard_change_collection_point, name='dashboard_change_collection_point'),
+    url(r'^dashboard/leave$', join.views.dashboard_leave, name='dashboard_leave'),
+    url(r'^dashboard/bye$', join.views.dashboard_bye, name='dashboard_bye'),
 
     #url(r'^account/', include('allauth.urls')),
     url(r"^password/change/$", account_views.password_change, name="account_change_password"),
