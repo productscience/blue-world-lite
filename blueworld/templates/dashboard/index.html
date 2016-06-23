@@ -8,13 +8,19 @@
 
       <p>Welcome {{ request.user.customer.nickname }}!</p>
 
-      <p>Your collection point is: {{ collection_point.name }}</p>
+      <p>Your collection point is: <strong>{{ collection_point.name }}</strong></p>
+      <p>Your next collection is <strong>{{ next_collection | date:"D d F" }}</strong>. Please check the opening days and hours of your collection point before collecting you order.</p>
       <p>The bags you are collecting are:</p>
       <ul>
       {% for bag_quantity in bag_quantities %}
-        <li>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</li>
+        <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
       {% endfor %}
       </ul>
+      {% if timenow >= next_deadline %}
+      <p>You are too late for making changes for your next collection, so any changes you make today will affect the collection after that one.</p>
+      {% else %}
+      <p>You can make changes that affect your next collection any time before <strong>{{ next_deadline | date:"D d F g:i a" }}</strong>.</p>
+      {% endif %}
     </div>
 {% endblock %}
 {% block extra_body %}

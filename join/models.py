@@ -43,6 +43,28 @@ class Customer(models.Model):
     go_cardless = models.CharField(max_length=30, default='')
 
 
+class AccountStatusChange(models.Model):
+    AWAITING_DIRECT_DEBIT = 'AWAITING_DIRECT_DEBIT'
+    AWAITING_START_CONFIRMATION = 'AWAITING_START_CONFIRMATION'
+    ACTIVE = 'ACTIVE'
+    ON_HOLD = 'HOLD'
+    LEFT = 'LEFT'
+    STATUS_CHOICES = (
+        (AWAITING_DIRECT_DEBIT, 'Awating Go Cardless'),
+        (AWAITING_START_CONFIRMATION, 'Awating Start Confirmation'),
+        (ACTIVE, 'Active'),
+        (ON_HOLD, 'On Hold'),
+        (LEFT, 'Left'),
+    )
+    changed = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+    status = models.CharField(max_length=255, choices=STATUS_CHOICES)
+
+
 class CollectionPointChange(models.Model):
     changed = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(

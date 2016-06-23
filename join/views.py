@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
-from .models import CollectionPoint, BagType, Customer, CollectionPointChange, OrderChange, BagQuantity
+from .models import CollectionPoint, BagType, Customer, CollectionPointChange, OrderChange, BagQuantity, AccountStatusChange
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
@@ -177,6 +177,9 @@ def dashboard(request):
         {
             'collection_point': latest_collection_point_change[0].collection_point,
             'bag_quantities': bag_quantities,
+            'next_collection': next_collection(),
+            'next_deadline': next_deadline(),
+            'timenow': datetime.datetime.now(),
         }
     )
 
@@ -188,6 +191,11 @@ def go_cardless_callback(request):
          return HttpResponseForbidden('<html><body><h1>Already set up</h1></body></html>')
     request.user.customer.go_cardless = 'done'
     request.user.customer.save()
+    account_status_change = AccountStatusChange(
+        customer=request.user.customer,
+        status=AccountStatusChange.AWAITING_START_CONFIRMATION,
+    )
+    account_status_change.save()
     messages.add_message(request, messages.INFO, 'Successfully set up Go Cardless.')
     return redirect(reverse("dashboard"))
 
@@ -219,3 +227,23 @@ def logged_out(request):
 @gocardless_is_set_up
 def bank_details(request):
     return render(request, 'dashboard/bank-details.html')
+
+
+
+
+import datetime
+
+def next_deadline():
+    sunday = 6
+    return _next_weekday(datetime.datetime.now(), sunday).replace(hour=15, minute=00, second=0, microsecond=0)
+
+def next_collection():
+    wednesday = 2
+    return _next_weekday(datetime.datetime.now(), wednesday)
+
+def _next_weekday(d, weekday):
+    # The value of weekday is 0-6 where Monday is 0 and Sunday is 6
+    days_ahead = weekday - d.weekday()
+    if days_ahead <= 0: # Target day already happened this week
+        days_ahead += 7
+    return d + datetime.timedelta(days_ahead)

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Customer, CollectionPointChange, OrderChange, BagQuantity
+from .models import Customer, CollectionPointChange, OrderChange, BagQuantity, AccountStatusChange
 
 
 class SignupForm(forms.Form):
@@ -16,6 +16,11 @@ class SignupForm(forms.Form):
             go_cardless='',
         )
         customer.save()
+        account_status_change = AccountStatusChange(
+            customer=customer,
+            status=AccountStatusChange.AWAITING_DIRECT_DEBIT,
+        )
+        account_status_change.save()
         collection_point_change = CollectionPointChange(
             customer=customer,
             collection_point_id=request.session['collection_point'],

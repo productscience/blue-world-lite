@@ -460,7 +460,6 @@ Here's the script (you'll need to change the superuser password):
 #!/bin/bash
 
 heroku pg:reset DATABASE_ADD_ON_NAME --confirm APP_NAME
-python manage.py makemigrations
 heroku run python manage.py migrate
 
 echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', 'superuserpassword'); exit()" | heroku run python manage.py shell
