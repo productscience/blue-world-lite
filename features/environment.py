@@ -12,7 +12,7 @@ def before_all(context):
     browser_vendor = context.config.userdata.get('default_browser', 'phantomjs').lower()
     if os.environ.get('BROWSER'):
         browser_vendor = os.environ['BROWSER'].lower()
-    assert browser_vendor in ['chrome', 'phantomjs'], 'Only Chrome and PhantomJS are tested for now'
+    assert browser_vendor in ['chrome', 'phantomjs'], 'Only Chrome and PhantomJS are tested for now, not {}'.format(browser_vendor)
     if browser_vendor == 'chrome':
         context.admin_browser = webdriver.Chrome()
         context.user_browser = webdriver.Chrome()

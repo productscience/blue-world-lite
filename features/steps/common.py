@@ -20,6 +20,24 @@ def step_impl(context):
     )
 
 
+@step('I login as a member of staff')
+def step_impl(context):
+    context.execute_steps(
+        '''
+        Given I navigate to /admin/logout/
+          And I navigate to /admin/login/
+          And I see "Django administration" in "h1"
+          And I see "Username" in "body"
+          And I see "Password" in "body"
+          And I type "staff" into "#id_username"
+          And I type "123123ab" into "#id_password"
+         When I click the "Log in" button
+         Then the browser moves to /admin/
+          And I see "staff" in "#user-tools"
+        '''
+    )
+
+
 @step('I choose one large veg box to collect from the Old Fire Station')
 def step_impl(context):
     context.execute_steps(

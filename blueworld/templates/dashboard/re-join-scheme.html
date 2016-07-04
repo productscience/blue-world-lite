@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block head_title %}Dashboard{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block content %}
+    <div class="row">
+      <h1>You have left the scheme.</h1>
+
+      <p>To re-join the scheme please check your <a href="{% url 'dashboard_change_order' %}">order</a>, <a href="{% url 'dashboard_change_collection_point' %}">collection point</a> and <a href="{% url 'dashboard_bank_details' %}">bank details</a> then click the Re-Activate button below.</p>
+
+      <form action="{% url 'dashboard_rejoin_scheme' %}" method="post">
+        {% csrf_token %}
+      </form>
+      <button>Re-Activate Not Implemented Yet</button>
+    </div>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}

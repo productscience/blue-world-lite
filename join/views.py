@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
-from .models import CollectionPoint, BagType, Customer, CollectionPointChange, OrderChange, BagQuantity, AccountStatusChange
+from .models import CollectionPoint, BagType, Customer, CustomerCollectionPointChange, CustomerOrderChange, CustomerOrderChangeBagQuantity, AccountStatusChange
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
@@ -157,7 +157,7 @@ def collection_point(request):
 
 def not_staff(func):
     def _decorated(request, *args, **kwargs):
-        if request.user.is_superuser:
+        if request.user.is_superuser or request.user.is_staff:
             return HttpResponseForbidden('<html><body><h1>Staff don\'t have a dashboard</h1></body></html>')
         return func(request, *args, **kwargs)
     return _decorated
@@ -191,20 +191,26 @@ def have_left_scheme(func):
 @not_staff
 @gocardless_is_set_up
 def dashboard(request):
-    latest_collection_point_change = CollectionPointChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
-    latest_order_change = OrderChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
-    bag_quantities = BagQuantity.objects.filter(order_change=latest_order_change).all()
-    return render(
-        request,
-        'dashboard/index.html',
-        {
-            'collection_point': latest_collection_point_change[0].collection_point,
-            'bag_quantities': bag_quantities,
-            'next_collection': next_collection(),
-            'next_deadline': next_deadline(),
-            'timenow': datetime.datetime.now(),
-        }
-    )
+    if request.user.customer.latest_account_status() != AccountStatusChange.LEFT:
+        latest_collection_point_change = CustomerCollectionPointChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
+        latest_customer_order_change = CustomerOrderChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
+        bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(customer_order_change=latest_customer_order_change).all()
+        return render(
+            request,
+            'dashboard/index.html',
+            {
+                'collection_point': latest_collection_point_change[0].collection_point,
+                'bag_quantities': bag_quantities,
+                'next_collection': next_collection(),
+                'next_deadline': next_deadline(),
+                'timenow': datetime.datetime.now(),
+            }
+        )
+    else:
+        return render(
+            request,
+            'dashboard/re-join-scheme.html',
+        )
 
 
 @login_required
@@ -314,3 +320,19 @@ def _next_weekday(d, weekday):
     if days_ahead <= 0: # Target day already happened this week
         days_ahead += 7
     return d + datetime.timedelta(days_ahead)
+
+
+
+@login_required
+@not_staff
+@gocardless_is_set_up
+def dashboard_order_history(request):
+    return render(request, 'dashboard/order-history.html')
+
+@login_required
+@not_staff
+@gocardless_is_set_up
+@have_left_scheme
+def dashboard_rejoin_scheme(request):
+    return HttpResponse('Not implemented')
+

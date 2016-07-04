@@ -19,6 +19,7 @@ Feature: Dashboard
      | Change Collection Point | /dashboard/change-collection-point | This functionality is not implemented yet        |
      | Bank Details            | /dashboard/bank-details            | change your bank direct debit details            |
      | Leave                   | /dashboard/leave                   | tell us why you have decided to leave the scheme |
+     | Order History           | /dashboard/order-history           | This functionality is not implemented yet        |
 
   Scenario: I can logout from the dashbaord
     Given I navigate to /dashboard
@@ -40,6 +41,7 @@ Feature: Dashboard
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
+     | /dashboard/order-history           |
      | /go-cardless-callback              |
 
   Scenario: Create a user without GoCardless
@@ -58,6 +60,7 @@ Feature: Dashboard
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
+     | /dashboard/order-history           |
 
    #  | /go-cardless-callback              |
 

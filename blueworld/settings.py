@@ -84,9 +84,11 @@ ACCOUNT_LOGOUT_ON_GET = True
 
 # For Hijack
 HIJACK_LOGIN_REDIRECT_URL = LOGIN_REDIRECT_URL  # Where admins are redirected to after hijacking a user
+HIJACK_REGISTER_ADMIN = False
 HIJACK_LOGOUT_REDIRECT_URL = '/admin/auth/user/'
 # Needed for hijack-admin to work (but maybe not a great idea?)
 HIJACK_ALLOW_GET_REQUESTS = True
+HIJACK_AUTHORIZE_STAFF = True
 
 
 MIDDLEWARE_CLASSES = [
