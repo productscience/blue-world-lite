@@ -7,7 +7,7 @@ class CollectionPoint(models.Model):
     location = models.CharField(null=True, blank=True, max_length=100, help_text="E.g. 'Leswin Road, N16'")
     latitude = models.FloatField(null=True, blank=True, help_text="Allows your pickup to show on a map. Latitude should be between 49 and 60 in the UK. You can find latitude and longitude by following these instructions: <ol><li>Go to <a href='http://maps.google.co.uk/' target='_NEW'>Google maps</a></li><li>Click the tiny green flask icon on the top-right</li><li>Scroll down and enable the 'LatLng Tool Tip'</li><li>Find your pickup and zoom in close</li><li>You'll see (latitude, longitude) showing on the mouse pointer</li><li>Note them down and copy latitude into the field above and longitude into the field below</li></ol>")
     longitude = models.FloatField(null=True, blank=True, help_text="Longitude should be between -10 and 2 in the UK")
-    active = models.BooleanField(default=True, help_text="You can mark this pickup as not available at the moment if you need to")
+    active = models.BooleanField(default=True, help_text="You can mark this pickup as not available if you need to. This might be because it is full for example.")
     display_order = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
@@ -60,6 +60,16 @@ class BagTypeCostChange(models.Model):
         return '{} {} {}'.format(self.bag_type.name, self.changed.strftime('%Y-%m-%d'))
 
 
+class CustomerTag(models.Model):
+    tag = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.tag
+
+    class Meta:
+        ordering = ('tag',)
+
+
 class Customer(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -71,12 +81,26 @@ class Customer(models.Model):
     mobile = models.CharField(max_length=30)
     go_cardless = models.CharField(max_length=30, default='')
 
-    def latest_account_status(self):
+    tags = models.ManyToManyField(CustomerTag)
+
+    def _get_latest_account_status(self):
         latest_account_status = AccountStatusChange.objects.order_by('-changed').filter(customer=self)[:1][0]
         return latest_account_status.status
+    account_status = property(_get_latest_account_status)
 
-    def has_left(self):
-        return self.latest_account_status() == AccountStatusChange.LEFT
+    def _has_left(self):
+        return self.account_status == AccountStatusChange.LEFT
+    has_left = property(_has_left)
+
+    def _get_latest_collection_point(self):
+        latest_collection_point = CustomerCollectionPointChange.objects.order_by('-changed').filter(customer=self)[:1][0]
+        return latest_collection_point.collection_point
+    collection_point = property(_get_latest_collection_point)
+
+    def _get_latest_bag_quantities(self):
+        latest_order = CustomerOrderChange.objects.order_by('-changed').filter(customer=self)[:1][0]
+        return latest_order.bag_quantities#.all()[:1][0].bag_type.name
+    bag_quantities = property(_get_latest_bag_quantities)
 
     def __str__(self):
         return '{} ({})'.format(self.full_name, self.nickname)
@@ -84,15 +108,15 @@ class Customer(models.Model):
 
 class AccountStatusChange(models.Model):
     AWAITING_DIRECT_DEBIT = 'AWAITING_DIRECT_DEBIT'
-    AWAITING_START_CONFIRMATION = 'AWAITING_START_CONFIRMATION'
+    #AWAITING_START_CONFIRMATION = 'AWAITING_START_CONFIRMATION'
     ACTIVE = 'ACTIVE'
-    ON_HOLD = 'HOLD'
+    #ON_HOLD = 'HOLD'
     LEFT = 'LEFT'
     STATUS_CHOICES = (
         (AWAITING_DIRECT_DEBIT, 'Awating Go Cardless'),
-        (AWAITING_START_CONFIRMATION, 'Awating Start Confirmation'),
+        #(AWAITING_START_CONFIRMATION, 'Awating Start Confirmation'),
         (ACTIVE, 'Active'),
-        (ON_HOLD, 'On Hold'),
+        #(ON_HOLD, 'On Hold'),
         (LEFT, 'Left'),
     )
     changed = models.DateTimeField(auto_now_add=True)
@@ -100,6 +124,7 @@ class AccountStatusChange(models.Model):
         Customer,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
+        related_name='account_status_change',
     )
     status = models.CharField(max_length=255, choices=STATUS_CHOICES)
 
@@ -150,6 +175,7 @@ class CustomerOrderChangeBagQuantity(models.Model):
         CustomerOrderChange,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
+        related_name='bag_quantities',
     )
     bag_type = models.ForeignKey(
         BagType,

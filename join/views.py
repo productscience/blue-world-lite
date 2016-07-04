@@ -173,7 +173,7 @@ def gocardless_is_set_up(func):
 
 def have_not_left_scheme(func):
     def _decorated(request, *args, **kwargs):
-        if request.user.customer.latest_account_status() == AccountStatusChange.LEFT:
+        if request.user.customer.account_status == AccountStatusChange.LEFT:
             return HttpResponseForbidden('<html><body><h1>You have left the scheme</h1></body></html>')
         return func(request, *args, **kwargs)
     return _decorated
@@ -181,7 +181,7 @@ def have_not_left_scheme(func):
 
 def have_left_scheme(func):
     def _decorated(request, *args, **kwargs):
-        if request.user.customer.latest_account_status() != AccountStatusChange.LEFT:
+        if request.user.customer.account_status != AccountStatusChange.LEFT:
             return redirect(reverse('dashboard'))
         return func(request, *args, **kwargs)
     return _decorated
@@ -191,7 +191,7 @@ def have_left_scheme(func):
 @not_staff
 @gocardless_is_set_up
 def dashboard(request):
-    if request.user.customer.latest_account_status() != AccountStatusChange.LEFT:
+    if request.user.customer.account_status != AccountStatusChange.LEFT:
         latest_collection_point_change = CustomerCollectionPointChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
         latest_customer_order_change = CustomerOrderChange.objects.order_by('-changed').filter(customer=request.user.customer)[:1]
         bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(customer_order_change=latest_customer_order_change).all()
@@ -222,7 +222,8 @@ def go_cardless_callback(request):
     request.user.customer.save()
     account_status_change = AccountStatusChange(
         customer=request.user.customer,
-        status=AccountStatusChange.AWAITING_START_CONFIRMATION,
+        # status=AccountStatusChange.AWAITING_START_CONFIRMATION,
+        status=AccountStatusChange.ACTIVE,
     )
     account_status_change.save()
     messages.add_message(request, messages.INFO, 'Successfully set up Go Cardless.')
@@ -256,11 +257,6 @@ def logged_out(request):
 @gocardless_is_set_up
 def bank_details(request):
     return render(request, 'dashboard/bank-details.html')
-
-
-# def get_account_status(customer):
-#     latest_account_status = AccountStatusChange.objects.order_by('-changed').filter(customer=customer)[:1][0]
-#     return latest_account_status.status
 
 
 

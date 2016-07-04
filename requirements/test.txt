@@ -2,4 +2,4 @@ behave==1.2.5
 browserstep==0.1.4
 lathermail==0.2.0
 requests==2.10.0
-selenium==2.53.5
+selenium==2.53.6
