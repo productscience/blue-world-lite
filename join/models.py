@@ -3,7 +3,7 @@ from django.conf import settings
 
 
 class CollectionPoint(models.Model):
-    name = models.CharField(max_length=40, help_text="e.g. 'The Old Fire Station'. <b>IMPORTANT</b>: Due to a limitation you <b>cannot use non-standard characters like accents</b> - sorry. If you do, you form will not display and you might get a strange error.", null=False, unique=True)
+    name = models.CharField(max_length=40, help_text="e.g. 'The Old Fire Station'", null=False, unique=True)
     location = models.CharField(null=True, blank=True, max_length=100, help_text="E.g. 'Leswin Road, N16'")
     latitude = models.FloatField(null=True, blank=True, help_text="Allows your pickup to show on a map. Latitude should be between 49 and 60 in the UK. You can find latitude and longitude by following these instructions: <ol><li>Go to <a href='http://maps.google.co.uk/' target='_NEW'>Google maps</a></li><li>Click the tiny green flask icon on the top-right</li><li>Scroll down and enable the 'LatLng Tool Tip'</li><li>Find your pickup and zoom in close</li><li>You'll see (latitude, longitude) showing on the mouse pointer</li><li>Note them down and copy latitude into the field above and longitude into the field below</li></ol>")
     longitude = models.FloatField(null=True, blank=True, help_text="Longitude should be between -10 and 2 in the UK")
@@ -19,7 +19,7 @@ class CollectionPoint(models.Model):
 
 class BagType(models.Model):
     """Each group has some bag types defined so that their customers can select them from the joining form"""
-    name = models.CharField(max_length=50, help_text="E.g. 'Standard veg'.")
+    name = models.CharField(max_length=50, help_text="E.g. 'Standard veg'.", null=False, unique=True)
 
 
     def _get_weekly_cost(self):

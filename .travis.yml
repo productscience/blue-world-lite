@@ -13,8 +13,9 @@ before_script:
 - "python manage.py collectstatic --noinput"
 - python manage.py makemigrations
 - python manage.py migrate
+- psql -c 'ALTER SEQUENCE join_bagtype_id_seq RESTART 5;' blueworld
 - psql -c "COPY join_bagtype(id,name,active,display_order) from '$PWD/data/bag_type.csv' with csv;" blueworld
-- psql -c "COPY join_bagtypecost_change(bagtype_id,changed,weekly_cost) from '$PWD/data/bag_type_cost_change.csv' with csv;" blueworld
+- psql -c "COPY join_bagtypecostchange(bag_type_id,changed,weekly_cost) from '$PWD/data/bag_type_cost_change.csv' with csv;" blueworld
 - psql -c "COPY join_collectionpoint(name,location,latitude,longitude,active,display_order) from '$PWD/data/collection_point.csv' with csv" blueworld
 - echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', '123123ab')" | python manage.py shell
 - echo "from django.contrib.auth.models import User, Permission; user=User.objects.create_user('staff', password='123123ab', email='staff@example.com'); user.is_staff=True; user.user_permissions.add(Permission.objects.get(name='Can add collection point')); user.user_permissions.add(Permission.objects.get(name='Can change collection point')); user.user_permissions.add(Permission.objects.get(name='Can add bag type')); user.user_permissions.add(Permission.objects.get(name='Can change bag type')); user.user_permissions.add(Permission.objects.get(name='Can add bag type cost change')); user.user_permissions.add(Permission.objects.get(name='Can change customer')); user.save(); exit();" | python manage.py shell
