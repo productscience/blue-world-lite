@@ -47,7 +47,7 @@ Feature: Forgotten password
       And I type "forgotten-password@example.com" into "#id_login"
       And I type "123123ab" into "#id_password"
      When I click the "Log in" button
-     Then the browser moves to /login
+     Then the browser is still at /login
      # Then the browser is still at /login?next=/dashboard
     Given I type "forgotten-password@example.com" into "#id_login"
       And I type "123123bc" into "#id_password"
