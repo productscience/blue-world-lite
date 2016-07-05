@@ -42,8 +42,12 @@ Feature: Change email
      When I click the "Add E-mail" button
      Then the browser is still at /email/
       And I see "Confirmation e-mail sent to email-changer-2@example.com." in "#messages"
-      
-    Given I fetch the first sent email
+      And 1 email has been sent
+      And I fetch the first sent email
+      And the email is to "email-changer-2@example.com"
+      And the email is from "no-reply@blueworld.example.com"
+      And the email subject is "[BlueWorld] Please Confirm Your E-mail Address"
+
       And I switch to the admin browser
       And I navigate to /admin/
       And I follow the "Email confirmations" link

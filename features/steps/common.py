@@ -170,3 +170,15 @@ def step_impl(context):
         raise Exception("PhantomJS does not support alerts")
     alert = context.browser.switch_to_alert()
     alert.accept()
+
+
+import re
+@step('I capture the value of "{regex}" in the message to the "{name}" variable')
+def step_impl(context, regex, name):
+    if not hasattr(context, 'variables'):
+        context.variables = {}
+    reg = re.compile(regex)
+    string = context.message['message_raw']
+    value = reg.search(string).group(1)
+    context.variables[name] = value
+    print(context.variables)
