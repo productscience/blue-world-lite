@@ -143,3 +143,30 @@ def step_impl(context, login, password):
 @step('I debug')
 def step_impl(context):
     import pdb; pdb.set_trace()
+
+@then(u'"{selector}" is checked')
+def step_impl(context, selector):
+    element = context.browser.find_element_by_css_selector(selector)
+    assert element is not None, "No such element found"
+    assert element.get_attribute('checked') == 'true', "Element is not checked"
+
+@then(u'the alert says "{text}"')
+def step_impl(context, text):
+    if context.browser_vendor == 'phantomjs':
+        raise Exception("PhantomJS does not support alerts")
+    alert = context.browser.switch_to_alert()
+    assert alert.text == text
+
+@then(u'I cancel the alert')
+def step_impl(context):
+    if context.browser_vendor == 'phantomjs':
+        raise Exception("PhantomJS does not support alerts")
+    alert = context.browser.switch_to_alert()
+    alert.dismiss()
+
+@then(u'I accept the alert')
+def step_impl(context):
+    if context.browser_vendor == 'phantomjs':
+        raise Exception("PhantomJS does not support alerts")
+    alert = context.browser.switch_to_alert()
+    alert.accept()
