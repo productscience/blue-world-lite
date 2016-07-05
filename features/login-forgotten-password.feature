@@ -27,12 +27,6 @@ Feature: Forgotten password
       And the email subject is "[BlueWorld] Password Reset E-mail"
       And I capture the value of "/password/reset/key/(.*)/" in the message to the "token" variable
 
-      # And I switch to the admin browser
-      # And I navigate to /admin/
-      # And I follow the "Email confirmations" link
-      # And I follow the "forgotten-password@example.com (forgotten-password)" link
-      # And I capture the value of "#id_key" to the "key" variable
-
     Given I switch to the user browser
       And I navigate to the formatted url /password/reset/key/{token}/
       And I see "Change Password" in "h1"
@@ -42,6 +36,7 @@ Feature: Forgotten password
      Then the browser moves to /password/reset/key/done/
       And I see "Password successfully changed." in "#messages"
 
+  Scenario: Can't login with old password
     Given I navigate to /dashboard
      Then the browser moves to /login?next=/dashboard
       And I type "forgotten-password@example.com" into "#id_login"
@@ -49,8 +44,9 @@ Feature: Forgotten password
      When I click the "Log in" button
      Then the browser is still at /login
      # Then the browser is still at /login?next=/dashboard
+
+  Scenario: Can login with new password
     Given I type "forgotten-password@example.com" into "#id_login"
       And I type "123123bc" into "#id_password"
      When I click the "Log in" button
      Then the browser moves to /dashboard
-
