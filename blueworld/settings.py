@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     # Hijack
     'hijack',
     'compat',
-    'hijack_admin',
+    #'hijack_admin',
     # Our apps
     'join',
 ]
@@ -84,10 +84,11 @@ ACCOUNT_LOGOUT_ON_GET = True
 
 # For Hijack
 HIJACK_LOGIN_REDIRECT_URL = LOGIN_REDIRECT_URL  # Where admins are redirected to after hijacking a user
+HIJACK_BUTTON_TEMPLATE='hijack_admin/admin_button.html'
 HIJACK_REGISTER_ADMIN = False
-HIJACK_LOGOUT_REDIRECT_URL = '/admin/auth/user/'
+HIJACK_LOGOUT_REDIRECT_URL = '/admin/'
 # Needed for hijack-admin to work (but maybe not a great idea?)
-HIJACK_ALLOW_GET_REQUESTS = True
+#HIJACK_ALLOW_GET_REQUESTS = True
 HIJACK_AUTHORIZE_STAFF = True
 
 
@@ -100,6 +101,7 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'join.helper.ThreadLocals',
 ]
 
 ROOT_URLCONF = 'blueworld.urls'

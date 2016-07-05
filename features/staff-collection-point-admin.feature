@@ -44,3 +44,6 @@ Feature: Staff collection point admin
      Then the browser moves to /admin/join/collectionpoint/
       And I see "changed successfully" in ".messagelist .success"
       And I see "New Collection Point Edited" in "#changelist"
+
+  Scenario: _teardown
+    Given I navigate to /admin/logout/

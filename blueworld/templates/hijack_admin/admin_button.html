@@ -1,0 +1,9 @@
+{% load i18n %}
+<form></form> {# XXX Horrible hack to force browser to ignore the outer form scope so that the top button actuall works. This is needed to allow CSRF protection instead of just using a GET #}
+
+<form action="/hijack/{{ user_id }}/" method="post">
+    {% csrf_token %}
+    <input type="submit" value="Become {{ full_name }}" />
+</form>
+
+{# <a href="{{ hijack_url }}" class="button">{% blocktrans %}Hijack {{ username }}{% endblocktrans %}</a> #}

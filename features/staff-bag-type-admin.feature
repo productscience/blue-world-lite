@@ -13,6 +13,7 @@ Feature: Staff bag type admin
 
   Scenario: Error when adding a new bag type with an existing name
     Given I type "Large veg" into "#id_name"
+      And I type "12.56" into "#id_weekly_cost"
      When I click the "Save" button
      Then the browser is still at /admin/join/bagtype/add/
       And I see "Please correct the error below." in "p.errornote"
@@ -23,8 +24,8 @@ Feature: Staff bag type admin
      Then the browser moves to /admin/join/bagtype/
       And I see "added successfully" in ".messagelist .success"
       And I see "New Bag Type" in "#changelist"
-
-
+     When I follow the "New Bag Type" link
+     Then the value of "#id_weekly_cost" is "12.56"
 
   Scenario Outline: Cannot use an existing name
     Given I navigate to /admin/join/bagtype/
@@ -44,3 +45,6 @@ Feature: Staff bag type admin
      Then the browser moves to /admin/join/bagtype/
       And I see "changed successfully" in ".messagelist .success"
       And I see "New Bag Type Edited" in "#changelist"
+
+  Scenario: _teardown
+    Given I navigate to /admin/logout/

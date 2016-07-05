@@ -1,0 +1,13 @@
+{% load url from compat %}
+{% load i18n %}
+
+<div id="hijack-notification">
+    <span style="padding-top: 4px; float: left;"><b>{% blocktrans with user=request.user.customer.full_name%}You are currently working on behalf of {{ user }}.{% endblocktrans %}</b></span>
+    <div class="hijacked-warning-controls hijacked-warning-controls-pull-right">
+        <form action="{% url 'release_hijack' %}" method="POST">
+            {% csrf_token %}
+            <button class="django-hijack-button-default">{% blocktrans with user=request.user %}Release{% endblocktrans %}</button>
+        </form>
+    </div>
+</div>
+<br style="width: 100%; clear: both">

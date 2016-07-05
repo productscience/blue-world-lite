@@ -22,11 +22,14 @@ class BagType(models.Model):
     name = models.CharField(max_length=50, help_text="E.g. 'Standard veg'.", null=False, unique=True)
 
 
+    def _set_weekly_cost(self, value):
+        import pdb; pdb.set_trace()
+
     def _get_weekly_cost(self):
         "Returns the latest weekly cost"
         latest_bag_type_cost_change = BagTypeCostChange.objects.order_by('-changed').filter(bag_type=self)[:1][0]
         return latest_bag_type_cost_change.weekly_cost
-    weekly_cost = property(_get_weekly_cost)
+    weekly_cost = property(_get_weekly_cost, _set_weekly_cost)
 
 
     display_order = models.IntegerField(null=True, blank=True, help_text="Bags will be sorted by this number (though they will always be grouped into fruit or veg first)")
@@ -75,6 +78,7 @@ class Customer(models.Model):
         settings.AUTH_USER_MODEL,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
+        related_name='customer'
     )
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)

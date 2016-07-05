@@ -31,4 +31,3 @@ Feature: Join - Bag and Collection Point Error Conditions
      When I follow the "go back and choose one" link
      Then the browser moves to /join/collection-point
       And I see "Where do you want to pick up your bag from?" in "h3"
-

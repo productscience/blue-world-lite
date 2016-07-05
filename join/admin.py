@@ -1,24 +1,23 @@
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.core import urlresolvers
-from join.models import CollectionPoint, BagType, Customer, CustomerOrderChange, CustomerOrderChangeBagQuantity, CustomerCollectionPointChange, AccountStatusChange, CustomerTag
+from join.models import CollectionPoint, BagType, Customer, CustomerOrderChange, CustomerOrderChangeBagQuantity, CustomerCollectionPointChange, AccountStatusChange, CustomerTag, BagTypeCostChange
 
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from hijack_admin.admin import HijackUserAdminMixin
 
 
+from join.helper import get_current_request
+from django.template import RequestContext
 
 from django.core.urlresolvers import reverse
 from django.template.loader import get_template
 from django.utils.translation import ugettext_lazy as _
 from django import VERSION
 
-from hijack import settings as hijack_settings
-from hijack_admin import settings as hijack_admin_settings
+from django.conf import settings
 
-if VERSION < (1, 8):
-    from django.template import Context
+from hijack import settings as hijack_settings
 
 
 class BlueWorldModelAdmin(admin.ModelAdmin):
@@ -38,20 +37,61 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
     )
 
 
-class UserAdmin(BaseUserAdmin, HijackUserAdminMixin):
+class UserAdmin(BaseUserAdmin):
     pass
 #     list_display = (
 #         'username',
 #         # 'hijack_field',  # Hijack button
 #     )
-# 
+#
 # UserAdmin.fieldsets[0][1]['fields'] = tuple(list(UserAdmin.fieldsets[0][1]['fields']) + ['hijack_field'])
 
 
+from django import forms
+class BagTypeForm(forms.ModelForm):
+
+    weekly_cost = forms.CharField(required=True)#, min_value=0, max_value=500, widget=forms.widgets.TextInput())
+
+    def __init__(self, *k, **p):
+        if p.get('instance'):
+            # Edit case
+            initial = p.get('iniital', {})
+            initial['weekly_cost'] = p['instance'].weekly_cost
+            p['initial'] = initial
+        super(BagTypeForm, self).__init__(*k, **p)
+
+    def save(self, commit=True):
+        weekly_cost = self.cleaned_data.get('weekly_cost', None)
+        # ...do something with extra_field here...
+        bag_type = super(BagTypeForm, self).save(commit=commit)
+        bag_type.save()
+        cost_change = BagTypeCostChange(weekly_cost=weekly_cost, bag_type=bag_type)
+        cost_change.save()
+        return bag_type
+
+
+    class Meta:
+        model = BagType
+        fields = '__all__'
+
+
 class BagTypeAdmin(BlueWorldModelAdmin):
-    pass
+    form = BagTypeForm
+#
+    #fields = ('name', 'display_order', 'active', 'weekly_cost')
+
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'display_order', 'active', 'weekly_cost',),
+        }),
+    )
+    list_display = ('name', 'active', 'weekly_cost')
 
 
+    #def formfield_for_dbfield(self, db_field, **kwargs):
+    #    field = super(BagTypeAdmin, self).formfield_for_dbfield(db_field, **kwargs)
+    #    import pdb; pdb.set_trace()
+    #    return field
 
 
 
@@ -111,20 +151,21 @@ class CustomerAdmin(BlueWorldModelAdmin):
     )
     # list_filter = ('account_status_change__status', admin.RelatedOnlyFieldListFilter),
 
+
     def hijack_field(self, obj):
         hijack_attributes = hijack_settings.HIJACK_URL_ALLOWED_ATTRIBUTES
 
         assert 'user_id' in hijack_attributes
         hijack_url = reverse('login_with_id', args=(obj.user.pk, ))
 
-        button_template = get_template(hijack_admin_settings.HIJACK_BUTTON_TEMPLATE)
-        button_context = {
+        button_template = get_template(settings.HIJACK_BUTTON_TEMPLATE)
+        button_context = RequestContext(get_current_request(), {
+            'request': get_current_request(),
+            'user_id': obj.user.pk,
             'hijack_url': hijack_url,
             'username': str(obj),
-        }
-        if VERSION < (1, 8):
-            button_context = Context(button_context)
-
+            'full_name': obj.full_name,
+        })
         return button_template.render(button_context)
 
     hijack_field.allow_tags = True
