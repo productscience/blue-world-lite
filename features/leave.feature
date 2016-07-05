@@ -1,8 +1,15 @@
 Feature: Leave
 
   Scenario: _setup:
-    Given I create a started user "Leaver", "leaver", "leaver@example.com" with password "123123ab"
-     And I login with "leaver@example.com" and "123123ab"
+    Given I switch to the user browser
+      And I create a started user "Leaver", "leaver", "leaver@example.com" with password "123123ab"
+      And I login with "leaver@example.com" and "123123ab"
+    Given I switch to the admin browser
+      And I login as a member of staff
+      And I navigate to /admin/join/customer/
+      And I type "Leaver" into "#searchbar"
+      And I click the "Search" button
+     Then I see "ACTIVE" in "tr.row1 td.field-account_status"
 
   Scenario: Haven't left, but navigate to /dashboard/bye
      When I navigate to /dashboard/bye
@@ -22,8 +29,13 @@ Feature: Leave
      When I click the "Leave" button
      Then the browser moves to /dashboard/bye
       And I see "We'll miss you" in "h1"
+    # Check that the admin has the correct status
+    Given I switch to the admin browser
+     When I navigate to /admin/join/customer/?q=leaver
+     Then I see "LEFT" in "tr.row1 td.field-account_status"
 
   Scenario: Can't leave once left
+    Given I switch to the user browser
      When I navigate to /dashboard/leave
      Then I see "You have left the scheme" in "h1"
 
@@ -64,3 +76,13 @@ Feature: Leave
      | collection point | /dashboard/change-collection-point |
      | bank details     | /dashboard/bank-details            |
 
+  Scenario: Rejoin
+    Given I navigate to /dashboard
+      And I see "You have left the scheme" in "h1"
+     When I click the "Re-Activate" button
+     Then the browser is still at /dashboard
+      And I see "Successfully re-activated your account" in "#messages"
+      And I see "Dashboard" in "h1"
+    Given I switch to the admin browser
+     When I navigate to /admin/join/customer/?q=leaver
+     Then I see "ACTIVE" in "tr.row1 td.field-account_status"

@@ -330,5 +330,13 @@ def dashboard_order_history(request):
 @gocardless_is_set_up
 @have_left_scheme
 def dashboard_rejoin_scheme(request):
-    return HttpResponse('Not implemented')
-
+    if request.method == 'POST':
+        account_status_change = AccountStatusChange(
+            customer=request.user.customer,
+            status=AccountStatusChange.ACTIVE,
+        )
+        account_status_change.save()
+        messages.add_message(request, messages.INFO, 'Successfully re-activated your account')
+        return redirect(reverse("dashboard"))
+    else:
+        return HttpResponseBadRequest()
