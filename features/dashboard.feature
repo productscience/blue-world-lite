@@ -1,8 +1,10 @@
 Feature: Dashboard
 
-  Scenario: Visit dashboard when not signed in
+  Scenario: _setup
     Given I'm using the user browser
       And I create a started user "Dashboard", "dashboard", "dashboard@example.com" with password "123123ab"
+
+  Scenario: Visit dashboard when not signed in
      When I navigate to /dashboard
      Then the browser moves to /login?next=/dashboard
 

@@ -43,7 +43,7 @@ def step_impl(context):
     context.execute_steps(
         '''
          Given I navigate to /join/choose-bags
-          And I type "1" into "#id_form-1-quantity"
+          And I type "1" into "#id_form-0-quantity"
           And I click the "Next" button
           And the browser moves to /join/collection-point
           And I click the "The Old Fire Station" label

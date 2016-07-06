@@ -134,21 +134,9 @@ class AccountStatusListFilter(admin.SimpleListFilter):
     parameter_name = 'latest_account_status'
 
     def lookups(self, request, model_admin):
-        """
-        Returns a list of tuples. The first element in each
-        tuple is the coded value for the option that will
-        appear in the URL query. The second element is the
-        human-readable name for the option that will appear
-        in the right sidebar.
-        """
         return AccountStatusChange.STATUS_CHOICES
 
     def queryset(self, request, queryset):
-        """
-        Returns the filtered queryset based on the value
-        provided in the query string and retrievable via
-        `self.value()`.
-        """
         # Compare the requested value (either '80s' or '90s')
         # to decide how to filter the queryset.
         if self.value() is None:
@@ -157,32 +145,48 @@ class AccountStatusListFilter(admin.SimpleListFilter):
         return queryset.filter(pk__in=customer_ids)
 
 
+class CollectionPointFilter(admin.SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options.
+    title = _('collection point')
+
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'collection_point'
+
+    def lookups(self, request, model_admin):
+        return [(cp.id, cp.name) for cp in CollectionPoint.objects.all()]
+
+    def queryset(self, request, queryset):
+        # Compare the requested value (either '80s' or '90s')
+        # to decide how to filter the queryset.
+        if self.value() is None:
+            return queryset
+        customer_ids = [customer.id for customer in queryset.all() if customer.collection_point.id==int(self.value())]
+        return queryset.filter(pk__in=customer_ids)
+
+
 class CustomerAdmin(BlueWorldModelAdmin):
     # ['user_link', 'id', 'user', 'full_name', 'nickname', 'mobile', 'go_cardless']
     search_fields = ('full_name', 'nickname', )
     list_display = (
         'full_name',
-     #   'user_link',
-        #'nickname',
-        'hijack_field',  # Hijack button
         'account_status', # Dynamically generated latest value
         'tags_field',
-        # 'collection_point', # Dynamically generated latest value
-        # 'bag_quantities',
+        'bag_quantities',
+        'collection_point', # Dynamically generated latest value
+        'hijack_field',  # Hijack button
     )
     list_filter = (
         AccountStatusListFilter,
         'tags__tag',
+        CollectionPointFilter,
     )
-    # list_filter = ('account_status_change__status', admin.RelatedOnlyFieldListFilter),
 
 
     def hijack_field(self, obj):
         hijack_attributes = hijack_settings.HIJACK_URL_ALLOWED_ATTRIBUTES
-
         assert 'user_id' in hijack_attributes
         hijack_url = reverse('login_with_id', args=(obj.user.pk, ))
-
         button_template = get_template(settings.HIJACK_BUTTON_TEMPLATE)
         button_context = RequestContext(get_current_request(), {
             'request': get_current_request(),
@@ -197,7 +201,6 @@ class CustomerAdmin(BlueWorldModelAdmin):
     hijack_field.short_description = _('Become user')
 
     # readonly_fields = ['user_link']
-
     # def user_link(self, obj):
     #     change_url = urlresolvers.reverse('admin:auth_user_change', args=(obj.user.id,))
     #     return mark_safe('<a href="%s">%s</a>' % (change_url, obj.user.email))
@@ -216,19 +219,20 @@ class CustomerAdmin(BlueWorldModelAdmin):
             result += '{}\n'.format(tag.tag)
         return result
     #     return mark_safe('<a href="%s">%s</a>' % (change_url, obj.user.email))
-    tags_field.short_description = 'Bag quantities'
+    tags_field.short_description = 'Tags'
 
     def get_readonly_fields(self, request, obj=None):
-        return ['user', 'full_name', 'nickname', 'mobile', 'go_cardless','collection_point', 'bag_quantities']
-        result = list(self.readonly_fields) + \
-               [field.name for field in obj._meta.fields] + \
-               [ 'collection_point', 'bag_quantities']
-        return result
+        return ['user', 'full_name', 'nickname', 'mobile', 'go_cardless', 'collection_point', 'bag_quantities']
+        # result = list(self.readonly_fields) + \
+        #        [field.name for field in obj._meta.fields] + \
+        #        [ 'collection_point', 'bag_quantities']
+        # return result
 
     def has_add_permission(self, request, obj=None):
         return False
 
-    fields = ['user', 'full_name', 'nickname', 'mobile', 'go_cardless','collection_point', 'bag_quantities', 'tags']
+    fields = ['user', 'full_name', 'nickname', 'mobile', 'go_cardless', 'collection_point', 'bag_quantities', 'tags']
+
 
 class CustomerOrderChangeAdmin(BlueWorldModelAdmin):
     pass

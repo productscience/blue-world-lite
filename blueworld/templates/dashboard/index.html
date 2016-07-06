@@ -8,10 +8,10 @@
 
       <p>Welcome {{ request.user.customer.nickname }}!</p>
 
-      <p>Your collection point is: <strong>{{ collection_point.name }}</strong></p>
+      <p>Your collection point is: <strong id="collection-point">{{ collection_point.name }}</strong></p>
       <p>Your next collection is <strong>{{ next_collection | date:"D d F" }}</strong>. Please check the opening days and hours of your collection point before collecting you order.</p>
       <p>The bags you are collecting are:</p>
-      <ul>
+      <ul id="order">
       {% for bag_quantity in bag_quantities %}
         <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
       {% endfor %}
