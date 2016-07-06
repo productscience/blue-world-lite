@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from collections import OrderedDict
+from decimal import Decimal
 
 
 class CollectionPoint(models.Model):
@@ -21,9 +23,13 @@ class BagType(models.Model):
     """Each group has some bag types defined so that their customers can select them from the joining form"""
     name = models.CharField(max_length=50, help_text="E.g. 'Standard veg'.", null=False, unique=True)
 
-
-    def _set_weekly_cost(self, value):
-        import pdb; pdb.set_trace()
+    def _set_weekly_cost(self, weekly_cost):
+        assert isinstance(weekly_cost, Decimal), "Expecting a decimal, not {!r}".format(weekly_cost)
+        # XXX Potential race condition here
+        cost_changes = BagTypeCostChange.objects.order_by('-changed').filter(bag_type=self)[:1]
+        if not len(cost_changes) or cost_changes[0].weekly_cost != weekly_cost:
+            cost_change = BagTypeCostChange(weekly_cost=weekly_cost, bag_type=self)
+            cost_change.save()
 
     def _get_weekly_cost(self):
         "Returns the latest weekly cost"
@@ -49,6 +55,7 @@ class BagTypeCostChange(models.Model):
         BagType,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
+        related_name='cost_changes'
     )
     weekly_cost = models.DecimalField(
         max_digits=12,
@@ -99,12 +106,31 @@ class Customer(models.Model):
     def _get_latest_collection_point(self):
         latest_collection_point = CustomerCollectionPointChange.objects.order_by('-changed').filter(customer=self)[:1][0]
         return latest_collection_point.collection_point
-    collection_point = property(_get_latest_collection_point)
+
+    def _set_collection_point(self, collection_point_id):
+        collection_point_change = CustomerCollectionPointChange(
+            customer=self,
+            collection_point_id=collection_point_id,
+        )
+        collection_point_change.save()
+
+    collection_point = property(_get_latest_collection_point, _set_collection_point)
 
     def _get_latest_bag_quantities(self):
         latest_order = CustomerOrderChange.objects.order_by('-changed').filter(customer=self)[:1][0]
-        return latest_order.bag_quantities#.all()[:1][0].bag_type.name
-    bag_quantities = property(_get_latest_bag_quantities)
+        #return OrderedDict([(bag_quantity.bag_type.id, bag_quantity.quantity) for bag_quantity in latest_order.bag_quantities])
+        return latest_order.bag_quantities.all()
+
+    def _set_bag_quantities(self, bag_quantities):
+        customer_order_change = CustomerOrderChange(customer=self)
+        customer_order_change.save()
+        for bag_type_id, quantity in bag_quantities.items():
+            bag_quantity = CustomerOrderChangeBagQuantity(customer_order_change=customer_order_change, bag_type_id=bag_type_id, quantity=quantity)
+            # XXX Do we need the save?
+            bag_quantity.save()
+
+    bag_quantities = property(_get_latest_bag_quantities, _set_bag_quantities)
+
 
     def __str__(self):
         return '{} ({})'.format(self.full_name, self.nickname)

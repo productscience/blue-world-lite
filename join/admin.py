@@ -1,4 +1,5 @@
 from django.contrib import admin
+from decimal import Decimal
 from django.utils.safestring import mark_safe
 from django.core import urlresolvers
 from join.models import CollectionPoint, BagType, Customer, CustomerOrderChange, CustomerOrderChangeBagQuantity, CustomerCollectionPointChange, AccountStatusChange, CustomerTag, BagTypeCostChange
@@ -48,9 +49,10 @@ class UserAdmin(BaseUserAdmin):
 
 
 from django import forms
+
 class BagTypeForm(forms.ModelForm):
 
-    weekly_cost = forms.CharField(required=True)#, min_value=0, max_value=500, widget=forms.widgets.TextInput())
+    weekly_cost = forms.DecimalField(required=True, min_value=0, max_value=500, max_digits=6, decimal_places=2)
 
     def __init__(self, *k, **p):
         if p.get('instance'):
@@ -61,12 +63,11 @@ class BagTypeForm(forms.ModelForm):
         super(BagTypeForm, self).__init__(*k, **p)
 
     def save(self, commit=True):
-        weekly_cost = self.cleaned_data.get('weekly_cost', None)
+        weekly_cost = Decimal(self.cleaned_data.get('weekly_cost', None))
         # ...do something with extra_field here...
         bag_type = super(BagTypeForm, self).save(commit=commit)
         bag_type.save()
-        cost_change = BagTypeCostChange(weekly_cost=weekly_cost, bag_type=bag_type)
-        cost_change.save()
+        bag_type.weekly_cost = weekly_cost
         return bag_type
 
 
@@ -82,11 +83,35 @@ class BagTypeAdmin(BlueWorldModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('name', 'display_order', 'active', 'weekly_cost',),
+            'fields': ('name', 'display_order', 'active', 'weekly_cost', 'cost_changes'),
         }),
     )
     list_display = ('name', 'active', 'weekly_cost')
 
+
+    def cost_changes(self, obj):
+        # XXX Not tested yet
+        result = ''
+        cost_changes = obj.cost_changes.order_by('-changed').all()
+        for i, cost_change in enumerate(cost_changes):
+            if i == len(cost_changes) - 1:
+                result += '<b>£{}</b> - inital value set at {}<br>'.format(
+                    cost_change.weekly_cost,
+                    cost_change.changed.strftime('%Y-%m-%d %H:%M'),
+                )
+            else:
+                result += '<b>£{}</b> - changed at {}<br>'.format(
+                    cost_change.weekly_cost,
+                    cost_change.changed.strftime('%Y-%m-%d %H:%M'),
+                )
+        return mark_safe(result)
+    cost_changes.short_description = 'Cost Changes'
+
+    def get_readonly_fields(self, request, obj=None):
+        return ['cost_changes']
+
+    # def has_add_permission(self, request, obj=None):
+    #     return False
 
     #def formfield_for_dbfield(self, db_field, **kwargs):
     #    field = super(BagTypeAdmin, self).formfield_for_dbfield(db_field, **kwargs)
@@ -180,7 +205,7 @@ class CustomerAdmin(BlueWorldModelAdmin):
 
     def bag_quantities(self, obj):
         result = ''
-        for bag_quantity in obj.bag_quantities.all():
+        for bag_quantity in obj.bag_quantities:
             result += '{} x {}\n'.format(bag_quantity.quantity, bag_quantity.bag_type.name)
         return result
     bag_quantities.short_description = 'Bag quantities'

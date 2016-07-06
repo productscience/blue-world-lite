@@ -6,7 +6,7 @@ Feature: Change Password
 
   Scenario: Can navigate from dashbaord
     Given I navigate to /dashboard
-      And I follow the "Change Password" link
+     When I follow the "Change Password" link
      Then the browser moves to /password/change/
       And I see "Change Password" in "h1"
 

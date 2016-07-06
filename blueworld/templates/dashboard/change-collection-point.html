@@ -1,11 +1,53 @@
 {% extends "base.html" %}
 
 {% block head_title %}Change Collection Point{% endblock %}
-{% block extra_head %}{% endblock %}
+{% block extra_head %}
+<script>
+if (typeof GC === "undefined") {
+    var GC = {};
+}
+GC.locations = {{ locations|safe }}
+</script>
+{% endblock %}
 {% block content %}
     <div class="row">
+
       <h1>Change Collection Point</h1>
-      <p>This functionality is not implemented yet</p>
+
+
+      <p>Where do you want to pick up from?</p>
+
+      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d39696.91748585319!2d-0.09553839804747107!3d51.548847512570475!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761cefef8e8c05%3A0xc5b1fb59d8196f2c!2sLondon+Borough+of+Hackney%2C+Greater+London!5e0!3m2!1sen!2suk!4v1465560067568" width="600" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
+
+      <div id="errors">
+      {{ form.non_form_errors }}
+      {{ form.errors }}
+      </div>
+      <form action="{% url 'dashboard_change_collection_point' %}" method="post">
+        {% csrf_token %}
+        <fieldset class="columns collection-points">
+          <legend>Choose one collection point</legend>
+          <ul class="row">
+          {% for radio in form.collection_point %}
+            <li class="column">
+              {{ radio.tag }}
+              <label for="{{ radio.id_for_label }}">
+                  {{ radio.choice_label }}
+              </label>
+            </li>
+          {% endfor %}
+          </ul>
+        </fieldset>
+        <div class="column">
+          <div class="row">
+            <div class="action-group">
+              <input type="submit" name="cancel" value="Cancel" class="button font-display large">
+              <input type="submit" class="button font-display primary large" value="Confirm">
+              {# <h4><a href="#" class="">back</a></h4> #}
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
 {% endblock %}
 {% block extra_body %}

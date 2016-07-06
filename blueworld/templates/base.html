@@ -33,7 +33,7 @@
           <ul id="navigation">
             <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
             {% if not user.customer.has_left %}
-              <li><a href="{% url 'account_email' %}">Change E-mail</a></li>
+              <li><a href="{% url 'account_email' %}">E-mail Addresses</a></li>
               <li><a href="{% url 'account_change_password' %}">Change Password</a></li>
               <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
               <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>

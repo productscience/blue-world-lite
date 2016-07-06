@@ -234,14 +234,97 @@ def go_cardless_callback(request):
 @not_staff
 @gocardless_is_set_up
 def dashboard_change_order(request):
-    return render(request, 'dashboard/change-order.html')
+    if request.method == 'POST' and request.POST.get('cancel'):
+        messages.add_message(request, messages.INFO, "Your order has not been changed.")
+        return redirect(reverse("dashboard"))
+    initial_bag_quantities = dict([(bag_quantity.bag_type.id, bag_quantity.quantity) for bag_quantity in request.user.customer.bag_quantities])
+    OrderFormSet = formset_factory(QuantityForm, extra=0, formset=BaseOrderFormSet)
+    quantities = []
+    quantity_by_inactive_bag_type_id = {}
+    available_bag_types = BagType.objects.order_by('display_order')#.filter(active=True)
+    for bag_type in available_bag_types:
+        quantity = 0
+        if bag_type.id in initial_bag_quantities:
+            quantity = initial_bag_quantities[bag_type.id]
+        if bag_type.active:
+            bag_quantity = {
+                "id": bag_type.id,
+                "name": bag_type.name,
+                "weekly_cost": bag_type.weekly_cost,
+                "quantity": quantity,
+                "not_active_warning_needed": False,
+            }
+            quantities.append(bag_quantity)
+        else:
+            # If this is a disabled bag type that the user is still getting:
+            if quantity > 0:
+                bag_quantity = {
+                    "id": bag_type.id,
+                    "name": bag_type.name,
+                    "weekly_cost": bag_type.weekly_cost,
+                    "quantity": quantity,
+                    "not_active_warning_needed": True,
+                }
+                quantities.append(bag_quantity)
+                quantity_by_inactive_bag_type_id[bag_type.id] = quantity
+    if request.method == 'POST':
+        formset = OrderFormSet(request.POST, request.FILES, initial=quantities) # auto_id=False)
+        if formset.is_valid():
+            bag_quantities = {}
+            for row in formset.cleaned_data:
+                # XXX Django should take care of making sure the IDs are in the initial data?
+                # bag ID not active and the quantity you are asking for is greater than what you started with
+                if row['id'] in quantity_by_inactive_bag_type_id:
+                    if row['quantity'] > quantity_by_inactive_bag_type_id[row['id']]:
+                        messages.add_message(request, messages.ERROR, "The {} bag you've selected is no longer available so you cannot order extra bags from it. Please check your order and try again.".format())
+                        #formset = OrderFormSet(initial=quantities)
+                        return render(request, 'dashboard/change-order.html', {'formset': formset})
+                if row['quantity'] != 0:
+                    bag_quantities[row['id']] = row['quantity']
+            # Save and load bag types
+            if initial_bag_quantities == bag_quantities:
+                messages.add_message(request, messages.ERROR, "You haven't made any changes to your order. You can click Cancel if you are happy with your order as it is.")
+                # formset = OrderFormSet(initial=quantities)
+                return render(request, 'dashboard/change-order.html', {'formset': formset})
+                
+            request.user.customer.bag_quantities = bag_quantities
+            messages.add_message(request, messages.SUCCESS, "Your order has been updated successfully")
+            return redirect(reverse("dashboard"))
+    else:
+        formset = OrderFormSet(initial=quantities)
+    return render(request, 'dashboard/change-order.html', {'formset': formset})
 
 
 @login_required
 @not_staff
 @gocardless_is_set_up
 def dashboard_change_collection_point(request):
-    return render(request, 'dashboard/change-collection-point.html')
+    if request.method == 'POST' and request.POST.get('cancel'):
+        messages.add_message(request, messages.INFO, "Your collection point has not been changed.")
+        return redirect(reverse("dashboard"))
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = CollectionPointForm(request.POST)
+        # XXX Guessing this checks the actual IDs too?
+        if form.is_valid():
+            if form.cleaned_data['collection_point'].id == request.user.customer.collection_point.id:
+                messages.add_message(request, messages.ERROR, "You haven't made any changes to your collection point. You can click Cancel if you are happy with your current collection point.")
+                return render(request, 'dashboard/change-collection-point.html', {'form': form})
+            request.user.customer.collection_point = form.cleaned_data['collection_point'].id
+            messages.add_message(request, messages.SUCCESS, "Your collection point has been updated successfully")
+            return redirect(reverse("dashboard"))
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = CollectionPointForm(initial={'collection_point': request.user.customer.collection_point.id})
+    locations = {}
+    for i, collection_point in enumerate(form.fields['collection_point'].queryset.all()):
+         locations['id_collection_point_{}'.format(i)] = {
+             "longitude": escape(collection_point.longitude),
+             "latitude": escape(collection_point.latitude),
+         }
+    return render(request, 'dashboard/change-collection-point.html', {'form': form, 'locations': json.dumps(locations)})
+
 
 def logged_out(request):
     if request.user.username:

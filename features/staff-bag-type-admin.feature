@@ -18,8 +18,17 @@ Feature: Staff bag type admin
      Then the browser is still at /admin/join/bagtype/add/
       And I see "Please correct the error below." in "p.errornote"
 
+  Scenario: Error when not entering a cost
+    Given I navigate to /admin/join/bagtype/
+      And I follow the "ADD BAG TYPE" link
+      And I type "New Bag Type" into "#id_name"
+     When I click the "Save" button
+     Then the browser is still at /admin/join/bagtype/add/
+      And I see "Please correct the error below." in "p.errornote"
+
   Scenario: Successfully add new bag type
     Given I type "New Bag Type" into "#id_name"
+      And I type "12.56" into "#id_weekly_cost"
      When I click the "Save" button
      Then the browser moves to /admin/join/bagtype/
       And I see "added successfully" in ".messagelist .success"
@@ -31,16 +40,22 @@ Feature: Staff bag type admin
     Given I navigate to /admin/join/bagtype/
       And I follow the "New Bag Type" link
       And I type "<name>" into "#id_name"
+      And I type "<weekly_cost>" into "#id_weekly_cost"
      When I click the "Save" button
      Then the browser is still at /admin/join/bagtype/5/change/
       And I see "Please correct the error below." in "p.errornote"
 
    Examples: Error data
-     | name      |
-     | Large veg |
+     | name         | weekly_cost |
+     | Large veg    | 12.56       |
+     | New Bag Type |             |
+     | New Bag Type | 12.5678     |
+     | New Bag Type | -12.56      |
 
-  Scenario: Successfully add new bag type
-    Given I type "New Bag Type Edited" into "#id_name"
+  Scenario: Successfully edit bag type name
+    Given I navigate to /admin/join/bagtype/
+      And I follow the "New Bag Type" link
+      And I type "New Bag Type Edited" into "#id_name"
      When I click the "Save" button
      Then the browser moves to /admin/join/bagtype/
       And I see "changed successfully" in ".messagelist .success"

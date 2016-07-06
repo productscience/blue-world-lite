@@ -4,8 +4,14 @@ Feature: Change email
       And I create a started user "Email Changer", "email-changer", "email-changer@example.com" with password "123123ab"
       And I login with "email-changer@example.com" and "123123ab"
 
-  Scenario: Navigate to email admin
-    Given I navigate to /email
+  Scenario: Navigate from Dashboard
+    Given I navigate to /dashboard
+     When I follow the "E-mail Addresses" link
+     Then the browser moves to /email/
+      And I see "E-mail Addresses" in "h1"
+
+  Scenario: Existing email is present
+    Given I navigate to /email/
      Then there is 1 "input[type='radio']" element in "form"
       And the value of "#email_radio_1" is "email-changer@example.com"
       And "#email_radio_1" is checked

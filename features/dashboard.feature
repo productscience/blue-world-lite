@@ -15,8 +15,8 @@ Feature: Dashboard
 
    Examples: Dashboard links
      | link                    | url                                | expected                                         |
-     | Change Order            | /dashboard/change-order            | This functionality is not implemented yet        |
-     | Change Collection Point | /dashboard/change-collection-point | This functionality is not implemented yet        |
+     | Change Order            | /dashboard/change-order            | Which bags do you want to pick up each week?     |
+     | Change Collection Point | /dashboard/change-collection-point | Where do you want to pick up from?               |
      | Bank Details            | /dashboard/bank-details            | change your bank direct debit details            |
      | Leave                   | /dashboard/leave                   | tell us why you have decided to leave the scheme |
      | Order History           | /dashboard/order-history           | This functionality is not implemented yet        |

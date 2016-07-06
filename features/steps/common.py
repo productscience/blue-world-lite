@@ -182,3 +182,9 @@ def step_impl(context, regex, name):
     value = reg.search(string).group(1)
     context.variables[name] = value
     print(context.variables)
+
+@step('I type "" into "{selector}"')
+def step_impl(context, selector):
+    element = context.browser.find_element_by_css_selector(selector)
+    assert element is not None, "No such element found"
+    element.clear()

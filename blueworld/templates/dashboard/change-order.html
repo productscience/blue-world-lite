@@ -5,7 +5,60 @@
 {% block content %}
     <div class="row">
       <h1>Change Order</h1>
-      <p>This functionality is not implemented yet</p>
+
+      <p>Which bags do you want to pick up each week?</p>
+
+      <div id="errors">
+      {{ formset.non_form_errors }}
+      </div>
+      <form action="{% url 'dashboard_change_order' %}" method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <table class="stack">
+          <thead>
+            <tr>
+              <th width="100">Qty</th>
+              <th>Bag Type</th>
+              <th>Cost per week</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for form in formset %}
+            {% if form.errors.quantity %}
+            <tr class="error" style="background: #fcc">
+              <td colspan="3">
+                {% for error in form.errors.quantity %}
+                  {{ error }}
+                {% endfor %}
+              </td>
+            </tr>
+            {% endif %}
+            <tr class="{% cycle row1 row2 %}">
+              <td>
+              {% for field in form.visible_fields %}
+              {# Include the hidden fields in the form #}
+              {% if forloop.first %}
+                {% for hidden in form.hidden_fields %}
+                {{ hidden }}
+                {% endfor %}
+              {% endif %}
+              {{ field }}
+              {% endfor %}
+              </td>
+              <td>{{ form.initial.name }}</td>
+              <td>£{{ form.initial.weekly_cost }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="row">
+          <div class="action-group column">
+            <input type="submit" name="cancel" value="Cancel" class="button font-display large">
+            <input type="submit" name="action" value="Confirm" class="button font-display primary large">
+            {#  <a href="#" class="">back</a> #}
+          </div>
+        </div>
+      </form>
     </div>
 {% endblock %}
 {% block extra_body %}
