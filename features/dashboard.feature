@@ -8,9 +8,39 @@ Feature: Dashboard
      When I navigate to /dashboard
      Then the browser moves to /login?next=/dashboard
 
-  Scenario Outline: Dashboard Links
+  Scenario Outline: Dashboard information after the last collection but before the deadline date
     Given I login with "dashboard@example.com" and "123123ab"
-      And I navigate to /dashboard
+      And I freeze time at <date>
+     When I navigate to /dashboard
+     Then I see "Wed 20 July" in "#collection-date"
+      And I see "You can make changes that affect your next collection any time before" in "#deadline-date-message"
+      And I see "Sun 17 July 3:00 p.m." in "#deadline-date"
+
+   # 13th is a Wednesday
+   # 17th is a Sunday
+   Examples: Times where you can make changes for the next collection
+     | date                |
+     | 2016-07-13 12:00:00 |
+     | 2016-07-17 14:59:59 |
+
+  Scenario Outline: Dashboard information after the deadline date but before the next collection
+    Given I freeze time at 2016-07-17 15:00:00
+     When I navigate to /dashboard
+     Then I see "Wed 20 July" in "#collection-date"
+      And I see "You are too late for making changes for your next collection" in "#deadline-date-message"
+
+   # 17th is a Sunday
+   # 20th is a Wednesday
+   Examples: Times when changes you make affect the collection after the next one
+     | date                |
+     | 2016-07-17 15:00:00 |
+     | 2016-07-20 11:59:59 |
+
+  Scenario: Unfrezee time
+    Given I return to the current time
+
+  Scenario Outline: Dashboard Links
+    Given I navigate to /dashboard
      When I follow the "<link>" link
      Then the browser moves to <url>
       And I see "<expected>" in "p"
@@ -66,8 +96,9 @@ Feature: Dashboard
 
    #  | /go-cardless-callback              |
 
-   Scenario: I set up GoCardless
-     Given I navigate to /dashboard
-      When I follow the "Skip" link
-      Then I see "Successfully set up Go Cardless" in "#messages"
-       And I see "Dashboard" in "h1"
+  Scenario: I set up GoCardless
+    Given I navigate to /dashboard
+     When I follow the "Skip" link
+     Then I see "Successfully set up Go Cardless" in "#messages"
+      And I see "Dashboard" in "h1"
+

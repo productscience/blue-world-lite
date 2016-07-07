@@ -12,7 +12,9 @@ from django import forms
 from django.forms import formset_factory
 from django.forms import BaseFormSet
 
+# In the tests we freeze datetime, so we need to get the datetime module separately each time.
 import json
+import datetime
 
 
 class QuantityForm(forms.Form):
@@ -311,6 +313,10 @@ def dashboard_change_collection_point(request):
             if form.cleaned_data['collection_point'].id == request.user.customer.collection_point.id:
                 messages.add_message(request, messages.ERROR, "You haven't made any changes to your collection point. You can click Cancel if you are happy with your current collection point.")
                 return render(request, 'dashboard/change-collection-point.html', {'form': form})
+            # elif CollectionPoint.objects.get(form.cleaned_data['collection_point'].id).active == False:
+            #     messages.add_message(request, messages.ERROR, "The collection point you've chosen is no longer available. Please choose another.")
+            #     form = CollectionPointForm(initial={'collection_point': request.user.customer.collection_point.id})
+            #     return render(request, 'dashboard/change-collection-point.html', {'form': form})
             request.user.customer.collection_point = form.cleaned_data['collection_point'].id
             messages.add_message(request, messages.SUCCESS, "Your collection point has been updated successfully")
             return redirect(reverse("dashboard"))
@@ -382,21 +388,49 @@ def dashboard_bye(request):
     return render(request, 'dashboard/bye.html')
 
 
+freezer = None
+import freezegun
+def timetravel_to(request, date):
+    global freezer
+    if freezer is not None:
+        freezer.stop()
+    freezer = freezegun.freeze_time(date, tick=True)
+    freezer.start()
+    return HttpResponse('ok')
 
-import datetime
+def timetravel_freeze(request, date):
+    global freezer
+    if freezer is not None:
+        freezer.stop()
+    freezer = freezegun.freeze_time(date)
+    freezer.start()
+    return HttpResponse('ok')
+
+def timetravel_cancel(request):
+    global freezer
+    if freezer is None:
+       return HttpResponse('not time travelling')
+    freezer.stop()
+    freezer = None
+    return HttpResponse('ok')
+
 
 def next_deadline():
     sunday = 6
-    return _next_weekday(datetime.datetime.now(), sunday).replace(hour=15, minute=00, second=0, microsecond=0)
+    return _next_weekday(datetime.datetime.now(), sunday, 15).replace(hour=15, minute=00, second=0, microsecond=0)
 
 def next_collection():
     wednesday = 2
-    return _next_weekday(datetime.datetime.now(), wednesday)
+    a =  _next_weekday(datetime.datetime.now(), wednesday, 12)
+    return a
 
-def _next_weekday(d, weekday):
+def _next_weekday(d, weekday, cutoff_hour):
     # The value of weekday is 0-6 where Monday is 0 and Sunday is 6
     days_ahead = weekday - d.weekday()
-    if days_ahead <= 0: # Target day already happened this week
+    if days_ahead == 0:
+        if d.hour >= cutoff_hour:
+            days_ahead += 7
+    elif days_ahead < 0: # Target day already happened this week
         days_ahead += 7
     return d + datetime.timedelta(days_ahead)
 
@@ -407,6 +441,7 @@ def _next_weekday(d, weekday):
 @gocardless_is_set_up
 def dashboard_order_history(request):
     return render(request, 'dashboard/order-history.html')
+
 
 @login_required
 @not_staff

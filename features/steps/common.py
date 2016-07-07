@@ -188,3 +188,25 @@ def step_impl(context, selector):
     element = context.browser.find_element_by_css_selector(selector)
     assert element is not None, "No such element found"
     element.clear()
+
+
+from freezegun import freeze_time
+import requests
+
+@step('I time travel to {date}')
+def step_impl(context, date):
+    r = requests.get('http://localhost:8000/timetravel/to/'+date)
+    assert r.status_code == 200, r.status_code
+    assert r.text == 'ok'
+
+@step('I freeze time at {date}')
+def step_impl(context, date):
+    r = requests.get('http://localhost:8000/timetravel/freeze/'+date)
+    assert r.status_code == 200, r.status_code
+    assert r.text == 'ok'
+
+@step('I return to the current time')
+def step_impl(context):
+    r = requests.get('http://localhost:8000/timetravel/cancel')
+    assert r.status_code == 200, r.status_code
+    assert r.text == 'ok'

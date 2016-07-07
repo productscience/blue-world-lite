@@ -21,6 +21,9 @@ import allauth.account.views as account_views
 
 urlpatterns = [
     url(r'^$', join.views.home, name='home'),
+    url(r'^timetravel/to/(?P<date>.+)$', join.views.timetravel_to, name='timetravel_to'),
+    url(r'^timetravel/freeze/(?P<date>.+)$', join.views.timetravel_freeze, name='timetravel_freeze'),
+    url(r'^timetravel/cancel$', join.views.timetravel_cancel, name='timetravel_cancel'),
     url(r'^join$', join.views.join, name='join'),
     url(r'^join/$', join.views.join),
     url(r'^join/choose-bags$', join.views.choose_bags, name='join_choose_bags'),
