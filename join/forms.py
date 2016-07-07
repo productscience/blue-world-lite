@@ -1,5 +1,11 @@
 from django import forms
-from .models import Customer, CustomerCollectionPointChange, CustomerOrderChange, CustomerOrderChangeBagQuantity, AccountStatusChange
+from .models import (
+    AccountStatusChange,
+    Customer,
+    CustomerCollectionPointChange,
+    CustomerOrderChange,
+    CustomerOrderChangeBagQuantity,
+)
 
 
 class SignupForm(forms.Form):

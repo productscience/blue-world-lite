@@ -528,3 +528,13 @@ Edit `django.po`. Then:
 ```
 $ PATH=/usr/local/Cellar/gettext/0.19.7/bin/:$PATH python manage.py compilemessages
 ```
+
+### Style
+
+You can check source code style like this:
+
+```
+pep8 blueworld join | grep -v "join/migrations/"
+```
+
+We don't bother styling the automatically-generated mirgrations.
