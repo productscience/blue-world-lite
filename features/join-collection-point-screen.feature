@@ -1,10 +1,5 @@
 Feature: Collection Point Screen
 
-   Note: If the user chooses a collection point which then becomes deactivated
-   *after* they clicked next, it will probably still be their chosen collection
-   point at the time they create their account. This is controlled by
-   SESSION_COOKIE_AGE in the blueworld/settings.py file.
-
   Scenario: _setup
     Given I switch to the user browser
       And I navigate to /logout

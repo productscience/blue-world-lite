@@ -143,6 +143,20 @@ def valid_collection_point_in_session(func):
                     '''.format(reverse("join_collection_point")),
                 )
             )
+        cps = CollectionPoint.objects.filter(
+            id__in=[request.session['collection_point']],
+            active=True
+        ).all()
+        if not len(cps) == 1:
+            return HttpResponse(
+                ERROR_TEMPLATE.format(
+                    heading='Your chosen collection point is not available',
+                    message='''
+                        Please
+                        <a href="{}">go back and choose a different one</a>.
+                    '''.format(reverse("join_collection_point")),
+                )
+            )
         return func(request, *args, **kwargs)
     return _decorated
 
@@ -575,6 +589,7 @@ class LeaveReasonForm(forms.Form):
         required=False,
     )
 
+
 @login_required
 @not_staff
 @gocardless_is_set_up
@@ -593,7 +608,9 @@ def dashboard_leave(request):
         form = LeaveReasonForm(request.POST)
         # check whether it's valid:
         if form.is_valid():
-            reason = dict(form.fields['reason'].choices)[form.cleaned_data['reason']]
+            reason = dict(form.fields['reason'].choices)[
+                form.cleaned_data['reason']
+            ]
             a = send_mail(
                 '[BlueWorld] Leaver Notification',
                 '''
