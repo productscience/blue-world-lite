@@ -417,7 +417,11 @@ def dashboard_change_order(request):
             })
     active_bag_type_ids = [bt['id'] for bt in active_bag_types]
     if request.method == 'POST':
-        formset = OrderFormSet(request.POST, request.FILES, initial=active_bag_types)
+        formset = OrderFormSet(
+            request.POST,
+            request.FILES,
+            initial=active_bag_types,
+        )
         if formset.is_valid():
             bag_quantities = {}
             for row in formset.cleaned_data:
@@ -426,7 +430,9 @@ def dashboard_change_order(request):
                 # bag ID not active and the quantity you are asking for is
                 # greater than what you started with
                 if row['id'] not in bag_type_ids:
-                    raise Exception('Invalid bag type ID: {}'.format(row['id']))
+                    raise Exception(
+                        'Invalid bag type ID: {}'.format(row['id'])
+                    )
                 if row['id'] not in active_bag_type_ids:
                     messages.add_message(
                         request,

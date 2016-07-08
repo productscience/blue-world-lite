@@ -8,7 +8,7 @@ Feature: Collection Point Screen
 
   Scenario: Can't continue to login details if I haven't chosen a collection point
     Given the browser is still at /join/choose-bags
-      And I type "1" into "#id_form-2-quantity"
+      And I type "1" into "#id_form-1-quantity"
       And I click the "Next" button
       And the browser moves to /join/collection-point
       And I see "Where do you want to pick up your bag from?" in "h3"

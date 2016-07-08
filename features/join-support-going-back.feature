@@ -19,20 +19,20 @@ Feature: Join - Support Going Back
       # One of the inputs from the test data is active=False so is excluded
       And there are 3 "input" elements in "form"
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "0"
-      And I type "1" into "#id_form-2-quantity"
+      And the value of "#id_form-0-quantity" is "0"
+      And I type "1" into "#id_form-0-quantity"
       And I click the "Next" button
       And the browser moves to /join/collection-point
     Given I navigate to /join/choose-bags
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "1"
+      And the value of "#id_form-0-quantity" is "1"
       And there are 3 "input" elements in "form"
-      And I type "2" into "#id_form-2-quantity"
+      And I type "2" into "#id_form-0-quantity"
      When I click the "Next" button
      Then the browser moves to /join/collection-point
     Given I navigate to /join/choose-bags
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "2"
+      And the value of "#id_form-0-quantity" is "2"
       And there are 3 "input" elements in "form"
      When I click the "Next" button
      Then the browser moves to /join/collection-point
@@ -42,7 +42,7 @@ Feature: Join - Support Going Back
      When I click the "Join the scheme" button
      Then the browser moves to /join/choose-bags
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "0"
+      And the value of "#id_form-0-quantity" is "0"
 
   Scenario: Complete choose bags and collection point, both choices are still there when you navigate back to them
     Given I navigate to /join/choose-bags
@@ -50,20 +50,20 @@ Feature: Join - Support Going Back
       # One of the inputs from the test data is active=False so is excluded
       And there are 3 "input" elements in "form"
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "0"
-      And I type "1" into "#id_form-2-quantity"
+      And the value of "#id_form-0-quantity" is "0"
+      And I type "1" into "#id_form-0-quantity"
       And I click the "Next" button
       And the browser moves to /join/collection-point
     Given I navigate to /join/choose-bags
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "1"
+      And the value of "#id_form-0-quantity" is "1"
       And there are 3 "input" elements in "form"
-      And I type "2" into "#id_form-2-quantity"
+      And I type "2" into "#id_form-0-quantity"
      When I click the "Next" button
      Then the browser moves to /join/collection-point
     Given I navigate to /join/choose-bags
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "2"
+      And the value of "#id_form-0-quantity" is "2"
       And there are 3 "input" elements in "form"
      When I click the "Next" button
      Then the browser moves to /join/collection-point
@@ -78,7 +78,7 @@ Feature: Join - Support Going Back
       And I see "Sign Up" in "h1"
     Given I navigate to /join/choose-bags
      Then the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "2"
+      And the value of "#id_form-0-quantity" is "2"
       And there are 3 "input" elements in "form"
      When I navigate to /join/collection-point
      Then there are 4 "input" elements in "form"
@@ -90,11 +90,11 @@ Feature: Join - Support Going Back
      When I click the "Join the scheme" button
      Then the browser moves to /join/choose-bags
       And the value of "#id_form-1-quantity" is "0"
-      And the value of "#id_form-2-quantity" is "0"
+      And the value of "#id_form-0-quantity" is "0"
      When I navigate to /join/collection-point
       And I see "You have not chosen any bags" in "h3"
     Given I navigate to /join/choose-bags
-      And I type "1" into "#id_form-2-quantity"
+      And I type "1" into "#id_form-0-quantity"
      When I click the "Next" button
      Then the browser moves to /join/collection-point
       And there are 0 "input[selected]" elements in "form"
