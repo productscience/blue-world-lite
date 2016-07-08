@@ -19,6 +19,7 @@ from django.shortcuts import render, redirect
 from django.utils.html import format_html, escape
 import freezegun
 
+
 from .models import (
     AccountStatusChange,
     BagType,
