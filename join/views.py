@@ -482,6 +482,7 @@ def dashboard_change_collection_point(request):
             'Your collection point has not been changed.'
         )
         return redirect(reverse("dashboard"))
+    current_collection_point = request.user.customer.collection_point
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
@@ -502,30 +503,11 @@ def dashboard_change_collection_point(request):
                 return render(
                     request,
                     'dashboard/change-collection-point.html',
-                    {'form': form}
+                    {
+                        'form': form,
+                        'current_collection_point': current_collection_point,
+                    }
                 )
-            # elif CollectionPoint.objects.get(
-            #     form.cleaned_data['collection_point'].id
-            # ).active == False:
-            #     messages.add_message(
-            #     request,
-            #     messages.ERROR,
-            #     '''
-            #     The collection point you've chosen is no longer available.
-            #     Please choose another.
-            #     '''
-            # )
-            #     form = CollectionPointForm(
-            #         initial = {
-            #             'collection_point': \
-            #                 request.user.customer.collection_point.id
-            #         }
-            #     )
-            #     return render(
-            #         request,
-            #         'dashboard/change-collection-point.html',
-            #         {'form': form}
-            #     )
             request.user.customer.collection_point = \
                 form.cleaned_data['collection_point'].id
             messages.add_message(
@@ -552,7 +534,11 @@ def dashboard_change_collection_point(request):
     return render(
         request,
         'dashboard/change-collection-point.html',
-        {'form': form, 'locations': json.dumps(locations)}
+        {
+            'form': form,
+            'locations': json.dumps(locations),
+            'current_collection_point': current_collection_point,
+        }
     )
 
 
@@ -589,12 +575,18 @@ class LeaveReasonForm(forms.Form):
         required=False,
     )
 
-
 @login_required
 @not_staff
 @gocardless_is_set_up
 @have_not_left_scheme
 def dashboard_leave(request):
+    if request.method == 'POST' and request.POST.get('cancel'):
+        messages.add_message(
+            request,
+            messages.INFO,
+            'You are still part of the scheme, and haven\'t left.'
+        )
+        return redirect(reverse("dashboard"))
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:

@@ -18,8 +18,9 @@ Feature: Leave
   Scenario: Leave and change mind
     Given I navigate to /dashboard/leave
       And I see "We're sorry to see you go" in "p"
-     When I follow the "< Cancel" link
+     When I click the "Cancel" button
      Then the browser moves to /dashboard
+      And I see "You are still part of the scheme, and haven't left" in "#messages"
      # Check I haven't left
     Given I navigate to /dashboard/leave
      Then I see "Leave" in "h1"

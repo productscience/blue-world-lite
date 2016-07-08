@@ -236,6 +236,10 @@ if os.environ.get('LEAVER_EMAIL_TO'):
 if not LEAVER_EMAIL_TO:
     LEAVER_EMAIL_TO = ADMINS
 
+# This is the maxiumum amount of time a user could have selected a
+# collection point which is inactivated before they create their user
+# account. Set to 20 mins.
+SESSION_COOKIE_AGE = 20 * 60
 
 # Raven
 if 'RAVEN_DSN' in os.environ:

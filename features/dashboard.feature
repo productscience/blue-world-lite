@@ -9,8 +9,9 @@ Feature: Dashboard
      Then the browser moves to /login?next=/dashboard
 
   Scenario Outline: Dashboard information after the last collection but before the deadline date
-    Given I login with "dashboard@example.com" and "123123ab"
-      And I freeze time at <date>
+    # Need to freeze time first, otherwise you get logged out because of the session time of 20 mins
+    Given I freeze time at <date>
+      And I login with "dashboard@example.com" and "123123ab"
      When I navigate to /dashboard
      Then I see "Wed 20 July" in "#collection-date"
       And I see "You can make changes that affect your next collection any time before" in "#deadline-date-message"
@@ -25,6 +26,7 @@ Feature: Dashboard
 
   Scenario Outline: Dashboard information after the deadline date but before the next collection
     Given I freeze time at 2016-07-17 15:00:00
+      And I login with "dashboard@example.com" and "123123ab"
      When I navigate to /dashboard
      Then I see "Wed 20 July" in "#collection-date"
       And I see "You are too late for making changes for your next collection" in "#deadline-date-message"
@@ -38,6 +40,7 @@ Feature: Dashboard
 
   Scenario: Unfrezee time
     Given I return to the current time
+      And I login with "dashboard@example.com" and "123123ab"
 
   Scenario Outline: Dashboard Links
     Given I navigate to /dashboard
