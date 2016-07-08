@@ -230,6 +230,11 @@ if os.environ.get('ALLOWED_HOSTS'):
 ADMINS = []
 if os.environ.get('ADMINS'):
     ADMINS += [email.strip() for email in os.environ['ADMINS'].split(',')]
+LEAVER_EMAIL_TO = []
+if os.environ.get('LEAVER_EMAIL_TO'):
+    LEAVER_EMAIL_TO += [email.strip() for email in os.environ['LEAVER_EMAIL_TO'].split(',')]
+if not LEAVER_EMAIL_TO:
+    LEAVER_EMAIL_TO = ADMINS
 
 
 # Raven

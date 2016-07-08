@@ -70,6 +70,7 @@ DATABASE_URL='postgres://blueworld:blueworld@localhost:5432/blueworld'
 DEBUG='True'
 SERVER_EMAIL='error@blueworld.example.com'
 ADMINS='send-errors-here@example.com'
+LEAVER_EMAIL_TO='leaver-email@example.com; billing@example.com'
 # Local
 EMAIL_HOST='localhost'
 EMAIL_HOST_USER='username'

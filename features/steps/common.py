@@ -183,6 +183,7 @@ def step_impl(context, regex, name):
     context.variables[name] = value
     print(context.variables)
 
+
 @step('I type "" into "{selector}"')
 def step_impl(context, selector):
     element = context.browser.find_element_by_css_selector(selector)

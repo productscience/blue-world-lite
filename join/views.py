@@ -3,6 +3,7 @@ import datetime
 
 from allauth.account.views import signup as allauth_signup
 from django import forms
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
@@ -13,6 +14,7 @@ from django.http import (
     HttpResponseBadRequest,
     HttpResponseForbidden,
 )
+from django.core.mail import send_mail
 from django.shortcuts import render, redirect
 from django.utils.html import format_html, escape
 import freezegun
@@ -599,6 +601,31 @@ def dashboard_leave(request):
         form = LeaveReasonForm(request.POST)
         # check whether it's valid:
         if form.is_valid():
+            reason = dict(form.fields['reason'].choices)[form.cleaned_data['reason']]
+            a = send_mail(
+                '[BlueWorld] Leaver Notification',
+                '''
+                Hello from BlueWorldLite,
+
+                {} has decided to leave the scheme. Here are the details:
+
+                Reason: {}\n
+                Comments:
+                {}
+
+                Thanks,
+
+                The BlueWorldLite system
+                '''.format(
+                    request.user.customer.full_name,
+                    reason,
+                    form.cleaned_data['comments'],
+                ),
+                settings.DEFAULT_FROM_EMAIL,
+                settings.LEAVER_EMAIL_TO,
+                fail_silently=False,
+            )
+            # Only save changes now in case there is a problem with the email
             account_status_change = AccountStatusChange(
                 customer=request.user.customer,
                 status=AccountStatusChange.LEFT,

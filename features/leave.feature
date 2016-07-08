@@ -25,7 +25,10 @@ Feature: Leave
      Then I see "Leave" in "h1"
 
   Scenario: Actually Leave
-    Given I navigate to /dashboard/leave
+    Given I clear any sent emails
+      And I navigate to /dashboard/leave
+      And I type "No comment" into "#id_comments"
+      # XXX Choose a different dropdown value
      When I click the "Leave" button
      Then the browser moves to /dashboard/bye
       And I see "We'll miss you" in "h1"
@@ -33,6 +36,13 @@ Feature: Leave
     Given I switch to the admin browser
      When I navigate to /admin/join/customer/?q=leaver
      Then I see "LEFT" in "tr.row1 td.field-account_status"
+      And 1 email has been sent
+      And I fetch the first sent email
+      And the email is to "leaver-notification@example.com"
+      And the email is from "no-reply@blueworld.example.com"
+      And the email subject is "[BlueWorld] Leaver Notification"
+      And the email body contains "Reason: Moving away from the area"
+      And the email body contains "No comment"
 
   Scenario: Can't leave once left
     Given I switch to the user browser
