@@ -6,9 +6,21 @@
     <div class="row">
       <h1>Change Order</h1>
 
-      <p>Which bags do you want to pick up each week?</p>
+      <p>Your current order is:</p>
+      <ul id="order">
+      {% for bag_quantity in request.user.customer.bag_quantities %}
+        <li>
+          <strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong>
+          {% if not bag_quantity.bag_type.active %}
+          (note this item is no longer available so if you change your order below, you will not be able to re-select it in future)
+          {% endif %}
+        </li>
+      {% endfor %}
+      </ul>
 
-      <p>Please note that you can only order a small fruit bag if you are also ordering another bag.</p>
+      <h3>New Order</h3>
+
+      <p>Note: You can only order a small fruit bag if you are also ordering another bag.</p>
 
       <div id="errors">
       {{ formset.non_form_errors }}

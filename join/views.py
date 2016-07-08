@@ -393,47 +393,30 @@ def dashboard_change_order(request):
             'Your order has not been changed.'
         )
         return redirect(reverse("dashboard"))
-    initial_bag_quantities = {}
-    for bag_quantity in request.user.customer.bag_quantities:
-        initial_bag_quantities[bag_quantity.bag_type.id] =\
-            bag_quantity.quantity
     OrderFormSet = formset_factory(
         QuantityForm,
         extra=0,
         formset=BaseOrderFormSet,
     )
-    quantities = []
-    quantity_by_inactive_bag_type_id = {}
-    # XXX .filter(active=True)
+    initial_bag_quantities = {}
+    for bag_quantity in request.user.customer.bag_quantities:
+        initial_bag_quantities[bag_quantity.bag_type.id] =\
+            bag_quantity.quantity
     available_bag_types = BagType.objects.order_by('display_order')
+    bag_type_ids = [b.id for b in available_bag_types]
+    active_bag_types = []
     for bag_type in available_bag_types:
-        quantity = 0
-        if bag_type.id in initial_bag_quantities:
-            quantity = initial_bag_quantities[bag_type.id]
         if bag_type.active:
-            bag_quantity = {
+            active_bag_types.append({
                 "id": bag_type.id,
                 "name": bag_type.name,
                 "weekly_cost": bag_type.weekly_cost,
-                "quantity": quantity,
+                "quantity": 0,
                 "not_active_warning_needed": False,
-            }
-            quantities.append(bag_quantity)
-        else:
-            # If this is a disabled bag type that the user is still getting:
-            if quantity > 0:
-                bag_quantity = {
-                    "id": bag_type.id,
-                    "name": bag_type.name,
-                    "weekly_cost": bag_type.weekly_cost,
-                    "quantity": quantity,
-                    "not_active_warning_needed": True,
-                }
-                quantities.append(bag_quantity)
-                quantity_by_inactive_bag_type_id[bag_type.id] = quantity
+            })
+    active_bag_type_ids = [bt['id'] for bt in active_bag_types]
     if request.method == 'POST':
-        # XXX auto_id=False)
-        formset = OrderFormSet(request.POST, request.FILES, initial=quantities)
+        formset = OrderFormSet(request.POST, request.FILES, initial=active_bag_types)
         if formset.is_valid():
             bag_quantities = {}
             for row in formset.cleaned_data:
@@ -441,24 +424,15 @@ def dashboard_change_order(request):
                 #     the initial data?
                 # bag ID not active and the quantity you are asking for is
                 # greater than what you started with
-                if row['id'] in quantity_by_inactive_bag_type_id:
-                    if row['quantity'] > quantity_by_inactive_bag_type_id[
-                        row['id']
-                    ]:
-                        messages.add_message(
-                            request,
-                            messages.ERROR,
-                            '''
-                            One or more bags you've selected is no longer
-                            available so you cannot order extra bags from it.
-                            Please check your order and try again.
-                            '''
-                        )
-                        return render(
-                            request,
-                            'dashboard/change-order.html',
-                            {'formset': formset}
-                        )
+                if row['id'] not in bag_type_ids:
+                    raise Exception('Invalid bag type ID: {}'.format(row['id']))
+                if row['id'] not in active_bag_type_ids:
+                    messages.add_message(
+                        request,
+                        messages.ERROR,
+                        'One or more bags you selected is no longer available.'
+                    )
+                    return redirect(reverse("dashboard_change_order"))
                 if row['quantity'] != 0:
                     bag_quantities[row['id']] = row['quantity']
             # Save and load bag types
@@ -472,11 +446,12 @@ def dashboard_change_order(request):
                     it is.
                     '''
                 )
-                return render(
-                    request,
-                    'dashboard/change-order.html',
-                    {'formset': formset}
-                )
+                return redirect(reverse("dashboard_change_order"))
+                # return render(
+                #     request,
+                #     'dashboard/change-order.html',
+                #     {'formset': formset}
+                # )
             request.user.customer.bag_quantities = bag_quantities
             messages.add_message(
                 request,
@@ -485,7 +460,7 @@ def dashboard_change_order(request):
             )
             return redirect(reverse("dashboard"))
     else:
-        formset = OrderFormSet(initial=quantities)
+        formset = OrderFormSet(initial=active_bag_types)
     return render(
         request,
         'dashboard/change-order.html',

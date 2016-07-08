@@ -45,6 +45,18 @@ class CollectionPoint(models.Model):
         be because it is full for example.
         '''
     )
+    FULL = 'FULL'
+    CLOSING_DOWN = 'CLOSING_DOWN'
+    INACTIVE_REASON_CHOICES = (
+        (FULL, 'Full'),
+        (CLOSING_DOWN, 'Closing down'),
+    )
+    inactive_reason = models.CharField(
+        max_length=255,
+        choices=INACTIVE_REASON_CHOICES,
+        default=FULL,
+        null=True
+    )
     display_order = models.IntegerField(null=True, blank=True)
 
     def __str__(self):

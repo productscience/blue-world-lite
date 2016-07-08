@@ -33,14 +33,14 @@ Feature: Change Collection Point
 
       And I switch to the user browser
       And I navigate to /dashboard/change-collection-point
-      And I see "Please be aware that St John of Jerusalem Church is currently full or closing down so if you switch to another collection point you won't be able to change back to St John of Jerusalem Church afterwards." in "#collection-point-not-active-warning"
+      And I see "Please be aware that St John of Jerusalem Church is currently full so if you switch to another collection point you won't be able to change back to St John of Jerusalem Church afterwards." in "#collection-point-not-active-warning"
       And I click the "Mother Earth (Albion Rd)" label
      When I click the "Confirm" button
      Then the browser moves to /dashboard
       And I see "Your collection point has been updated successfully" in "#messages"
       And I see "Mother Earth (Albion Rd)" in "#collection-point"
 
-  Scenario: Newly chosen collection point is no longer active, so we the old one is shown again
+  Scenario: Newly chosen collection point is no longer active
     Given I navigate to /dashboard/change-collection-point
       And I click the "Springfield" label
       And I switch to the admin browser
