@@ -49,12 +49,20 @@ class BaseOrderFormSet(BaseFormSet):
             # on its own
             return
         total_bags = 0
+        last_bag = None
         for form in self.forms:
             total_bags += form.cleaned_data['quantity']
+            if form.cleaned_data['quantity']:
+                last_bag = form.cleaned_data['id']
         # Do we want to validate this?
         if total_bags < 1:
             raise forms.ValidationError(
                 "Please choose at least one bag to order."
+            )
+        if total_bags == 1 and last_bag == 3:
+            raise forms.ValidationError(
+                "You must choose another bag too if you order "
+                "small fruit"
             )
 
 
