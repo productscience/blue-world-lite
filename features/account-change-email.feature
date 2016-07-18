@@ -16,22 +16,23 @@ Feature: Change email
       And the value of "#email_radio_1" is "email-changer@example.com"
       And "#email_radio_1" is checked
 
-#  Scenario: Cannot remove primary email
-#     When I click the "Remove" button
-#     Then the alert says "Do you really want to remove the selected e-mail address?"
-#      And I cancel the alert
-#      And the browser is still at /email/
-#      And there is 1 "input[type='radio']" element in "form"
-#      And the value of "#email_radio_1" is "email-changer@example.com"
-#      And "#email_radio_1" is checked
-#     When I click the "Remove" button
-#     Then the alert says "Do you really want to remove the selected e-mail address?"
-#      And I accept the alert
-#     Then the browser is still at /email/
-#      And there is 1 "input[type='radio']" element in "form"
-#      And the value of "#email_radio_1" is "email-changer@example.com"
-#      And "#email_radio_1" is checked
-#      And I see "You cannot remove your primary e-mail address (email-changer@example.com)." in "#messages"
+  @chrome
+  Scenario: Cannot remove primary email
+     When I click the "Remove" button
+     Then the alert says "Do you really want to remove the selected e-mail address?"
+      And I cancel the alert
+      And the browser is still at /email/
+      And there is 1 "input[type='radio']" element in "form"
+      And the value of "#email_radio_1" is "email-changer@example.com"
+      And "#email_radio_1" is checked
+     When I click the "Remove" button
+     Then the alert says "Do you really want to remove the selected e-mail address?"
+      And I accept the alert
+     Then the browser is still at /email/
+      And there is 1 "input[type='radio']" element in "form"
+      And the value of "#email_radio_1" is "email-changer@example.com"
+      And "#email_radio_1" is checked
+      And I see "You cannot remove your primary e-mail address (email-changer@example.com)." in "#messages"
 
 
   Scenario: Add an email

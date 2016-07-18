@@ -23,7 +23,7 @@ before_script:
 - "python manage.py runserver 0.0.0.0:8000 > log_runserver.txt 2>&1 &"
 - "curl -0 -H 'X-Mail-Password: password' http://127.0.0.1:5000/api/0/messages/"
 - sleep 5
-script: behave
+script: behave --tags=-chrome
 after_script:
 - cat log_runserver.txt
 - cat log_lathermail.txt

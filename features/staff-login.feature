@@ -26,11 +26,12 @@ Feature: Staff login
    Examples: Customer-only URLs
      | url                                |
      | /dashboard                         |
+     | /dashboard/gocardless              |
      | /dashboard/change-order            |
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
-     | /go-cardless-callback              |
+     | /gocardless-callback               |
 
   Scenario: Logout
     Given I'm using the user browser

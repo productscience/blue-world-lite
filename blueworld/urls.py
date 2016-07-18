@@ -93,14 +93,19 @@ urlpatterns = [
         include('hijack.urls')
     ),
     url(
-        r'^go-cardless-callback$',
-        join.views.go_cardless_callback,
-        name='go_cardless_callback',
+        r'^gocardless-callback$',
+        join.views.gocardless_callback,
+        name='gocardless_callback',
     ),
     url(
         r'^dashboard$',
         join.views.dashboard,
         name='dashboard',
+    ),
+    url(
+        r'^dashboard/gocardless$',
+        join.views.dashboard_gocardless,
+        name='dashboard_gocardless',
     ),
     url(
         r'^dashboard/bank-details$',

@@ -39,6 +39,6 @@ Feature: Join - Verify Email Address Later
      Then I see "Confirm E-mail Address" in "h1"
       And I see "Please confirm that join-verify-later@example.com is an e-mail address for user join-verify-later." in "body"
      When I click the "Confirm" button
-     Then the browser moves to /dashboard
+     Then the browser moves to /dashboard/gocardless
       And I see "Set up Go Cardless" in "h1"
 

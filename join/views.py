@@ -1,5 +1,6 @@
-import json
 import datetime
+import json
+import uuid
 
 from allauth.account.views import signup as allauth_signup
 from django import forms
@@ -17,7 +18,17 @@ from django.http import (
 from django.core.mail import send_mail
 from django.shortcuts import render, redirect
 from django.utils.html import format_html, escape
-import freezegun
+
+
+if settings.TIME_TRAVEL:
+    import freezegun
+
+
+import gocardless_pro
+gocardless_client = gocardless_pro.Client(
+    access_token=settings.GOCARDLESS_ACCESS_TOKEN,
+    environment=settings.GOCARDLESS_ENVIRONMENT,
+)
 
 
 from .models import (
@@ -299,8 +310,21 @@ def not_staff(func):
 
 def gocardless_is_set_up(func):
     def _decorated(request, *args, **kwargs):
-        if not request.user.customer.go_cardless:
-            return render(request, 'dashboard/set-up-go-cardless.html')
+        if not request.user.customer.gocardless_mandate_id:
+            return redirect(reverse('dashboard_gocardless'))
+        return func(request, *args, **kwargs)
+    return _decorated
+
+
+def gocardless_is_not_set_up(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.customer.gocardless_mandate_id:
+            return HttpResponseForbidden(
+                FORBIDDEN_TEMPLATE.format(
+                    heading='Go Cardless is Already Set Up',
+                    message=''
+                )
+            )
         return func(request, *args, **kwargs)
     return _decorated
 
@@ -324,6 +348,70 @@ def have_left_scheme(func):
             return redirect(reverse('dashboard'))
         return func(request, *args, **kwargs)
     return _decorated
+
+
+
+@login_required
+@not_staff
+@gocardless_is_not_set_up
+def dashboard_gocardless(request):
+    if request.method == 'POST':
+        assert request.user.username
+        # from django.contrib.sites.models import Site
+        # current_site = Site.objects.get_current()
+        # success_redirect_url = 'http://{}{}'.format(
+        #     current_site.domain,
+        #     reverse('gocardless_callback'),
+        # )
+        success_redirect_url = '{}://{}{}'.format(
+            request.scheme,
+            request.META['HTTP_HOST'],
+            reverse('gocardless_callback'),
+        )
+        request.user.customer.gocardless_session_token = str(uuid.uuid4())
+        redirect_flow = gocardless_client.redirect_flows.create(params={
+            'description': 'Your Growing Communities Veg Box Order',
+            'session_token': request.user.customer.gocardless_session_token,
+            'success_redirect_url': success_redirect_url,
+            # 'scheme': ... DD scheme.
+        })
+        request.user.customer.gocardless_redirect_flow_id = redirect_flow.id
+        request.user.customer.save()
+        return redirect(redirect_flow.redirect_url)
+    else:
+        return render(request, 'dashboard/set-up-go-cardless.html')
+
+
+@login_required
+@not_staff
+@gocardless_is_not_set_up
+def gocardless_callback(request):
+    if settings.GOCARDLESS_ENVIRONMENT == 'sandbox' and request.GET.get('skip', '').lower() == 'true':
+        request.user.customer.gocardless_mandate_id = str(uuid.uuid4())
+        request.user.customer.gocardless_session_token = ''
+        request.user.customer.gocardless_redirect_flow_id = ''
+    else:
+        redirect_flow_id = request.GET['redirect_flow_id']
+        assert request.user.customer.gocardless_redirect_flow_id == redirect_flow_id
+        complete_redirect_flow = gocardless_client.redirect_flows.complete(
+            redirect_flow_id,
+            {'session_token': request.user.customer.gocardless_session_token}
+        )
+        request.user.customer.gocardless_mandate_id = complete_redirect_flow.id
+        request.user.customer.gocardless_session_token = ''
+        request.user.customer.gocardless_redirect_flow_id = ''
+    request.user.customer.save()
+    account_status_change = AccountStatusChange(
+        customer=request.user.customer,
+        status=AccountStatusChange.ACTIVE,
+    )
+    account_status_change.save()
+    messages.add_message(
+        request,
+        messages.INFO,
+        'Successfully set up Go Cardless.'
+    )
+    return redirect(reverse("dashboard"))
 
 
 @login_required
@@ -356,31 +444,6 @@ def dashboard(request):
             request,
             'dashboard/re-join-scheme.html',
         )
-
-
-@login_required
-@not_staff
-def go_cardless_callback(request):
-    if request.user.customer.go_cardless:
-        return HttpResponseForbidden(
-            FORBIDDEN_TEMPLATE.format(
-                heading='Already set up',
-                message=''
-            )
-        )
-    request.user.customer.go_cardless = 'done'
-    request.user.customer.save()
-    account_status_change = AccountStatusChange(
-        customer=request.user.customer,
-        status=AccountStatusChange.ACTIVE,
-    )
-    account_status_change.save()
-    messages.add_message(
-        request,
-        messages.INFO,
-        'Successfully set up Go Cardless.'
-    )
-    return redirect(reverse("dashboard"))
 
 
 @login_required
@@ -644,34 +707,34 @@ def dashboard_bye(request):
     return render(request, 'dashboard/bye.html')
 
 
-freezer = None
-
-
-def timetravel_to(request, date):
-    global freezer
-    if freezer is not None:
-        freezer.stop()
-    freezer = freezegun.freeze_time(date, tick=True)
-    freezer.start()
-    return HttpResponse('ok')
-
-
-def timetravel_freeze(request, date):
-    global freezer
-    if freezer is not None:
-        freezer.stop()
-    freezer = freezegun.freeze_time(date)
-    freezer.start()
-    return HttpResponse('ok')
-
-
-def timetravel_cancel(request):
-    global freezer
-    if freezer is None:
-        return HttpResponse('not time travelling')
-    freezer.stop()
+if settings.TIME_TRAVEL:
     freezer = None
-    return HttpResponse('ok')
+
+    def timetravel_to(request, date):
+        global freezer
+        if freezer is not None:
+            freezer.stop()
+        freezer = freezegun.freeze_time(date, tick=True)
+        freezer.start()
+        return HttpResponse('ok')
+
+
+    def timetravel_freeze(request, date):
+        global freezer
+        if freezer is not None:
+            freezer.stop()
+        freezer = freezegun.freeze_time(date)
+        freezer.start()
+        return HttpResponse('ok')
+
+
+    def timetravel_cancel(request):
+        global freezer
+        if freezer is None:
+            return HttpResponse('not time travelling')
+        freezer.stop()
+        freezer = None
+        return HttpResponse('ok')
 
 
 def next_deadline():

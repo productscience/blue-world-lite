@@ -10,17 +10,17 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
-try:
+import os
+
+# Do NOT enable time travel on production
+# or users could go back in time and mess things up
+TIME_TRAVEL = not str(os.environ.get('TIME_TRAVEL')).lower() == 'false'
+if TIME_TRAVEL:
     # Must import this before the datetime module (and hence before Django)
     import freezegun
-except ImportError:
-    # freezegun isn't installed, so we can't time travel. Most likely this
-    # is a production install
-    pass
 
 
 import dj_database_url
-import os
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -251,3 +251,15 @@ if 'RAVEN_DSN' in os.environ:
         # release based on the git info.
         # 'release': raven.fetch_git_sha(os.path.dirname(__file__)),
     }
+
+
+# Go Cardless
+# https://github.com/gocardless/gocardless-pro-python
+# https://developer.gocardless.com/2015-07-06/#overview
+# https://gocardless.com/blog/an-introduction-to-our-api/
+# https://gocardless.com/blog/goingcardless-an-introduction-to-gocardless/
+GOCARDLESS_ACCESS_TOKEN = os.environ['GOCARDLESS_ACCESS_TOKEN']
+GOCARDLESS_ENVIRONMENT = os.environ.get(
+    'GOCARDLESS_ENVIRONMENT',
+    'sandbox'
+)

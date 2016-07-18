@@ -1,7 +1,7 @@
 Feature: Join - Cannot join if logged in
 
   Scenario: _setup
-    Given I create an email verified user "Cannot Join If Logged In", "cannot-join-if-logged-in", "cannot-join-if-logged-in@example.com" with password "123123ab"
+    Given I create a started user "Cannot Join If Logged In", "cannot-join-if-logged-in", "cannot-join-if-logged-in@example.com" with password "123123ab"
       And I login with "cannot-join-if-logged-in@example.com" and "123123ab"
 
   Scenario: Home redirects to dashbaord

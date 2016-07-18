@@ -7,3 +7,4 @@ django-allauth==0.25.2
 django-hijack==2.1.1
 raven==5.21.0
 freezegun==0.3.7
+gocardless_pro==0.2.2

@@ -40,7 +40,7 @@
             {% endif %}
             <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
             {% if not user.customer.has_left %}
-              {% if user.customer.go_cardless %}
+              {% if user.customer.gocardless_mandate_id %}
                 <li><a href="{% url 'dashboard_bank_details' %}">Bank Details</a></li>
                 <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
               {% endif %}

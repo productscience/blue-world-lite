@@ -72,17 +72,18 @@ Feature: Dashboard
    Examples: Protected URLs
      | url                                |
      | /dashboard                         |
+     | /dashboard/gocardless              |
      | /dashboard/change-order            |
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
      | /dashboard/order-history           |
-     | /go-cardless-callback              |
+     | /gocardless-callback               |
 
   Scenario: Create a user without GoCardless
     Given I'm using the user browser
       And I create an email verified user "Dashboard GoCardless", "dashboard-gocardless", "dashboard-gocardless@example.com" with password "123123ab"
-      And I login with "dashboard-gocardless@example.com" and "123123ab"
+      And I login with "dashboard-gocardless@example.com" and "123123ab" without GoCardless
 
   Scenario Outline: Protected dashboard URLs from users who haven't set up GoCardless
      When I navigate to <url>
@@ -91,17 +92,15 @@ Feature: Dashboard
    Examples: Pages that show the set up gocardless page
      | url                                |
      | /dashboard                         |
+     | /dashboard/gocardless              |
      | /dashboard/change-order            |
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
      | /dashboard/order-history           |
 
-   #  | /go-cardless-callback              |
-
-  Scenario: I set up GoCardless
-    Given I navigate to /dashboard
-     When I follow the "Skip" link
-     Then I see "Successfully set up Go Cardless" in "#messages"
-      And I see "Dashboard" in "h1"
-
+  Scenario: Protected GoCardless callback from users who have signed up with GoCardless
+    Given I'm using the user browser
+      And I login with "dashboard@example.com" and "123123ab"
+     When I navigate to /gocardless-callback
+     Then I see "Go Cardless is Already Set Up" in "h1"

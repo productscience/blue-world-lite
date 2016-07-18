@@ -5,8 +5,14 @@
 {% block content %}
     <div class="row">
       <h1>Set up Go Cardless</h1>
-      <p><a href="{% url 'go_cardless_callback' %}">Skip</a></p>
+      <p>Before we can continue we need to set up a direct debit to take payments. We do this using a service alled Go Cardless.</p>
+
+      <form action="{% url 'dashboard_gocardless' %}" method="post">
+        {% csrf_token %}
+        <input type="submit" class="button font-display primary large" value="Set up Go Cardless">
+      </form>
     </div>
 {% endblock %}
+
 {% block extra_body %}
 {% endblock %}

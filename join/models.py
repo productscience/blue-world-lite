@@ -159,8 +159,9 @@ class Customer(models.Model):
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
     mobile = models.CharField(max_length=30)
-    go_cardless = models.CharField(max_length=30, default='')
-
+    gocardless_session_token = models.CharField(max_length=255, default='')
+    gocardless_redirect_flow_id = models.CharField(max_length=255, default='')
+    gocardless_mandate_id = models.CharField(max_length=255, default='')
     tags = models.ManyToManyField(CustomerTag)
 
     def _get_latest_account_status(self):
