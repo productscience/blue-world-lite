@@ -231,13 +231,15 @@ class CustomerAdmin(BlueWorldModelAdmin):
         return result
     tags_field.short_description = 'Tags'
 
+    def current_mandate(self, obj):
+        return obj.gocardless_current_mandate.gocardless_mandate_id
+    current_mandate.short_description = 'Gocardless current mandate'
+
     def get_readonly_fields(self, request, obj=None):
         return [
             'user',
-            'full_name',
-            'nickname',
-            'mobile',
-            'go_cardless',
+            'account_status',
+            'current_mandate',
             'collection_point',
             'bag_quantities',
         ]
@@ -251,10 +253,11 @@ class CustomerAdmin(BlueWorldModelAdmin):
 
     fields = [
         'user',
+        'account_status',
         'full_name',
         'nickname',
         'mobile',
-        'go_cardless',
+        'current_mandate',
         'collection_point',
         'bag_quantities',
         'tags',

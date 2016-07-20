@@ -149,6 +149,20 @@ class CustomerTag(models.Model):
         ordering = ('tag',)
 
 
+class BillingGoCardlessMandate(models.Model):
+    session_token = models.CharField(max_length=255, default='')
+    gocardless_redirect_flow_id = models.CharField(max_length=255, default='')
+    gocardless_mandate_id = models.CharField(max_length=255, default='')
+    customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='go_cardless_mandate',
+        null=True,
+    )
+
+
 class Customer(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -158,11 +172,15 @@ class Customer(models.Model):
     )
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
-    mobile = models.CharField(max_length=30)
-    gocardless_session_token = models.CharField(max_length=255, default='')
-    gocardless_redirect_flow_id = models.CharField(max_length=255, default='')
-    gocardless_mandate_id = models.CharField(max_length=255, default='')
-    tags = models.ManyToManyField(CustomerTag)
+    mobile = models.CharField(max_length=30, default='', blank=True)
+    tags = models.ManyToManyField(CustomerTag, blank=True)
+    gocardless_current_mandate = models.OneToOneField(
+        BillingGoCardlessMandate,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='in_use_for_customer',
+        null=True,
+    )
 
     def _get_latest_account_status(self):
         latest_account_status = AccountStatusChange.objects.order_by(
@@ -307,3 +325,28 @@ class CustomerOrderChangeBagQuantity(models.Model):
             self.bag_type.name,
             self.customer_order_change.changed.strftime('%Y-%m-%d'),
         )
+
+
+
+
+class BillingCredit(models.Model):
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='billing_credit',
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    # XXX What about when prices change and we've already got some skip
+    # credits in place -> Prbably just add a manual credit to those accounts
+    # where it is an issue.
+    amount_pence = models.IntegerField()
+
+
+class BillingSkipCredit(BillingCredit):
+    collection_date = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # XXX if collection_date < next_skip_date:
+        #     raise ValueError('Cannot skip dates in the past')
+        return super().save(*args, **kwargs)

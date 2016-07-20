@@ -3,7 +3,7 @@ Feature: Staff bag type admin
     Given I switch to the user browser
       And I login as a member of staff
 
-  Scenario: Can navigate to New bag type form 2
+  Scenario: Can navigate to New bag type form
     Given I navigate to /admin
       And I follow the "Bag types" link
       And the browser moves to /admin/join/bagtype/

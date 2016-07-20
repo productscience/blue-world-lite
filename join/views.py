@@ -20,25 +20,24 @@ from django.shortcuts import render, redirect
 from django.utils.html import format_html, escape
 
 
-if settings.TIME_TRAVEL:
-    import freezegun
-
-
-import gocardless_pro
-gocardless_client = gocardless_pro.Client(
-    access_token=settings.GOCARDLESS_ACCESS_TOKEN,
-    environment=settings.GOCARDLESS_ENVIRONMENT,
-)
-
-
 from .models import (
     AccountStatusChange,
     BagType,
+    BillingGoCardlessMandate,
     CollectionPoint,
     Customer,
     CustomerCollectionPointChange,
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
+)
+if settings.TIME_TRAVEL:
+    import freezegun
+import gocardless_pro
+
+# XXX Should this be global?
+gocardless_client = gocardless_pro.Client(
+    access_token=settings.GOCARDLESS_ACCESS_TOKEN,
+    environment=settings.GOCARDLESS_ENVIRONMENT,
 )
 
 
@@ -310,7 +309,7 @@ def not_staff(func):
 
 def gocardless_is_set_up(func):
     def _decorated(request, *args, **kwargs):
-        if not request.user.customer.gocardless_mandate_id:
+        if not request.user.customer.gocardless_current_mandate:
             return redirect(reverse('dashboard_gocardless'))
         return func(request, *args, **kwargs)
     return _decorated
@@ -318,7 +317,7 @@ def gocardless_is_set_up(func):
 
 def gocardless_is_not_set_up(func):
     def _decorated(request, *args, **kwargs):
-        if request.user.customer.gocardless_mandate_id:
+        if request.user.customer.gocardless_current_mandate:
             return HttpResponseForbidden(
                 FORBIDDEN_TEMPLATE.format(
                     heading='Go Cardless is Already Set Up',
@@ -363,20 +362,24 @@ def dashboard_gocardless(request):
         #     current_site.domain,
         #     reverse('gocardless_callback'),
         # )
+        session_token = str(uuid.uuid4())
         success_redirect_url = '{}://{}{}'.format(
             request.scheme,
             request.META['HTTP_HOST'],
             reverse('gocardless_callback'),
         )
-        request.user.customer.gocardless_session_token = str(uuid.uuid4())
         redirect_flow = gocardless_client.redirect_flows.create(params={
             'description': 'Your Growing Communities Veg Box Order',
-            'session_token': request.user.customer.gocardless_session_token,
+            'session_token': session_token,
             'success_redirect_url': success_redirect_url,
             # 'scheme': ... DD scheme.
         })
-        request.user.customer.gocardless_redirect_flow_id = redirect_flow.id
-        request.user.customer.save()
+        mandate = BillingGoCardlessMandate(
+            session_token = session_token,
+            gocardless_redirect_flow_id = redirect_flow.id,
+            customer = request.user.customer,
+        )
+        mandate.save()
         return redirect(redirect_flow.redirect_url)
     else:
         return render(request, 'dashboard/set-up-go-cardless.html')
@@ -387,19 +390,22 @@ def dashboard_gocardless(request):
 @gocardless_is_not_set_up
 def gocardless_callback(request):
     if settings.GOCARDLESS_ENVIRONMENT == 'sandbox' and request.GET.get('skip', '').lower() == 'true':
-        request.user.customer.gocardless_mandate_id = str(uuid.uuid4())
-        request.user.customer.gocardless_session_token = ''
-        request.user.customer.gocardless_redirect_flow_id = ''
+        mandate = BillingGoCardlessMandate.objects.filter(customer=request.user.customer).get()
+        mandate.gocardless_mandate_id = str(uuid.uuid4())
+        request.user.customer.gocardless_mandate = mandate
     else:
-        redirect_flow_id = request.GET['redirect_flow_id']
-        assert request.user.customer.gocardless_redirect_flow_id == redirect_flow_id
+        mandate = BillingGoCardlessMandate.objects.filter(
+            customer=request.user.customer,
+            gocardless_redirect_flow_id=request.GET['redirect_flow_id'],
+        ).get()
         complete_redirect_flow = gocardless_client.redirect_flows.complete(
-            redirect_flow_id,
-            {'session_token': request.user.customer.gocardless_session_token}
+            mandate.gocardless_redirect_flow_id,
+            {'session_token': mandate.session_token}
         )
-        request.user.customer.gocardless_mandate_id = complete_redirect_flow.id
-        request.user.customer.gocardless_session_token = ''
-        request.user.customer.gocardless_redirect_flow_id = ''
+        assert complete_redirect_flow.id == mandate.gocardless_redirect_flow_id
+        mandate.gocardless_mandate_id = complete_redirect_flow.links.mandate
+    mandate.in_use_for_customer = request.user.customer
+    mandate.save()
     request.user.customer.save()
     account_status_change = AccountStatusChange(
         customer=request.user.customer,

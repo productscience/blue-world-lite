@@ -50,7 +50,7 @@ Feature: Join - Verify Email Address Immediately
   Scenario: Complete GoCardless
     Given I type "First Name" into "#customer_given_name"
       And I type "Last Name" into "#customer_family_name"
-      And I type "customer@example.com" into "#customer_email"
+      And I type "james@jimmyg.org" into "#customer_email"
       And I type "20-00-00" into "#customer_bank_accounts_branch_code"
       And I type "55779911" into "#customer_bank_accounts_account_number"
       And I click on "div.address-lookup-toggle button"
