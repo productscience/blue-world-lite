@@ -390,9 +390,10 @@ def dashboard_gocardless(request):
 @gocardless_is_not_set_up
 def gocardless_callback(request):
     if settings.GOCARDLESS_ENVIRONMENT == 'sandbox' and request.GET.get('skip', '').lower() == 'true':
-        mandate = BillingGoCardlessMandate.objects.filter(customer=request.user.customer).get()
-        mandate.gocardless_mandate_id = str(uuid.uuid4())
-        request.user.customer.gocardless_mandate = mandate
+        mandate = BillingGoCardlessMandate.objects.filter(
+            customer=request.user.customer,
+        ).get()
+        mandate.gocardless_mandate_id=str(uuid.uuid4())
     else:
         mandate = BillingGoCardlessMandate.objects.filter(
             customer=request.user.customer,
@@ -406,7 +407,6 @@ def gocardless_callback(request):
         mandate.gocardless_mandate_id = complete_redirect_flow.links.mandate
     mandate.in_use_for_customer = request.user.customer
     mandate.save()
-    request.user.customer.save()
     account_status_change = AccountStatusChange(
         customer=request.user.customer,
         status=AccountStatusChange.ACTIVE,
@@ -417,6 +417,7 @@ def gocardless_callback(request):
         messages.INFO,
         'Successfully set up Go Cardless.'
     )
+    request.user.customer.save()
     return redirect(reverse("dashboard"))
 
 
