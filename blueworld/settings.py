@@ -258,8 +258,11 @@ if 'RAVEN_DSN' in os.environ:
 # https://developer.gocardless.com/2015-07-06/#overview
 # https://gocardless.com/blog/an-introduction-to-our-api/
 # https://gocardless.com/blog/goingcardless-an-introduction-to-gocardless/
-GOCARDLESS_ACCESS_TOKEN = os.environ['GOCARDLESS_ACCESS_TOKEN']
 GOCARDLESS_ENVIRONMENT = os.environ.get(
     'GOCARDLESS_ENVIRONMENT',
     'sandbox'
 )
+if GOCARDLESS_ENVIRONMENT != 'sandbox':
+    GOCARDLESS_ACCESS_TOKEN = os.environ['GOCARDLESS_ACCESS_TOKEN']
+else:
+    GOCARDLESS_ACCESS_TOKEN = ''
