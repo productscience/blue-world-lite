@@ -45,15 +45,8 @@
 
           <div id="navigation">
             {# <a class="font-display button primary" href="{% url 'dashboard' %}">Home</a> #}
-            <h4>Your order</h4>
-            <div class="button-group">
 
-              <a class="font-display button primary" href="{% url 'dashboard_order_history' %}">Order History</a>
-              <a href="{% url 'dashboard_change_order' %}" class="font-display button primary">Change Order</a>
-              <a href="{% url 'dashboard_change_collection_point' %}" class="font-display button primary">Change Collection Point</a>
-            </div>
-
-            <h4>Your account</h4>
+            <h4 class="font-display">Your account</h4>
             {% if not user.customer.has_left %}
               <div class="button-group">
                 <a class="font-display button primary" href="{% url 'account_email' %}">E-mail Addresses</a>

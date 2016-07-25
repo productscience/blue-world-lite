@@ -4,9 +4,8 @@
 {% block extra_head %}{% endblock %}
 {% block content %}
     <div class="row">
-      <h1>Dashboard</h1>
 
-      <p>Welcome {{ request.user.customer.nickname }}!</p>
+      <h4>Hi {{ request.user.customer.nickname }},</h4>
 
       <p>Your collection point is
         <strong id="collection-point">{{ collection_point.name }}</strong>
@@ -21,14 +20,39 @@
       <p><em>Please check the opening days and hours of your collection point before collecting you order</em>.</p>
         {% endif %}
 
-      <p>Your order</p>
+      {% if skipped %}
+      <h4>Your next collection is
+        <a href="{% url 'dashboard_skip_weeks' %}">skipped</a> so there is nothing for you to pick up</span>
+        <span id="collection-date">{{ collection_date }}</span>
+        from
+        <span id="collection-point">{{ collection_point.name }}</span>.
+      </h4>
+      {% else %}
+      <h4>Your next collection is:
+      <span id="collection-date">{{ collection_date }}</span>
+      from
+      <span id="collection-point">{{ collection_point.name }}</span>.
+    </h4>
+      <p><em>Please check the opening days and hours of your collection point before collecting you order</em>.</p>
+      {% endif %}
+
+      <h4 class="font-display">Your Order</h4>
       <ul id="order">
       {% for bag_quantity in bag_quantities %}
-        <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
+        <li><h5>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</h5></li>
       {% endfor %}
       </ul>
 
+
       <p>Any changes you make until <span id="deadline">{{ deadline }}</span> will affect <span id="changes-affect">{{ changes_affect }}</span></p>
+
+      <div class="button-group">
+        <a class="font-display button primary" href="{% url 'dashboard_order_history' %}">Order History</a>
+        <a href="{% url 'dashboard_change_order' %}" class="font-display button primary">Change Order</a>
+        <a href="{% url 'dashboard_change_collection_point' %}" class="font-display button primary">Change Collection Point</a>
+      </div>
+
+      <hr>
 
     </div>
 {% endblock %}
