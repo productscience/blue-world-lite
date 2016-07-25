@@ -184,9 +184,12 @@ class Customer(models.Model):
         on_delete=models.CASCADE,
         related_name='customer'
     )
-    full_name = models.CharField(max_length=255)
-    nickname = models.CharField(max_length=30)
-    mobile = models.CharField(max_length=30, default='', blank=True)
+    full_name = models.CharField(max_length=255,
+        help_text="We'll use this to label your bag when you pick it up")
+    nickname = models.CharField(max_length=30,
+        help_text="We'll use this when emailing you about the scheme.")
+    mobile = models.CharField(max_length=30, default='', blank=True,
+        help_text="We use this to notify when your bag is ready to pick up")
     balance_carried_over = models.IntegerField(default=0)
     holiday_due = models.IntegerField(default=0)
     tags = models.ManyToManyField(CustomerTag, blank=True)
