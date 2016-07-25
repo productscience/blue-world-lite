@@ -11,9 +11,9 @@ from jobs import count_customers
 q = Queue(connection=conn)
 
 
-@sched.scheduled_job('interval', seconds=15)
+@sched.scheduled_job('interval', seconds=1500)
 def timed_job():
-    print('This job is run every 15 seconds to count customers.')
+    print('This job is run every 1500 seconds to count customers.')
     job = q.enqueue(count_customers)
 
 
