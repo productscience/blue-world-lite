@@ -8,19 +8,18 @@
 
       <p>Welcome {{ request.user.customer.nickname }}!</p>
 
-      <p>Your collection point is: <strong id="collection-point">{{ collection_point.name }}</strong></p>
-      <p>Your next collection is <strong id="collection-date">{{ next_collection | date:"D d F" }}</strong>. Please check the opening days and hours of your collection point before collecting you order.</p>
+      <p>Your collection point is: <strong id="collection-point">{{ collection_point.name }}</strong> and your next collection is <strong id="collection-date">{{ collection_date }}</strong>.</p>
+
+      <em>Please check the opening days and hours of your collection point before collecting you order</em>.</p>
       <p>The bags you are collecting are:</p>
       <ul id="order">
       {% for bag_quantity in bag_quantities %}
         <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
       {% endfor %}
       </ul>
-      {% if next_deadline > next_collection %}
-      <p id="deadline-date-message">You are too late for making changes for your next collection, so any changes you make today will affect the collection after that one.</p>
-      {% else %}
-      <p id="deadline-date-message">You can make changes that affect your next collection any time before <strong id="deadline-date">{{ next_deadline | date:"D d F g:i a" }}</strong>.</p>
-      {% endif %}
+
+      <p>Any changes you make until <span id="deadline">{{ deadline }}</span> will affect <span id="changes-affect">{{ changes_affect }}</span></p>
+
     </div>
 {% endblock %}
 {% block extra_body %}

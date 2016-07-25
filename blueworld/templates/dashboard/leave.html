@@ -6,19 +6,29 @@
     <div class="row">
       <h1>Leave</h1>
 
-      <p>We're sorry to see you go. <br> <br> Could you please tell us why you have decided to leave the scheme?</p>
+      <p>We're sorry to see you go.</p>
+  
+      <p>We would really appreciate you telling us why you have decided
+to leave the scheme?</p>
 
-      <div id="errors">
-      {{ form.non_form_errors }}
-      {{ form.errors }}
-      </div>
+      {# {{ next_deadline }} {{ next_collection_datetime }} #}
+      {# {% if next_deadline > next_collection_datetime %} #}
+      {# <p id="deadline-date-message">The earliest you can leave the scheme is Friday because this week's order has already been packed.</p> #}
+      {# {% endif %} #}
+
+      <p>If you aren't ready to leave immedately, you can email us at help@growingcommunities.org with the date you want to leave and we'll arrange to close your account on that date.</p>
+
+      <p>For billing purposes, we'll treat your last month just like any other
+and then at the end of the month we'll refund you any money we owe from
+collections after your leaving date.</p>
+
       <form action="{% url 'dashboard_leave' %}" method="post">
         {% csrf_token %}
         {{ form }}
         <div class="row">
           <div class="action-group column">
             <input type="submit" name="cancel" value="Cancel" class="button font-display large">
-            <input type="submit" name="action" value="Leave" class="button font-display primary large">
+            <input type="submit" name="action" value="Leave immediately" class="button font-display primary large">
           </div>
         </div>
       </form>

@@ -1,5 +1,6 @@
 behave==1.2.5
-browserstep==0.1.5
+browserstep==0.1.6
 lathermail==0.2.0
+python-dateutil==2.2
 requests==2.10.0
 selenium==2.53.6

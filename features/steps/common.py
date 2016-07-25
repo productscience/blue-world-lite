@@ -103,6 +103,7 @@ def step_impl(context, fullname, nickname, email, password):
         )
     )
 
+
 @step('I create a started user "{fullname}", "{nickname}", "{email}" with password "{password}"')
 def step_impl(context, fullname, nickname, email, password):
     context.execute_steps(

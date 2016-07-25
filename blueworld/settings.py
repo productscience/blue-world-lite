@@ -176,7 +176,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/London'
 
 USE_I18N = True
 
@@ -238,8 +238,8 @@ if not LEAVER_EMAIL_TO:
 
 # This is the maxiumum amount of time a user could have selected a
 # collection point which is inactivated before they create their user
-# account. Set to 20 mins.
-SESSION_COOKIE_AGE = 20 * 60
+# account. Set to 40 mins.
+SESSION_COOKIE_AGE = 40 * 60
 
 # Raven
 if 'RAVEN_DSN' in os.environ:

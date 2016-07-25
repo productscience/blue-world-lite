@@ -7,39 +7,6 @@ Feature: Dashboard
   Scenario: Visit dashboard when not signed in
      When I navigate to /dashboard
      Then the browser moves to /login?next=/dashboard
-
-  Scenario Outline: Dashboard information after the last collection but before the deadline date
-    # Need to freeze time first, otherwise you get logged out because of the session time of 20 mins
-    Given I freeze time at <date>
-      And I login with "dashboard@example.com" and "123123ab"
-     When I navigate to /dashboard
-     Then I see "Wed 20 July" in "#collection-date"
-      And I see "You can make changes that affect your next collection any time before" in "#deadline-date-message"
-      And I see "Sun 17 July 3:00 p.m." in "#deadline-date"
-
-   # 13th is a Wednesday
-   # 17th is a Sunday
-   Examples: Times where you can make changes for the next collection
-     | date                |
-     | 2016-07-13 12:00:00 |
-     | 2016-07-17 14:59:59 |
-
-  Scenario Outline: Dashboard information after the deadline date but before the next collection
-    Given I freeze time at 2016-07-17 15:00:00
-      And I login with "dashboard@example.com" and "123123ab"
-     When I navigate to /dashboard
-     Then I see "Wed 20 July" in "#collection-date"
-      And I see "You are too late for making changes for your next collection" in "#deadline-date-message"
-
-   # 17th is a Sunday
-   # 20th is a Wednesday
-   Examples: Times when changes you make affect the collection after the next one
-     | date                |
-     | 2016-07-17 15:00:00 |
-     | 2016-07-20 11:59:59 |
-
-  Scenario: Unfrezee time
-    Given I return to the current time
       And I login with "dashboard@example.com" and "123123ab"
 
   Scenario Outline: Dashboard Links
@@ -49,12 +16,18 @@ Feature: Dashboard
       And I see "<expected>" in "p"
 
    Examples: Dashboard links
-     | link                    | url                                | expected                                         |
-     | Change Order            | /dashboard/change-order            | Your current order is                            |
-     | Change Collection Point | /dashboard/change-collection-point | Your current collection point is                 |
-     | Bank Details            | /dashboard/bank-details            | change your bank direct debit details            |
-     | Leave                   | /dashboard/leave                   | tell us why you have decided to leave the scheme |
-     | Order History           | /dashboard/order-history           | This functionality is not implemented yet        |
+     | link                    | url                                | expected                                  |
+     | Change Order            | /dashboard/change-order            | Your current order is                     |
+     | Change Collection Point | /dashboard/change-collection-point | Your current collection point is          |
+     | Bank Details            | /dashboard/bank-details            | change your bank direct debit details     |
+     | Leave                   | /dashboard/leave                   | We're sorry to see you go                 |
+     | Order History           | /dashboard/order-history           | This functionality is not implemented yet |
+
+  Scenario: Can't get the callback if you have completed GoCardless
+    Given I'm using the user browser
+      And I login with "dashboard@example.com" and "123123ab"
+     When I navigate to /gocardless-callback
+     Then I see "Go Cardless is Already Set Up" in "h1"
 
   Scenario: I can logout from the dashbaord
     Given I navigate to /dashboard
@@ -98,9 +71,3 @@ Feature: Dashboard
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
      | /dashboard/order-history           |
-
-  Scenario: Protected GoCardless callback from users who have signed up with GoCardless
-    Given I'm using the user browser
-      And I login with "dashboard@example.com" and "123123ab"
-     When I navigate to /gocardless-callback
-     Then I see "Go Cardless is Already Set Up" in "h1"

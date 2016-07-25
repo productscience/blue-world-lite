@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block head_title %}Skip Weeks{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block content %}
+    <div class="row">
+      <h1>Skip Weeks</h1>
+
+      <p>If you want to skip a week further in the future than those listed below. Please contact help@growingcommunities.org.</p>
+
+      <div id="errors">
+      {{ formset.non_form_errors }}
+      </div>
+      <form action="{% url 'dashboard_skip_weeks' %}" method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <table class="stack">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Skip collection the week starting:</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for form in formset %}
+            {% if form.errors.quantity %}
+            <tr class="error" style="background: #fcc">
+              <td colspan="3">
+                {% for error in form.errors.quantity %}
+                  {{ error }}
+                {% endfor %}
+              </td>
+            </tr>
+            {% endif %}
+            <tr class="{% cycle row1 row2 %}">
+              <td width="20">
+              {% for field in form.visible_fields %}
+              {# Include the hidden fields in the form #}
+              {% if forloop.first %}
+                {% for hidden in form.hidden_fields %}
+                {{ hidden }}
+                {% endfor %}
+              {% endif %}
+              {{ field }}
+              {% endfor %}
+              </td>
+              <td>{{ form.initial.display_date|date:"D d M Y" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="row">
+          <div class="action-group column">
+            <input type="submit" name="cancel" value="Cancel" class="button font-display large">
+            <input type="submit" name="action" value="Confirm" class="button font-display primary large">
+            {#  <a href="#" class="">back</a> #}
+          </div>
+        </div>
+      </form>
+    </div>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}

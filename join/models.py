@@ -57,6 +57,19 @@ class CollectionPoint(models.Model):
         default=FULL,
         null=True
     )
+    WED_THURS = 'WED_THURS'
+    WED = 'WED'
+    THURS = 'THURS'
+    COLLECTION_DAY_CHOICES = (
+        (WED_THURS, 'Wednesday and Thursday'),
+        (WED, 'Wednesday'),
+        (THURS, 'Thursday'),
+    )
+    collection_day = models.CharField(
+        max_length=255,
+        choices=COLLECTION_DAY_CHOICES,
+        default=WED,
+    )
     display_order = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
@@ -173,6 +186,8 @@ class Customer(models.Model):
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
     mobile = models.CharField(max_length=30, default='', blank=True)
+    balance_carried_over = models.IntegerField(default=0)
+    holiday_due = models.IntegerField(default=0)
     tags = models.ManyToManyField(CustomerTag, blank=True)
     gocardless_current_mandate = models.OneToOneField(
         BillingGoCardlessMandate,
@@ -192,6 +207,10 @@ class Customer(models.Model):
     def _has_left(self):
         return self.account_status == AccountStatusChange.LEFT
     has_left = property(_has_left)
+
+    # def _is_leaving(self):
+    #     return self.account_status == AccountStatusChange.LEAVING
+    # is_leaving = property(_is_leaving)
 
     def _get_latest_collection_point(self):
         latest_cp = CustomerCollectionPointChange.objects.order_by(
@@ -230,6 +249,16 @@ class Customer(models.Model):
 
     bag_quantities = property(_get_latest_bag_quantities, _set_bag_quantities)
 
+    def _get_latest_skips(self):
+        skipped_dates = []
+        for skip in Skip.objects.order_by(
+                'collection_date'
+           ).filter(customer=self, collection_date__gt=ld):
+            skipped_dates.append(skip.collection_date)
+        return skipped_dates
+
+    skips = property(_get_latest_skips)
+
     def __str__(self):
         return '{} ({})'.format(self.full_name, self.nickname)
 
@@ -237,17 +266,13 @@ class Customer(models.Model):
 class AccountStatusChange(models.Model):
     AWAITING_DIRECT_DEBIT = 'AWAITING_DIRECT_DEBIT'
     ACTIVE = 'ACTIVE'
-    # AWAITING_START_CONFIRMATION = 'AWAITING_START_CONFIRMATION'
-    # ON_HOLD = 'HOLD'
     LEFT = 'LEFT'
     STATUS_CHOICES = (
         (AWAITING_DIRECT_DEBIT, 'Awating Go Cardless'),
         (ACTIVE, 'Active'),
         (LEFT, 'Left'),
-        # (AWAITING_START_CONFIRMATION, 'Awating Start Confirmation'),
-        # (ON_HOLD, 'On Hold'),
     )
-
+    leaving_date = models.DateTimeField(null=True)
     changed = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(
         Customer,
@@ -327,8 +352,6 @@ class CustomerOrderChangeBagQuantity(models.Model):
         )
 
 
-
-
 class BillingCredit(models.Model):
     customer = models.ForeignKey(
         Customer,
@@ -343,10 +366,11 @@ class BillingCredit(models.Model):
     amount_pence = models.IntegerField()
 
 
-class BillingSkipCredit(BillingCredit):
-    collection_date = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        # XXX if collection_date < next_skip_date:
-        #     raise ValueError('Cannot skip dates in the past')
-        return super().save(*args, **kwargs)
+class Skip(models.Model):
+    collection_date = models.DateTimeField()
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='skip',
+    )
