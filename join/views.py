@@ -655,6 +655,8 @@ def dashboard(request):
         ).all()
         if skipped:
             collection_date = collection_date.replace(' and ', ' or ')
+            if not (collection_date.startswith('today') or collection_date.startswith('tomorrow')):
+                collection_date = 'on '+collection_date
         return render(
             request,
             'dashboard/index.html',

@@ -376,3 +376,4 @@ class Skip(models.Model):
         on_delete=models.CASCADE,
         related_name='skip',
     )
+    created = models.DateTimeField(auto_now_add=True)
