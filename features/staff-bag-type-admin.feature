@@ -3,7 +3,7 @@ Feature: Staff bag type admin
     Given I switch to the user browser
       And I login as a member of staff
 
-  Scenario: Can navigate to New bag type form 2
+  Scenario: Can navigate to New bag type form
     Given I navigate to /admin
       And I follow the "Bag types" link
       And the browser moves to /admin/join/bagtype/
@@ -39,10 +39,11 @@ Feature: Staff bag type admin
   Scenario Outline: Cannot use an existing name
     Given I navigate to /admin/join/bagtype/
       And I follow the "New Bag Type" link
+      And I capture the value of "/admin/join/bagtype/(.*)/change/" in the URL to the "pk" variable
       And I type "<name>" into "#id_name"
       And I type "<weekly_cost>" into "#id_weekly_cost"
      When I click the "Save" button
-     Then the browser is still at /admin/join/bagtype/5/change/
+     Then the browser is at the formatted URL /admin/join/bagtype/{pk}/change/
       And I see "Please correct the error below." in "p.errornote"
 
    Examples: Error data

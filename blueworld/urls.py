@@ -14,6 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 from django.conf.urls import url, include
+from django.conf import settings
 from django.contrib import admin
 import join.views
 import allauth.account.views as account_views
@@ -24,21 +25,6 @@ urlpatterns = [
         r'^$',
         join.views.home,
         name='home',
-    ),
-    url(
-        r'^timetravel/to/(?P<date>.+)$',
-        join.views.timetravel_to,
-        name='timetravel_to',
-    ),
-    url(
-        r'^timetravel/freeze/(?P<date>.+)$',
-        join.views.timetravel_freeze,
-        name='timetravel_freeze',
-    ),
-    url(
-        r'^timetravel/cancel$',
-        join.views.timetravel_cancel,
-        name='timetravel_cancel',
     ),
     url(
         r'^join$',
@@ -93,14 +79,24 @@ urlpatterns = [
         include('hijack.urls')
     ),
     url(
-        r'^go-cardless-callback$',
-        join.views.go_cardless_callback,
-        name='go_cardless_callback',
+        r'^gocardless-callback$',
+        join.views.gocardless_callback,
+        name='gocardless_callback',
+    ),
+    url(
+        r'^billing-dates$',
+        join.views.billing_dates,
+        name='join_billing_dates',
     ),
     url(
         r'^dashboard$',
         join.views.dashboard,
         name='dashboard',
+    ),
+    url(
+        r'^dashboard/gocardless$',
+        join.views.dashboard_gocardless,
+        name='dashboard_gocardless',
     ),
     url(
         r'^dashboard/bank-details$',
@@ -116,6 +112,11 @@ urlpatterns = [
         r'^dashboard/rejoin-scheme$',
         join.views.dashboard_rejoin_scheme,
         name='dashboard_rejoin_scheme',
+    ),
+    url(
+        r'^dashboard/skip-weeks$',
+        join.views.dashboard_skip_weeks,
+        name='dashboard_skip_weeks',
     ),
     url(
         r'^dashboard/change-order$',
@@ -184,4 +185,28 @@ urlpatterns = [
         account_views.password_reset_from_key_done,
         name='account_reset_password_from_key_done'
     ),
+]
+
+if settings.TIME_TRAVEL:
+    urlpatterns += [
+        url(
+            r'^timetravel/to/(?P<date>.+)$',
+            join.views.timetravel_to,
+            name='timetravel_to',
+        ),
+        url(
+            r'^timetravel/freeze/(?P<date>.+)$',
+            join.views.timetravel_freeze,
+            name='timetravel_freeze',
+        ),
+        url(
+            r'^timetravel/cancel$',
+            join.views.timetravel_cancel,
+            name='timetravel_cancel',
+        ),
+    ]
+
+
+urlpatterns += [
+    url(r'^admin/django-rq/', include('django_rq.urls')),
 ]

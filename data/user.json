@@ -1,0 +1,77 @@
+[
+{
+    "model": "auth.user",
+    "fields": {
+        "password": "pbkdf2_sha256$24000$7MJBq0kOsHae$jOX18mE8lLhF2LrkmaR2C27V5OIcVkfAN5JwEeRa/ew=",
+        "last_login": null,
+        "is_superuser": true,
+        "username": "superuser",
+        "first_name": "",
+        "last_name": "",
+        "email": "superuser@example.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2016-07-26T09:47:40.056Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "fields": {
+        "password": "pbkdf2_sha256$24000$8UWw0FcNSni4$mCjO2OIDd5BZIgFQwOY2jnMeWzDEG39n8ioiu9JWVNk=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "staff",
+        "first_name": "",
+        "last_name": "",
+        "email": "staff@example.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2016-07-26T09:47:40.648Z",
+        "groups": [],
+        "user_permissions": [
+            [
+                "add_bagtype",
+                "join",
+                "bagtype"
+            ],
+            [
+                "change_bagtype",
+                "join",
+                "bagtype"
+            ],
+            [
+                "add_bagtypecostchange",
+                "join",
+                "bagtypecostchange"
+            ],
+            [
+                "add_collectionpoint",
+                "join",
+                "collectionpoint"
+            ],
+            [
+                "change_collectionpoint",
+                "join",
+                "collectionpoint"
+            ],
+            [
+                "change_customer",
+                "join",
+                "customer"
+            ],
+            [
+                "add_customertag",
+                "join",
+                "customertag"
+            ],
+            [
+                "change_customertag",
+                "join",
+                "customertag"
+            ]
+        ]
+    }
+}
+]

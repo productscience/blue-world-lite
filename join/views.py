@@ -1,5 +1,7 @@
+from datetime import timedelta
 import json
-import datetime
+import uuid
+from collections import OrderedDict
 
 from allauth.account.views import signup as allauth_signup
 from django import forms
@@ -16,19 +18,115 @@ from django.http import (
 )
 from django.core.mail import send_mail
 from django.shortcuts import render, redirect
+from django.template.defaulttags import register
+from django.utils import timezone
 from django.utils.html import format_html, escape
-import freezegun
+import gocardless_pro
 
-
+from join.helper import (
+    last_deadline,
+    next_deadline,
+    next_collection,
+    start_of_the_month,
+    get_pickup_dates,
+)
 from .models import (
     AccountStatusChange,
     BagType,
+    BillingGoCardlessMandate,
+    Skip,
     CollectionPoint,
     Customer,
     CustomerCollectionPointChange,
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
+    CustomerTag,
 )
+if settings.TIME_TRAVEL:
+    import freezegun
+
+
+@register.filter
+def get_item(dictionary, key):
+    return dictionary.get(key)
+
+
+# XXX Should this be global?
+gocardless_client = gocardless_pro.Client(
+    access_token=settings.GOCARDLESS_ACCESS_TOKEN,
+    environment=settings.GOCARDLESS_ENVIRONMENT,
+)
+
+
+ERROR_TEMPLATE = '''
+<html>
+  <h3>{heading}</h3>
+  <p>{message}</p>
+</html>
+'''
+
+
+FORBIDDEN_TEMPLATE = '''
+<html>
+  <h1>{heading}</h1>
+  <p>{message}</p>
+</html>
+'''
+
+
+def not_staff(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.is_superuser or request.user.is_staff:
+            return HttpResponseForbidden(
+                FORBIDDEN_TEMPLATE.format(
+                    heading='Staff don\'t have a dashboard',
+                    message=''
+                )
+            )
+        return func(request, *args, **kwargs)
+    return _decorated
+
+
+def gocardless_is_set_up(func):
+    def _decorated(request, *args, **kwargs):
+        if not request.user.customer.gocardless_current_mandate:
+            return redirect(reverse('dashboard_gocardless'))
+        return func(request, *args, **kwargs)
+    return _decorated
+
+
+def gocardless_is_not_set_up(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.customer.gocardless_current_mandate:
+            return HttpResponseForbidden(
+                FORBIDDEN_TEMPLATE.format(
+                    heading='Go Cardless is Already Set Up',
+                    message=''
+                )
+            )
+        return func(request, *args, **kwargs)
+    return _decorated
+
+
+def have_not_left_scheme(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.customer.account_status == AccountStatusChange.LEFT:
+            return HttpResponseForbidden(
+                FORBIDDEN_TEMPLATE.format(
+                    heading='You have left the scheme',
+                    message='',
+                )
+            )
+        return func(request, *args, **kwargs)
+    return _decorated
+
+
+def have_left_scheme(func):
+    def _decorated(request, *args, **kwargs):
+        if request.user.customer.account_status != AccountStatusChange.LEFT:
+            return redirect(reverse('dashboard'))
+        return func(request, *args, **kwargs)
+    return _decorated
 
 
 class QuantityForm(forms.Form):
@@ -54,13 +152,13 @@ class BaseOrderFormSet(BaseFormSet):
         for form in self.forms:
             total_bags += form.cleaned_data['quantity']
             if form.cleaned_data['quantity']:
-                last_bag = form.cleaned_data['id']
+                last_bag = form.initial['name']
         # Do we want to validate this?
         if total_bags < 1:
             raise forms.ValidationError(
                 "Please choose at least one bag to order."
             )
-        if total_bags == 1 and last_bag == 3:
+        if total_bags == 1 and last_bag == settings.SMALL_FRUIT_BAG_NAME:
             raise forms.ValidationError(
                 "You must choose another bag too if you order "
                 "small fruit"
@@ -85,6 +183,118 @@ class CollectionPointForm(forms.Form):
     )
 
 
+class SkipForm(forms.Form):
+    skipped = forms.BooleanField(required=False)
+    collection_date = forms.DateTimeField(widget=forms.HiddenInput())
+
+
+class BaseSkipFormSet(BaseFormSet):
+    def clean(self):
+        """Checks that no dates are before the last skip date"""
+        if any(self.errors):
+            # Don't bother validating the formset unless each form is valid
+            # on its own
+            return
+        if not len(self.initial) == len(self.cleaned_data):
+            raise forms.ValidationError(
+                "Some of the data you had entered is no longer valid. "
+                "Please review your choices and try again."
+            )
+        for i, initial in enumerate(self.initial):
+            if self.cleaned_data[i]['collection_date'].strftime('%Y-%m-%d') \
+               != self.initial[i]['collection_date']:
+                raise forms.ValidationError(
+                    "Some of the data you had entered is no longer valid. "
+                    "Please review your choices and try again."
+                )
+
+
+@login_required
+@not_staff
+@gocardless_is_set_up
+def dashboard_skip_weeks(request):
+    if request.method == 'POST' and request.POST.get('cancel'):
+        messages.add_message(
+            request,
+            messages.INFO,
+            'Your skip weeks have not been changed.'
+        )
+        return redirect(reverse("dashboard"))
+    SkipFormSet = formset_factory(
+        SkipForm,
+        extra=0,
+        formset=BaseSkipFormSet,
+    )
+    ld = next_deadline()
+    skipped_dates = request.user.customer.skips
+    valid_dates = {}
+    initial_skips = []
+    # Offer dates this month and for the next two.
+    for month, pickup_dates in get_pickup_dates(ld, 3).items():
+        for pickup_date in pickup_dates:
+            skip_choice = {
+                'display_date': (pickup_date - timedelta(days=2)),
+                'collection_date': pickup_date.strftime('%Y-%m-%d'),
+                'collection_date_obj': pickup_date,
+                'skipped': pickup_date in skipped_dates,
+            }
+            initial_skips.append(skip_choice)
+            valid_dates[(pickup_date).strftime('%Y-%m-%d')] = skip_choice
+    if request.method == 'POST':
+        formset = SkipFormSet(
+            request.POST,
+            request.FILES,
+            initial=initial_skips,
+        )
+        if formset.is_valid():
+            to_skip = []
+            to_unskip = []
+            for row in formset.cleaned_data:
+                d = row['collection_date'].strftime('%Y-%m-%d')
+                if row['skipped'] != valid_dates[d]['skipped']:
+                    if row['skipped'] is True:
+                        to_skip.append(valid_dates[d]['collection_date_obj'])
+                    else:
+                        to_unskip.append(valid_dates[d]['collection_date_obj'])
+            if not to_skip and not to_unskip:
+                messages.add_message(
+                    request,
+                    messages.ERROR,
+                    '''
+                    You haven't made any changes to your skip weeks.
+                    You can click Cancel if you are happy with your skip
+                    weeks as they are.
+                    '''
+                )
+                return redirect(reverse("dashboard_skip_weeks"))
+            for collection_date in to_skip:
+                assert collection_date not in to_unskip
+                skip = Skip(
+                    customer=request.user.customer,
+                    collection_date=collection_date,
+                )
+                skip.save()
+            for collection_date in to_unskip:
+                skip = Skip.objects.filter(
+                    customer=request.user.customer,
+                    collection_date=collection_date,
+                ).get()
+                skip.delete()
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                'Your skip weeks have been updated successfully'
+            )
+            return redirect(reverse("dashboard"))
+    else:
+        formset = SkipFormSet(initial=initial_skips)
+    return render(
+        request,
+        'dashboard/skip-weeks.html',
+        {'formset': formset}
+    )
+
+
 def home(request):
     if request.user.username:
         if request.user.is_staff:
@@ -105,22 +315,6 @@ def home(request):
 
 def join(request):
     return redirect(reverse("join_choose_bags"))
-
-
-ERROR_TEMPLATE = '''
-<html>
-  <h3>{heading}</h3>
-  <p>{message}</p>
-</html>
-'''
-
-
-FORBIDDEN_TEMPLATE = '''
-<html>
-  <h1>{heading}</h1>
-  <p>{message}</p>
-</html>
-'''
 
 
 def user_not_signed_in(func):
@@ -284,46 +478,97 @@ def collection_point(request):
     )
 
 
-def not_staff(func):
-    def _decorated(request, *args, **kwargs):
-        if request.user.is_superuser or request.user.is_staff:
-            return HttpResponseForbidden(
-                FORBIDDEN_TEMPLATE.format(
-                    heading='Staff don\'t have a dashboard',
-                    message=''
-                )
-            )
-        return func(request, *args, **kwargs)
-    return _decorated
+class _RF:
+    """Used as an empty attribute container in dashboard_gocardless()"""
+    pass
 
 
-def gocardless_is_set_up(func):
-    def _decorated(request, *args, **kwargs):
-        if not request.user.customer.go_cardless:
-            return render(request, 'dashboard/set-up-go-cardless.html')
-        return func(request, *args, **kwargs)
-    return _decorated
+@login_required
+@not_staff
+@gocardless_is_not_set_up
+def dashboard_gocardless(request):
+    if request.method == 'POST':
+        assert request.user.username
+        # from django.contrib.sites.models import Site
+        # current_site = Site.objects.get_current()
+        # success_redirect_url = 'http://{}{}'.format(
+        #     current_site.domain,
+        #     reverse('gocardless_callback'),
+        # )
+        session_token = str(uuid.uuid4())
+        success_redirect_url = '{}://{}{}'.format(
+            request.scheme,
+            request.META['HTTP_HOST'],
+            reverse('gocardless_callback'),
+        )
+        try:
+            redirect_flow = gocardless_client.redirect_flows.create(params={
+                'description': 'Your Growing Communities Veg Box Order',
+                'session_token': session_token,
+                'success_redirect_url': success_redirect_url,
+                # 'scheme': ... DD scheme.
+            })
+        except:
+            if not settings.TIME_TRAVEL:
+                raise
+            else:
+                offline_mode = True
+                redirect_flow = _RF()
+                redirect_flow.id = str(uuid.uuid4())
+        else:
+            offline_mode = False
+        mandate = BillingGoCardlessMandate(
+            session_token=session_token,
+            gocardless_redirect_flow_id=redirect_flow.id,
+            customer=request.user.customer,
+        )
+        mandate.save()
+        if offline_mode:
+            return HttpResponse('Offline, did not set up mandate')
+        else:
+            return redirect(redirect_flow.redirect_url)
+    else:
+        return render(request, 'dashboard/set-up-go-cardless.html')
 
 
-def have_not_left_scheme(func):
-    def _decorated(request, *args, **kwargs):
-        if request.user.customer.account_status == AccountStatusChange.LEFT:
-            return HttpResponseForbidden(
-                FORBIDDEN_TEMPLATE.format(
-                    heading='You have left the scheme',
-                    message='',
-                )
-            )
-        return func(request, *args, **kwargs)
-    return _decorated
-
-
-def have_left_scheme(func):
-    def _decorated(request, *args, **kwargs):
-        if request.user.customer.account_status != AccountStatusChange.LEFT:
-            return redirect(reverse('dashboard'))
-        return func(request, *args, **kwargs)
-    return _decorated
+@login_required
+@not_staff
+@gocardless_is_not_set_up
+def gocardless_callback(request):
+    if settings.GOCARDLESS_ENVIRONMENT == 'sandbox' and \
+       request.GET.get('skip', '').lower() == 'true':
+        mandate = BillingGoCardlessMandate.objects.filter(
+            customer=request.user.customer,
+        ).get()
+        mandate.gocardless_mandate_id = str(uuid.uuid4())
+    else:
+        mandate = BillingGoCardlessMandate.objects.filter(
+            customer=request.user.customer,
+            gocardless_redirect_flow_id=request.GET['redirect_flow_id'],
+        ).get()
+        complete_redirect_flow = gocardless_client.redirect_flows.complete(
+            mandate.gocardless_redirect_flow_id,
+            {'session_token': mandate.session_token}
+        )
+        assert complete_redirect_flow.id == mandate.gocardless_redirect_flow_id
+        mandate.gocardless_mandate_id = complete_redirect_flow.links.mandate
+    mandate.in_use_for_customer = request.user.customer
+    mandate.save()
+    account_status_change = AccountStatusChange(
+        customer=request.user.customer,
+        status=AccountStatusChange.ACTIVE,
+    )
+    account_status_change.save()
+    tags = CustomerTag.objects.filter(tag='Starter').all()
+    if tags:
+        request.user.customer.tags.add(tags[0])
+    messages.add_message(
+        request,
+        messages.INFO,
+        'Successfully set up Go Cardless.'
+    )
+    request.user.customer.save()
+    return redirect(reverse("dashboard"))
 
 
 @login_required
@@ -337,6 +582,69 @@ def dashboard(request):
         latest_customer_order_change = CustomerOrderChange.objects.order_by(
             '-changed'
         ).filter(customer=request.user.customer)[:1]
+        collection_point = latest_cp_change[0].collection_point
+        weekday = timezone.now().weekday()
+        if weekday == 6:  # Sunday
+            if collection_point.collection_day == 'WED':
+                collection_date = 'Wednesday'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'Thursday'
+            else:
+                collection_date = 'Wednesday and Thursday'
+            if timezone.now().hour < 15:
+                deadline = '3pm today'
+                changes_affect = "next week's collection"
+            else:
+                deadline = '3pm next Sunday'
+                changes_affect = "the collection after next"
+        elif weekday == 0:  # Monday
+            if collection_point.collection_day == 'WED':
+                collection_date = 'Wednesday'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'Thursday'
+            else:
+                collection_date = 'Wednesday and Thursday'
+            deadline = '3pm this Sunday'
+            changes_affect = "next week's collection"
+        elif weekday == 1:  # Tuesday
+            if collection_point.collection_day == 'WED':
+                collection_date = 'tomorrow'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'Thursday'
+            else:
+                collection_date = 'tomorrow and Thursday'
+            deadline = '3pm this Sunday'
+            changes_affect = "next week's collection"
+        elif weekday == 2:  # Wednesday
+            if collection_point.collection_day == 'WED':
+                collection_date = 'today'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'tomorrow'
+            else:
+                collection_date = 'today and tomorrow'
+            deadline = '3pm this Sunday'
+            changes_affect = "next week's collection"
+        elif weekday == 3:  # Thurs
+            if collection_point.collection_day == 'WED':
+                collection_date = 'Wednesday next week'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'today'
+            else:
+                collection_date = 'today'
+            deadline = '3pm this Sunday'
+            changes_affect = "next week's collection"
+        else:
+            if collection_point.collection_day == 'WED':
+                collection_date = 'Wednesday next week'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'Thursday next week'
+            else:
+                collection_date = 'Wednesday and Thursday next week'
+            if weekday == 4:  # Friday
+                deadline = '3pm this Sunday'
+            else:  # Saturday
+                deadline = '3pm tomorrow'
+            changes_affect = "next week's collection"
         bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
             customer_order_change=latest_customer_order_change
         ).all()
@@ -344,11 +652,11 @@ def dashboard(request):
             request,
             'dashboard/index.html',
             {
-                'collection_point': latest_cp_change[0].collection_point,
                 'bag_quantities': bag_quantities,
-                'next_collection': next_collection(),
-                'next_deadline': next_deadline(),
-                'timenow': datetime.datetime.now(),
+                'collection_point': collection_point,
+                'collection_date': collection_date,
+                'deadline': deadline,
+                'changes_affect': changes_affect,
             }
         )
     else:
@@ -356,31 +664,6 @@ def dashboard(request):
             request,
             'dashboard/re-join-scheme.html',
         )
-
-
-@login_required
-@not_staff
-def go_cardless_callback(request):
-    if request.user.customer.go_cardless:
-        return HttpResponseForbidden(
-            FORBIDDEN_TEMPLATE.format(
-                heading='Already set up',
-                message=''
-            )
-        )
-    request.user.customer.go_cardless = 'done'
-    request.user.customer.save()
-    account_status_change = AccountStatusChange(
-        customer=request.user.customer,
-        status=AccountStatusChange.ACTIVE,
-    )
-    account_status_change.save()
-    messages.add_message(
-        request,
-        messages.INFO,
-        'Successfully set up Go Cardless.'
-    )
-    return redirect(reverse("dashboard"))
 
 
 @login_required
@@ -567,6 +850,16 @@ LEAVE_REASON_CHOICES = (
 )
 
 
+# class FutureDateField(forms.DateField):
+#     def clean(self, value):
+#         if value < timezone.today().strftime('%Y-%m-%d'):
+#             raise forms.ValidationError(
+#                 "Please choose a leaving date that isn't in the past."
+#             )
+#         value = super().clean(value)
+#         return value
+
+
 class LeaveReasonForm(forms.Form):
     reason = forms.ChoiceField(
         label='Reason',
@@ -578,6 +871,10 @@ class LeaveReasonForm(forms.Form):
         widget=forms.Textarea,
         required=False,
     )
+    # leaving_date = FutureDateField(
+    #     initial=timezone.today,
+    #     widget=forms.SelectDateWidget(),
+    # )
 
 
 @login_required
@@ -634,7 +931,23 @@ def dashboard_leave(request):
     # if a GET (or any other method) we'll create a blank form
     else:
         form = LeaveReasonForm()
-    return render(request, 'dashboard/leave.html', {'form': form})
+
+    now_date = timezone.now()
+    is_thursday = now_date.weekday() == 3
+    next_collection_datetime = next_collection()
+    next_collection_date = next_collection_datetime
+    return render(
+        request,
+        'dashboard/leave.html',
+        {
+            'form': form,
+            'next_collection_datetime': next_collection_datetime,
+            'next_collection_date': next_collection_date,
+            'next_deadline': next_deadline(),
+            'now_date': now_date,
+            'is_thursday': is_thursday,
+        }
+    )
 
 
 @login_required
@@ -644,61 +957,33 @@ def dashboard_bye(request):
     return render(request, 'dashboard/bye.html')
 
 
-freezer = None
-
-
-def timetravel_to(request, date):
-    global freezer
-    if freezer is not None:
-        freezer.stop()
-    freezer = freezegun.freeze_time(date, tick=True)
-    freezer.start()
-    return HttpResponse('ok')
-
-
-def timetravel_freeze(request, date):
-    global freezer
-    if freezer is not None:
-        freezer.stop()
-    freezer = freezegun.freeze_time(date)
-    freezer.start()
-    return HttpResponse('ok')
-
-
-def timetravel_cancel(request):
-    global freezer
-    if freezer is None:
-        return HttpResponse('not time travelling')
-    freezer.stop()
+if settings.TIME_TRAVEL:
     freezer = None
-    return HttpResponse('ok')
 
+    def timetravel_to(request, date):
+        global freezer
+        if freezer is not None:
+            freezer.stop()
+        freezer = freezegun.freeze_time(date, tick=True)
+        freezer.start()
+        return HttpResponse('ok')
 
-def next_deadline():
-    sunday = 6
-    return _next_weekday(datetime.datetime.now(), sunday, 15).replace(
-        hour=15,
-        minute=00,
-        second=0,
-        microsecond=0
-    )
+    def timetravel_freeze(request, date):
+        global freezer
+        if freezer is not None:
+            freezer.stop()
+        freezer = freezegun.freeze_time(date)
+        freezer.start()
+        return HttpResponse('ok')
 
+    def timetravel_cancel(request):
+        global freezer
+        if freezer is None:
+            return HttpResponse('not time travelling')
+        freezer.stop()
+        freezer = None
+        return HttpResponse('ok')
 
-def next_collection():
-    wednesday = 2
-    a = _next_weekday(datetime.datetime.now(), wednesday, 12)
-    return a
-
-
-def _next_weekday(d, weekday, cutoff_hour):
-    # The value of weekday is 0-6 where Monday is 0 and Sunday is 6
-    days_ahead = weekday - d.weekday()
-    if days_ahead == 0:
-        if d.hour >= cutoff_hour:
-            days_ahead += 7
-    elif days_ahead < 0:  # Target day already happened this week
-        days_ahead += 7
-    return d + datetime.timedelta(days_ahead)
 
 
 @login_required
@@ -727,3 +1012,23 @@ def dashboard_rejoin_scheme(request):
         return redirect(reverse("dashboard"))
     else:
         return HttpResponseBadRequest()
+
+
+def gocardless_events_callback(request):
+    # XXX import pdb; pdb.set_trace()
+    pass
+
+
+def billing_dates(request):
+    pickup_dates = get_pickup_dates(start_of_the_month(), 12)
+    billing_dates = OrderedDict()
+    for month in pickup_dates:
+        billing_dates[month] = pickup_dates[month][0] - timedelta(days=3)
+    return render(
+        request,
+        'billing-dates.html',
+        {
+            'pickup_dates': pickup_dates,
+            'billing_dates': billing_dates,
+        }
+    )

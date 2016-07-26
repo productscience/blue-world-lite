@@ -10,17 +10,17 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
-try:
+import os
+
+# Do NOT enable time travel on production
+# or users could go back in time and mess things up
+TIME_TRAVEL = not str(os.environ.get('TIME_TRAVEL')).lower() == 'false'
+if TIME_TRAVEL:
     # Must import this before the datetime module (and hence before Django)
     import freezegun
-except ImportError:
-    # freezegun isn't installed, so we can't time travel. Most likely this
-    # is a production install
-    pass
 
 
 import dj_database_url
-import os
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -56,12 +56,29 @@ INSTALLED_APPS = [
     # Hijack
     'hijack',
     'compat',
+    # RQ
+    'django_rq',
     #  Our apps
     'join',
 ]
 
+
+
 if DEBUG:
     INSTALLED_APPS.append('django_extensions')
+
+
+RQ_QUEUES = {
+    'default': {
+        'URL': os.getenv('REDISTOGO_URL', 'redis://localhost:6379/0'),
+        'DEFAULT_TIMEOUT': 500,
+    },
+}
+
+# RQ_EXCEPTION_HANDLERS = ['path.to.my.handler'] # If you need custom exception handlers
+
+
+
 # Sentry
 if 'RAVEN_DSN' in os.environ:
     INSTALLED_APPS.append('raven.contrib.django.raven_compat')
@@ -176,7 +193,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/London'
 
 USE_I18N = True
 
@@ -238,8 +255,8 @@ if not LEAVER_EMAIL_TO:
 
 # This is the maxiumum amount of time a user could have selected a
 # collection point which is inactivated before they create their user
-# account. Set to 20 mins.
-SESSION_COOKIE_AGE = 20 * 60
+# account. Set to 40 mins.
+SESSION_COOKIE_AGE = 40 * 60
 
 # Raven
 if 'RAVEN_DSN' in os.environ:
@@ -251,3 +268,24 @@ if 'RAVEN_DSN' in os.environ:
         # release based on the git info.
         # 'release': raven.fetch_git_sha(os.path.dirname(__file__)),
     }
+
+
+# Go Cardless
+# https://github.com/gocardless/gocardless-pro-python
+# https://developer.gocardless.com/2015-07-06/#overview
+# https://gocardless.com/blog/an-introduction-to-our-api/
+# https://gocardless.com/blog/goingcardless-an-introduction-to-gocardless/
+GOCARDLESS_ENVIRONMENT = os.environ.get(
+    'GOCARDLESS_ENVIRONMENT',
+    'sandbox'
+)
+if GOCARDLESS_ENVIRONMENT != 'sandbox':
+    GOCARDLESS_ACCESS_TOKEN = os.environ['GOCARDLESS_ACCESS_TOKEN']
+else:
+    GOCARDLESS_ACCESS_TOKEN = ''
+
+
+SMALL_FRUIT_BAG_NAME='Small fruit'
+
+# XXX Warning - this overrides the admin template!
+RQ_SHOW_ADMIN_LINK = True

@@ -57,6 +57,15 @@ CREATE DATABASE blueworld;
 GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;
 ```
 
+### Redis
+
+This is used by `rq` inside `worker.py` triggered from `clock.py`.
+
+```
+redis-server
+```
+
+
 ### Configuration
 
 Configuration is handled via environment variables, and how you set them up
@@ -71,6 +80,9 @@ DEBUG='True'
 SERVER_EMAIL='error@blueworld.example.com'
 ADMINS='send-errors-here@example.com'
 LEAVER_EMAIL_TO='leaver-email@example.com; billing@example.com'
+GOCARDLESS_ACCESS_TOKEN='xxx'
+GOCARDLESS_ENVIRONMENT='sandbox|live'
+TIME_TRAVEL='false'
 # Local
 EMAIL_HOST='localhost'
 EMAIL_HOST_USER='username'
@@ -470,6 +482,20 @@ echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); 
 cat "$PWD/data/bag_type.csv" | PGPASSWORD=password psql -h host -U username database -c "COPY join_bagtype(name,active,display_order,weekly_cost) from stdin with csv;"
 
 cat "$PWD/data/collection_point.csv" | PGPASSWORD=password psql -h host -U username database -c "COPY join_collectionpoint(name,location,latitude,longitude,active,display_order) from stdin with csv"
+```
+
+You can start the clock and set up the worker process like this:
+
+```
+heroku ps:scale clock=1
+heroku addons:create redistogo
+heroku scale worker=1
+```
+
+You can see the worker logs like this:
+
+```
+heroku logs -t -p worker
 ```
 
 You should be able to see your app at the correct domain now with the sample data loaded.

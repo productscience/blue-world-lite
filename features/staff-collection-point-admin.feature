@@ -24,14 +24,13 @@ Feature: Staff collection point admin
       And I see "added successfully" in ".messagelist .success"
       And I see "New Collection Point" in "#changelist"
 
-
-
   Scenario Outline: Cannot use an existing name
     Given I navigate to /admin/join/collectionpoint/
       And I follow the "New Collection Point" link
+      And I capture the value of "/admin/join/collectionpoint/(.*)/change/" in the URL to the "pk" variable
       And I type "<name>" into "#id_name"
      When I click the "Save" button
-     Then the browser is still at /admin/join/collectionpoint/6/change/
+     Then the browser is at the formatted URL /admin/join/collectionpoint/{pk}/change/
       And I see "Please correct the error below." in "p.errornote"
 
    Examples: Error data

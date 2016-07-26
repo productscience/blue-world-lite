@@ -2,6 +2,7 @@ from collections import OrderedDict
 from decimal import Decimal
 from django.conf import settings
 from django.db import models
+from .helper import last_deadline
 
 
 class CollectionPoint(models.Model):
@@ -56,6 +57,19 @@ class CollectionPoint(models.Model):
         choices=INACTIVE_REASON_CHOICES,
         default=FULL,
         null=True
+    )
+    WED_THURS = 'WED_THURS'
+    WED = 'WED'
+    THURS = 'THURS'
+    COLLECTION_DAY_CHOICES = (
+        (WED_THURS, 'Wednesday and Thursday'),
+        (WED, 'Wednesday'),
+        (THURS, 'Thursday'),
+    )
+    collection_day = models.CharField(
+        max_length=255,
+        choices=COLLECTION_DAY_CHOICES,
+        default=WED,
     )
     display_order = models.IntegerField(null=True, blank=True)
 
@@ -149,6 +163,20 @@ class CustomerTag(models.Model):
         ordering = ('tag',)
 
 
+class BillingGoCardlessMandate(models.Model):
+    session_token = models.CharField(max_length=255, default='')
+    gocardless_redirect_flow_id = models.CharField(max_length=255, default='')
+    gocardless_mandate_id = models.CharField(max_length=255, default='')
+    customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='go_cardless_mandate',
+        null=True,
+    )
+
+
 class Customer(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -158,10 +186,17 @@ class Customer(models.Model):
     )
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
-    mobile = models.CharField(max_length=30)
-    go_cardless = models.CharField(max_length=30, default='')
-
-    tags = models.ManyToManyField(CustomerTag)
+    mobile = models.CharField(max_length=30, default='', blank=True)
+    balance_carried_over = models.IntegerField(default=0)
+    holiday_due = models.IntegerField(default=0)
+    tags = models.ManyToManyField(CustomerTag, blank=True)
+    gocardless_current_mandate = models.OneToOneField(
+        BillingGoCardlessMandate,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='in_use_for_customer',
+        null=True,
+    )
 
     def _get_latest_account_status(self):
         latest_account_status = AccountStatusChange.objects.order_by(
@@ -173,6 +208,10 @@ class Customer(models.Model):
     def _has_left(self):
         return self.account_status == AccountStatusChange.LEFT
     has_left = property(_has_left)
+
+    # def _is_leaving(self):
+    #     return self.account_status == AccountStatusChange.LEAVING
+    # is_leaving = property(_is_leaving)
 
     def _get_latest_collection_point(self):
         latest_cp = CustomerCollectionPointChange.objects.order_by(
@@ -211,6 +250,17 @@ class Customer(models.Model):
 
     bag_quantities = property(_get_latest_bag_quantities, _set_bag_quantities)
 
+    def _get_latest_skips(self):
+        skipped_dates = []
+        ld = last_deadline()
+        for skip in Skip.objects.order_by(
+                'collection_date'
+           ).filter(customer=self, collection_date__gt=ld):
+            skipped_dates.append(skip.collection_date)
+        return skipped_dates
+
+    skips = property(_get_latest_skips)
+
     def __str__(self):
         return '{} ({})'.format(self.full_name, self.nickname)
 
@@ -218,17 +268,13 @@ class Customer(models.Model):
 class AccountStatusChange(models.Model):
     AWAITING_DIRECT_DEBIT = 'AWAITING_DIRECT_DEBIT'
     ACTIVE = 'ACTIVE'
-    # AWAITING_START_CONFIRMATION = 'AWAITING_START_CONFIRMATION'
-    # ON_HOLD = 'HOLD'
     LEFT = 'LEFT'
     STATUS_CHOICES = (
         (AWAITING_DIRECT_DEBIT, 'Awating Go Cardless'),
         (ACTIVE, 'Active'),
         (LEFT, 'Left'),
-        # (AWAITING_START_CONFIRMATION, 'Awating Start Confirmation'),
-        # (ON_HOLD, 'On Hold'),
     )
-
+    leaving_date = models.DateTimeField(null=True)
     changed = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(
         Customer,
@@ -306,3 +352,27 @@ class CustomerOrderChangeBagQuantity(models.Model):
             self.bag_type.name,
             self.customer_order_change.changed.strftime('%Y-%m-%d'),
         )
+
+
+class BillingCredit(models.Model):
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='billing_credit',
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    # XXX What about when prices change and we've already got some skip
+    # credits in place -> Prbably just add a manual credit to those accounts
+    # where it is an issue.
+    amount_pence = models.IntegerField()
+
+
+class Skip(models.Model):
+    collection_date = models.DateTimeField()
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='skip',
+    )

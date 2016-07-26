@@ -1,0 +1,22 @@
+{% extends "base_join.html" %}
+
+{% block head_title %}Billing Dates{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block content %}
+    <div class="row">
+      <h1>Billing Dates</h1>
+      <div id="billing-dates">
+          {% for key in pickup_dates %}
+            <h2>{{ key|date:"M Y"}} - {{ pickup_dates|get_item:key|length }} weeks</h2>
+            <p><strong>Invoicing date:</strong> <span class="invoicing-date">{{ billing_dates|get_item:key|date:"D d M Y" }}</span></p>
+            <ul>
+              {% for value in pickup_dates|get_item:key %}
+              <li>{{ value|date:"D d M Y" }}</li>
+              {% endfor %}
+            </ul>
+          {% endfor %}
+      </div>
+    </div>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}

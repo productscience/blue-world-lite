@@ -5,8 +5,22 @@
 {% block content %}
     <div class="row">
       <h1>Set up Go Cardless</h1>
-      <p><a href="{% url 'go_cardless_callback' %}">Skip</a></p>
+      <p>Before we can continue we need to set up a direct debit to take payments. We do this using a service alled Go Cardless.</p>
+
+      <p>Please click the button below to set up your bank details on the GoCardless site.</p>
+
+      <p><tt>IF ANY COLLECTIONS LEFT THIS MONTH:</tt></p>
+      <p>Once you have completed this step we'll also immeditely bill you £<tt>AMOUNT</tt> for the next <tt>NUMBER</tt> collections this month. After that we'll bill you near the begining of every month for the collections coming up in that month.</p>
+      <p><tt>ELSE</tt></p>
+      <p>We'll start taking payments on <tt>DATE</tt> for the <tt>NUMBER</tt> collections in <tt>MONTH</tt>.</p>
+      <p><tt>END IF</tt></p>
+
+      <form action="{% url 'dashboard_gocardless' %}" method="post">
+        {% csrf_token %}
+        <input type="submit" class="button font-display primary large" value="Set up Go Cardless">
+      </form>
     </div>
 {% endblock %}
+
 {% block extra_body %}
 {% endblock %}

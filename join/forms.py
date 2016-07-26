@@ -19,7 +19,6 @@ class SignupForm(forms.Form):
             nickname=self.cleaned_data['nickname'],
             mobile=self.cleaned_data['mobile'],
             user=user,
-            go_cardless='',
         )
         customer.save()
         account_status_change = AccountStatusChange(

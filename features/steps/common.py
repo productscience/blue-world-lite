@@ -1,4 +1,6 @@
 from browserstep.common import *
+from browserstep.debug import *
+from browserstep.popup import *
 from browserstep.sentmail import *
 
 
@@ -101,15 +103,16 @@ def step_impl(context, fullname, nickname, email, password):
         )
     )
 
+
 @step('I create a started user "{fullname}", "{nickname}", "{email}" with password "{password}"')
 def step_impl(context, fullname, nickname, email, password):
     context.execute_steps(
         (
              CREATE_USER_STEPS + '''
-             Then the browser moves to /dashboard
+             Then the browser moves to /dashboard/gocardless
               And I see "Set up Go Cardless" in "h1"
-              And I follow the "Skip" link
-              And the browser is still at /dashboard
+              And I click the "Set up Go Cardless" button
+              And I navigate to /gocardless-callback?skip=True
               And I see "Dashboard" in "h1"
               And I navigate to /logout
             '''
@@ -139,59 +142,22 @@ def step_impl(context, login, password):
         '''.format(login=login, password=password)
     )
 
-
-@step('I debug')
-def step_impl(context):
-    import pdb; pdb.set_trace()
-
-@then(u'"{selector}" is checked')
-def step_impl(context, selector):
-    element = context.browser.find_element_by_css_selector(selector)
-    assert element is not None, "No such element found"
-    assert element.get_attribute('checked') == 'true', "Element is not checked"
-
-@then(u'the alert says "{text}"')
-def step_impl(context, text):
-    if context.browser_vendor == 'phantomjs':
-        raise Exception("PhantomJS does not support alerts")
-    alert = context.browser.switch_to_alert()
-    assert alert.text == text
-
-@then(u'I cancel the alert')
-def step_impl(context):
-    if context.browser_vendor == 'phantomjs':
-        raise Exception("PhantomJS does not support alerts")
-    alert = context.browser.switch_to_alert()
-    alert.dismiss()
-
-@then(u'I accept the alert')
-def step_impl(context):
-    if context.browser_vendor == 'phantomjs':
-        raise Exception("PhantomJS does not support alerts")
-    alert = context.browser.switch_to_alert()
-    alert.accept()
+@step('I login with "{login}" and "{password}" without GoCardless')
+def step_impl(context, login, password):
+    context.execute_steps(
+        '''
+    Given I switch to the user browser
+      And I navigate to /logout
+      And I navigate to /login
+      And I see "Log In" in "h1"
+      And I type "{login}" into "#id_login"
+      And I type "{password}" into "#id_password"
+     When I click the "Log in" button
+     Then the browser moves to /dashboard/gocardless
+        '''.format(login=login, password=password)
+    )
 
 
-import re
-@step('I capture the value of "{regex}" in the message to the "{name}" variable')
-def step_impl(context, regex, name):
-    if not hasattr(context, 'variables'):
-        context.variables = {}
-    reg = re.compile(regex)
-    string = context.message['message_raw']
-    value = reg.search(string).group(1)
-    context.variables[name] = value
-    print(context.variables)
-
-
-@step('I type "" into "{selector}"')
-def step_impl(context, selector):
-    element = context.browser.find_element_by_css_selector(selector)
-    assert element is not None, "No such element found"
-    element.clear()
-
-
-from freezegun import freeze_time
 import requests
 
 @step('I time travel to {date}')
