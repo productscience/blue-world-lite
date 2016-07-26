@@ -40,6 +40,7 @@ from .models import (
     CustomerCollectionPointChange,
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
+    CustomerTag,
 )
 if settings.TIME_TRAVEL:
     import freezegun
@@ -558,6 +559,9 @@ def gocardless_callback(request):
         status=AccountStatusChange.ACTIVE,
     )
     account_status_change.save()
+    tags = CustomerTag.objects.filter(tag='Starter').all()
+    if tags:
+        request.user.customer.tags.add(tags[0])
     messages.add_message(
         request,
         messages.INFO,

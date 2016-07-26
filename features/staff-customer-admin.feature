@@ -18,6 +18,7 @@ Feature: Customer admin
       And I see "ACTIVE" in ".field-account_status"
       And I see "1 x Large veg" in ".field-bag_quantities"
       And I see "The Old Fire Station" in ".field-collection_point"
+      And I see "Starter" in ".field-tags_field"
 
   Scenario: Customer view
      When I follow the "Customer One" link

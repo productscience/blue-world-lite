@@ -24,13 +24,7 @@ Feature: Join - Verify Email Address Immediately
       And the email is to "join-verify-immediately@example.com"
       And the email is from "no-reply@blueworld.example.com"
       And the email subject is "[BlueWorld] Please Confirm Your E-mail Address"
-    Given I'm using the admin browser
-      And I login as a superuser
-      And I follow the "Email confirmations" link
-      And I follow the "join-verify-immediately@example.com (join-verify-immediately)" link
-      And I capture the value of "#id_key" to the "key" variable
-      And the formatted email body contains "http://localhost:8000/confirm-email/{key}/"
-    Given I switch to the user browser
+      And I capture the value of "/confirm-email/(.*)/" in the message to the "key" variable
      When I navigate to the formatted url /confirm-email/{key}/
      Then I see "Confirm E-mail Address" in "h1"
       And I see "Please confirm that join-verify-immediately@example.com is an e-mail address for user join-verify-immediately." in "body"
