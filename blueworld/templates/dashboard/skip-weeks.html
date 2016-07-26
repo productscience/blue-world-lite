@@ -44,7 +44,7 @@
               {{ field }}
               {% endfor %}
               </td>
-              <td>{{ form.initial.display_date|date:"D d M Y" }}</td>
+              <td id="id_form-{{forloop.counter0}}-display-date">{{ form.initial.display_date|date:"D d M Y" }}</td>
             </tr>
           {% endfor %}
           </tbody>

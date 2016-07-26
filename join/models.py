@@ -2,6 +2,7 @@ from collections import OrderedDict
 from decimal import Decimal
 from django.conf import settings
 from django.db import models
+from .helper import last_deadline
 
 
 class CollectionPoint(models.Model):
@@ -251,6 +252,7 @@ class Customer(models.Model):
 
     def _get_latest_skips(self):
         skipped_dates = []
+        ld = last_deadline()
         for skip in Skip.objects.order_by(
                 'collection_date'
            ).filter(customer=self, collection_date__gt=ld):
