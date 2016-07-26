@@ -2,10 +2,11 @@ Feature: Billing dates
   Scenario: _setup
     Given I switch to the user browser
       And I navigate to /logout
-      And I freeze time at <date>
+      And I freeze time at 2016-07-12 16:00:00
 
   Scenario: Billing dates are correct
-    Given "#billing-dates" has the following text with all whitespace removed:
+     When I navigate to /billing-dates
+     Then "#billing-dates" has the following text with all whitespace removed:
       """
       Jul 2016 - 4 weeks
       Invoicing date: Sun 03 Jul 2016
