@@ -1,0 +1,161 @@
+[
+{
+    "pk": 51,
+    "fields": {
+        "name": "Large veg",
+        "active": true,
+        "display_order": 5
+    },
+    "model": "join.bagtype"
+},
+{
+    "pk": 0,
+    "fields": {
+        "changed": "2016-07-04T12:10+00:00",
+        "weekly_cost": "15",
+        "bag_type_id": 51
+    },
+    "model": "join.bagtypecostchange"
+},
+{
+    "pk": 52,
+    "fields": {
+        "name": "Large no pots",
+        "active": true,
+        "display_order": 7
+    },
+    "model": "join.bagtype"
+},
+{
+    "pk": 1,
+    "fields": {
+        "changed": "2016-07-04T12:10+00:00",
+        "weekly_cost": "18.50",
+        "bag_type_id": 52
+    },
+    "model": "join.bagtypecostchange"
+},
+{
+    "pk": 5,
+    "fields": {
+        "name": "Small fruit",
+        "active": true,
+        "display_order": 9
+    },
+    "model": "join.bagtype"
+},
+{
+    "pk": 5,
+    "fields": {
+        "changed": "2016-07-04T12:10+00:00",
+        "weekly_cost": "13.15",
+        "bag_type_id": 5
+    },
+    "model": "join.bagtypecostchange"
+},
+{
+    "pk": 2,
+    "fields": {
+        "name": "Small veg",
+        "active": false,
+        "display_order": 10
+    },
+    "model": "join.bagtype"
+},
+{
+    "pk": 9,
+    "fields": {
+        "changed": "2016-07-04T12:10+00:00",
+        "weekly_cost": "15",
+        "bag_type_id": 2
+    },
+    "model": "join.bagtypecostchange"
+},
+{
+    "pk": 1,
+    "fields": {
+        "name": "The Old Fire Station",
+        "location": "61 Leswin Road, N16 7NX",
+        "display_order": 10,
+        "longitude": -0.073096,
+        "latitude": 51.557853,
+        "active": true
+    },
+    "model": "join.collectionpoint"
+},
+{
+    "pk": 58,
+    "fields": {
+        "name": "Springfield",
+        "location": "",
+        "display_order": null,
+        "longitude": null,
+        "latitude": null,
+        "active": true
+    },
+    "model": "join.collectionpoint"
+},
+{
+    "pk": 38,
+    "fields": {
+        "name": "St Peters - De Beauvoir Town ",
+        "location": "Northchurch Terrace, De Beauvoir Town, N1 4DA",
+        "display_order": 15,
+        "longitude": -0.080208,
+        "latitude": 51.540775,
+        "active": true
+    },
+    "model": "join.collectionpoint"
+},
+{
+    "pk": 38,
+    "fields": {
+        "name": "St Peters - De Beauvoir Town ",
+        "location": "Northchurch Terrace, De Beauvoir Town, N1 4DA",
+        "display_order": 15,
+        "longitude": -0.080208,
+        "latitude": 51.540775,
+        "active": true
+    },
+    "model": "join.collectionpoint"
+},
+{
+    "pk": 6,
+    "fields": {
+        "name": "Mother Earth (Albion Rd)",
+        "location": "5 Albion Parade, Albion Road, N16 9LD",
+        "display_order": 50,
+        "longitude": -0.083725,
+        "latitude": 51.557041,
+        "active": true
+    },
+    "model": "join.collectionpoint"
+},
+{
+    "pk": 3,
+    "fields": {
+        "name": "St John of Jerusalem Church",
+        "location": "Lauriston Road, E9 7DH",
+        "display_order": 80,
+        "longitude": -0.045249,
+        "latitude": 51.540512,
+        "active": true
+    },
+    "model": "join.collectionpoint"
+},
+{
+    "pk": 1,
+    "fields": {
+        "name": "BlueWorld",
+        "domain": "localhost"
+    },
+    "model": "sites.site"
+},
+{
+    "model": "join.customertag",
+    "pk": 1,
+    "fields": {
+        "tag": "Starter"
+    }
+}
+]
