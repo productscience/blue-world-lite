@@ -584,6 +584,11 @@ def dashboard(request):
         ).filter(customer=request.user.customer)[:1]
         collection_point = latest_cp_change[0].collection_point
         weekday = timezone.now().weekday()
+        wednesday = next_collection().replace(hour=0, minute=0, second=0, microsecond=0)
+        if weekday == 3 and collection_point.collection_day != 'WED':
+            # We still want any skips to refer to this week, so wind back a week
+            wednesday = wednesday - timedelta(7)
+        skipped = wednesday in request.user.customer.skips
         if weekday == 6:  # Sunday
             if collection_point.collection_day == 'WED':
                 collection_date = 'Wednesday'
@@ -648,6 +653,8 @@ def dashboard(request):
         bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
             customer_order_change=latest_customer_order_change
         ).all()
+        if skipped:
+            collection_date = collection_date.replace(' and ', ' or ')
         return render(
             request,
             'dashboard/index.html',
@@ -657,6 +664,7 @@ def dashboard(request):
                 'collection_date': collection_date,
                 'deadline': deadline,
                 'changes_affect': changes_affect,
+                'skipped': skipped,
             }
         )
     else:

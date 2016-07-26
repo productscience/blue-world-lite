@@ -8,10 +8,19 @@
 
       <p>Welcome {{ request.user.customer.nickname }}!</p>
 
-      <p>Your collection point is: <strong id="collection-point">{{ collection_point.name }}</strong> and your next collection is <strong id="collection-date">{{ collection_date }}</strong>.</p>
+      <p>Your collection point is:
+        <strong id="collection-point">{{ collection_point.name }}</strong>
+        {% if skipped %}
+        <span id="message">but your next collection is <strong>skipped</strong> so there is nothing for you to pick up on</span>
+        <span id="collection-date">{{ collection_date }}</span>.
+        {% else %}
+        <span id="message">and your next collection is</span>
+        <strong id="collection-date">{{ collection_date }}</strong>.
+        {% endif %}
+      </p>
 
       <em>Please check the opening days and hours of your collection point before collecting you order</em>.</p>
-      <p>The bags you are collecting are:</p>
+      <p>Your order</p>
       <ul id="order">
       {% for bag_quantity in bag_quantities %}
         <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
