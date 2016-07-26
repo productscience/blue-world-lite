@@ -56,12 +56,29 @@ INSTALLED_APPS = [
     # Hijack
     'hijack',
     'compat',
+    # RQ
+    'django_rq',
     #  Our apps
     'join',
 ]
 
+
+
 if DEBUG:
     INSTALLED_APPS.append('django_extensions')
+
+
+RQ_QUEUES = {
+    'default': {
+        'URL': os.getenv('REDISTOGO_URL', 'redis://localhost:6379/0'),
+        'DEFAULT_TIMEOUT': 500,
+    },
+}
+
+# RQ_EXCEPTION_HANDLERS = ['path.to.my.handler'] # If you need custom exception handlers
+
+
+
 # Sentry
 if 'RAVEN_DSN' in os.environ:
     INSTALLED_APPS.append('raven.contrib.django.raven_compat')
@@ -269,3 +286,6 @@ else:
 
 
 SMALL_FRUIT_BAG_NAME='Small fruit'
+
+# XXX Warning - this overrides the admin template!
+RQ_SHOW_ADMIN_LINK = True

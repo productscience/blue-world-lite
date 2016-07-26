@@ -9,4 +9,4 @@ raven==5.21.0
 freezegun==0.3.7
 gocardless_pro==0.2.2
 APScheduler==3.2.0
-rq==0.6.0
+django-rq==0.9.1

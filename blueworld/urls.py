@@ -205,3 +205,8 @@ if settings.TIME_TRAVEL:
             name='timetravel_cancel',
         ),
     ]
+
+
+urlpatterns += [
+    url(r'^admin/django-rq/', include('django_rq.urls')),
+]

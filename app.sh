@@ -1,4 +1,4 @@
 #!/bin/bash
 
 gunicorn blueworld.wsgi:application --preload --log-file - &
-python worker.py
+python manage.py rqworker default
