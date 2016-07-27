@@ -25,6 +25,15 @@
 
       <div class="main" role="main">
 
+        {% if user.is_authenticated %}
+          <ul class="horizontal menu expanded global-nav">
+            <li><a href="{% url 'dashboard' %}#dashboard">home</a></li>
+            <li><a href="{% url 'dashboard' %}#your-order">your order</a></li>
+            <li><a href="{% url 'dashboard' %}#your-account">your account</a></li>
+          </ul>
+        {% endif %}
+
+
       {% if messages %}
         <div class="row">
           <div id="messages">
