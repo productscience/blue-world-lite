@@ -8,7 +8,7 @@ This is a Django project that handles management and billing of a Growing
 Communities veg box scheme. It handles user registration and self-service,
 pickup list generation and billing.
 
-The codebase exists as a different apps all found in the `apps` directory. Each app can be installed and tested on its own, or as part of the overall application.
+The codebase exists as a set of different apps all found in the `apps` directory. Each app can be installed and tested on its own, or as part of the overall application.
 
 * `blueworld` - the main codebase:
   * provides base templates and CSS assets
@@ -59,7 +59,7 @@ GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;
 
 ### Redis
 
-This is used by `rq` inside `worker.py` triggered from `clock.py`. If deploying to Heroku or similar, you shoudl be able to use one of the free hosted redis services.
+This is used by `rq` inside `worker.py` triggered from `clock.py`. If deploying to Heroku or similar, you should be able to use one of the free hosted Redis services (i.e. RedisToGo)
 
 ```
 redis-server
@@ -83,6 +83,7 @@ LEAVER_EMAIL_TO='leaver-email@example.com; billing@example.com'
 GOCARDLESS_ACCESS_TOKEN='xxx'
 GOCARDLESS_ENVIRONMENT='sandbox|live'
 TIME_TRAVEL='false'
+
 # Local
 EMAIL_HOST='localhost'
 EMAIL_HOST_USER='username'
@@ -109,7 +110,7 @@ window like this:
 
 ### Django
 
-Make sure your environment is activates and configuration set:
+Make sure your environment is activated and configuration set:
 
 ```
 . .ve3/bin/activate
@@ -124,8 +125,8 @@ python manage.py migrate
 ```
 
 You can automate the setup of a super user and naming of the site with these
-bash commands that use the Django shell, and the environment variables you've
-configured. (These are the commands used by Travis for example):
+commands that use the Django shell, and the environment variables you've
+configured. These are the commands used by Travis for example:
 
 ```
 python manage.py loaddata data/user.json
@@ -136,9 +137,11 @@ python manage.py loaddata data/initial.json
 
 #### Export Existing Data
 
-If you're migrating data from the previous version of the Growing Communities app, you can export the spin up the guest VM for it using `vagrant up` in the project, then follow the steps outlined in `migrate.py` docstrings.
+If you're migrating data from the previous version of the Growing Communities app, you can export like to:
 
-Once you have these set up, you should be able to access the guest machine's database through the newlt forwarded port, and run the migrate script to generate a new `initial.json` file in Django's preferred fixture format.
+the spin up the guest VM for the old Growing Communities project, using `vagrant up` in it's own project directory, then follow the steps outlined in `migrate.py` docstrings in _this_ project.
+
+Once you have made the changes to the guest VM setup, you should be able to access the guest machine's database through the newly forwarded port from the host machine, and run the migrate script to generate a new `initial.json` file in Django's preferred fixture format.
 
 ```
 python migrate.py
@@ -351,7 +354,7 @@ chmod +x run-tests.sh
 If you just pass this script specific feature file paths, it will just run
 them. It will also pass any extra flags onto the `behave` command.
 
-When implementing a specific feature you can overrride the browser to `chrome`
+When implementing a specific feature you can override the browser to `chrome`
 using the `BROWSER` environment variable then run individual tests in debug
 mode like this (make sure you have chromedriver installed):
 
