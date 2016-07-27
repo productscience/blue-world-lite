@@ -202,6 +202,7 @@ class Customer(models.Model):
         latest_account_status = AccountStatusChange.objects.order_by(
             '-changed'
         ).filter(customer=self)[:1][0]
+        # Human readable?
         return latest_account_status.status
     account_status = property(_get_latest_account_status)
 
@@ -305,9 +306,10 @@ class CustomerCollectionPointChange(models.Model):
     )
 
     def __str__(self):
-        return 'Customer Collection Point Change for {} on {}'.format(
+        return '{} -> {} on {}'.format(
             self.customer.full_name,
-            self.changed.strftime('%Y-%m-%d'),
+            self.collection_point.name,
+            self.changed.isoformat(),
         )
 
 
@@ -376,3 +378,4 @@ class Skip(models.Model):
         on_delete=models.CASCADE,
         related_name='skip',
     )
+    created = models.DateTimeField(auto_now_add=True)

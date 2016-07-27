@@ -1,0 +1,32 @@
+{% extends "base_join.html" %}
+
+{% block head_title %}Packing List{% endblock %}
+{% block extra_head %}{% endblock %}
+{% block content %}
+    <div class="row">
+      <h1>Packing Lists</h1>
+      <div id="packing-lists">
+        {% for collection_point in collection_points %}
+          <h2>{{ collection_point }}</h2>
+          <table>
+            <tr>
+              <th>Customer</th>
+              {% for bag_type in bag_types %}
+              <th>{{ bag_type }}</th>
+              {% endfor %}
+            </tr>
+            {% for customer in collection_points|get_item:collection_point %}
+            <tr> 
+              <td class="customer">{{ customer }}</td>
+              {% for bag_type in bag_types %}
+              <td>{{ collection_points|get_item:collection_point|get_item:customer|get_item:bag_type|default_if_none:"" }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </table>
+        {% endfor %}
+      </div>
+    </div>
+{% endblock %}
+{% block extra_body %}
+{% endblock %}

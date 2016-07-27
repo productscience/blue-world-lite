@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from decimal import Decimal
 from django import forms
 from django.conf import settings
@@ -6,6 +7,9 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.core import urlresolvers
 from django.core.urlresolvers import reverse
+from django.db import connection
+from django.db import reset_queries
+from django.shortcuts import render
 from django.template import RequestContext
 from django.template.loader import get_template
 from django.utils.safestring import mark_safe
@@ -35,11 +39,64 @@ class AccountStatusChangeAdmin(BlueWorldModelAdmin):
 
 
 class CollectionPointAdmin(BlueWorldModelAdmin):
+    actions = ['packing_list']
     list_display = (
         'name',
         'active',
         'display_order',
     )
+
+    def packing_list(self, request, queryset):
+        # Can't use filter() with distinct() because Django applies the filter() first
+        # so instead we do all the joins manually in memory
+        bag_types = BagType.objects.order_by('name').distinct(
+            'name').values_list('name', flat=True)
+        collection_point_ids = [collection_point.id for collection_point in queryset]
+        cps = OrderedDict()
+        ccpcs = CustomerCollectionPointChange.objects.order_by(
+            'customer', '-changed'
+        ).distinct('customer').only('customer_id', 'collection_point_id')
+        customer_ids = [ccpc.customer_id for ccpc in ccpcs if ccpc.collection_point_id in collection_point_ids]
+        order_changes = CustomerOrderChange.objects.order_by(
+            'customer', '-changed'
+        ).distinct('customer').only('customer_id', 'id')
+        order_change_ids = [order_change.id for order_change in order_changes if order_change.customer_id in customer_ids]
+        bqs = CustomerOrderChangeBagQuantity.objects.filter(
+            customer_order_change__in=order_change_ids
+        )
+        for bq in bqs:
+            collection_point = bq.customer_order_change.customer.collection_point
+            if collection_point.name not in cps:
+                cps[collection_point.name] = OrderedDict()
+            if bq.customer_order_change.customer.full_name not in cps[collection_point.name]:
+                cps[collection_point.name][bq.customer_order_change.customer.full_name] = {
+                    bq.bag_type.name: bq.quantity
+                }
+            else:
+                assert bq.bag_type.name not in cps[collection_point.name][bq.customer_order_change.customer.full_name]
+                cps[collection_point.name][
+                    bq.customer_order_change.customer.full_name
+                ][bq.bag_type.name] = bq.quantity
+        rows_updated = len(cps)
+        if rows_updated == 1:
+            message_bit = '''
+                packing list generated successfully for 1 collection point
+            '''
+        else:
+            message_bit = '''
+                packing lists generated successfully for %s collection points
+            ''' % rows_updated
+        self.message_user(request, "%s." % message_bit)
+        return render(
+            request,
+            'packing-list.html',
+            {
+                'collection_points': cps,
+                'bag_types': bag_types,
+            },
+        )
+    packing_list.short_description = \
+        "Generated packing list for selected collection points"
 
 
 class UserAdmin(BaseUserAdmin):
@@ -139,12 +196,10 @@ class AccountStatusListFilter(admin.SimpleListFilter):
         # to decide how to filter the queryset.
         if self.value() is None:
             return queryset
-        customer_ids = []
-        for customer in queryset.filter(
-            account_status_change__status=self.value()
-        ).all():
-            if customer.account_status == self.value():
-                customer_ids.append(customer.pk)
+        ascs = AccountStatusChange.objects.order_by(
+            'customer', '-changed'
+        ).distinct('customer').only('id')
+        customer_ids = [c.customer_id for c in ascs if c.status == self.value()]
         return queryset.filter(pk__in=customer_ids)
 
 
@@ -160,14 +215,13 @@ class CollectionPointFilter(admin.SimpleListFilter):
         return [(cp.id, cp.name) for cp in CollectionPoint.objects.all()]
 
     def queryset(self, request, queryset):
-        # Compare the requested value (either '80s' or '90s')
-        # to decide how to filter the queryset.
         if self.value() is None:
             return queryset
-        customer_ids = []
-        for customer in queryset.all():
-            if customer.collection_point.id == int(self.value()):
-                customer_ids.append(customer.id)
+        # Note: You can't use a filter here
+        ccpcs = CustomerCollectionPointChange.objects.order_by(
+            'customer', '-changed'
+        ).distinct('customer').only('id')
+        customer_ids = [c.customer_id for c in ccpcs if c.collection_point.pk == int(self.value())]
         return queryset.filter(pk__in=customer_ids)
 
 
@@ -260,6 +314,8 @@ class CustomerAdmin(BlueWorldModelAdmin):
         'current_mandate',
         'collection_point',
         'bag_quantities',
+        'holiday_due',
+        'balance_carried_over',
         'tags',
     ]
 
