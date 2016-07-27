@@ -11,11 +11,21 @@ Edit ``pg_hba.conf``:
 
     host    all       all   0.0.0.0/0     md5
 
+Restart the server for the changes to `postgres,conf` and `pg_ba.conf`
+to be reflected:
+
+::
+    sudo service postgresql restart
+
+Set up a user for migrating data out of the previous database:
 ::
 
     CREATE USER migrate WITH PASSWORD 'migrate';
     GRANT ALL PRIVILEGES ON DATABASE grocom to migrate;
     GRANT SELECT ON ALL TABLES IN SCHEMA public TO migrate;
+
+Make sure we have have defined a port to allow outside access
+from the host machine, to the guest VM:
 
 ::
 
@@ -27,6 +37,11 @@ Edit ``pg_hba.conf``:
                 # for postgres access
                 machine.vm.network "forwarded_port", guest: 5432, host: 8032
 
+Make sure new port forwarding is active, so we can connect to the guest VM
+database:
+
+::
+    vagrant reload
 
 '''
 
@@ -39,6 +54,14 @@ import pytz
 
 
 def run(dsn, path, out=print):
+    """
+
+    Writes a stream of output to a provided
+
+    dsn: a String that psycopg2 uses to connect to Postgres
+    path: a String listing the filename to write to
+    out: a Callable used to sending logs to
+    """
     conn = psycopg2.connect(dsn)
     cursor = conn.cursor(cursor_factory=DictCursor)
 
