@@ -26,29 +26,7 @@
       <div class="main" role="main">
 
       {% block menu %}
-        {% if user.is_authenticated %}
-        <div class="row">
-          <strong>Navigation:</strong>
-          <ul id="navigation">
-            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            {% if not user.customer.has_left %}
-              <li><a href="{% url 'account_email' %}">E-mail Addresses</a></li>
-              <li><a href="{% url 'account_change_password' %}">Change Password</a></li>
-              <li><a href="{% url 'dashboard_skip_weeks' %}">Skip Weeks</a></li>
-              <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
-              <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
-            {% endif %}
-            <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
-            {% if not user.customer.has_left %}
-              {% if user.customer.gocardless_current_mandate.gocardless_mandate_id %}
-                <li><a href="{% url 'dashboard_bank_details' %}">Bank Details</a></li>
-                <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
-              {% endif %}
-            {% endif %}
-            <li><a href="{% url 'account_logout' %}">Log Out</a></li>
-          </ul>
-        </div>
-        {% endif %}
+        {% include "partials/navigation.html" %}
       {% endblock %}
       {% if messages %}
         <div class="row">
@@ -69,5 +47,7 @@
     </div>
   </div>
     {% include "partials/footer.html" %}
+
+    <link rel="stylesheet" type="text/css" href="https://d1a8174p97a9gm.cloudfront.net/js/application.js" />
   </body>
 </html>

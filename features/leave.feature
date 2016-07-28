@@ -54,7 +54,7 @@ Feature: Leave
      When I navigate to /dashboard
      Then I see "You have left the scheme" in "h1"
       And there are 3 "input" elements in "#navigation"
-      And I see "Dashboard" in "#navigation"
+      And I see "Home" in "#navigation"
       And I see "Order History" in "#navigation"
       And I see "Log Out" in "#navigation"
       And I see "To re-join the scheme" in "p"
@@ -77,7 +77,7 @@ Feature: Leave
      Given I navigate to /dashboard
      When I follow the "<link>" link
      Then the browser moves to <url>
-      And I see "Dashboard" in "#navigation"
+      And I see "Home" in "#navigation"
       And I see "Order History" in "#navigation"
       And I see "Log Out" in "#navigation"
 
