@@ -610,39 +610,13 @@ def dashboard(request):
         now = timezone.now()
         bw = get_billing_week(now)
         weekday = now.weekday()
-        # wednesday = bw.wed
-        # wednesday = pytz.utc.localize(datetime.datetime(wednesday.year, wednesday.month, wednesday.day, 12,0,0,0))
-
-        # if weekday == 3 and collection_point.collection_day != 'WED':
-        #     wednesday = wednesday - timedelta(7)
-
         skipped_billing_weeks = []
-        for skip in Skip.objects.order_by(
-                'billing_week'
-           ).filter(
-               customer=request.user.customer,
-               billing_week__gte=str(bw),
-           ):
-            skipped_billing_weeks.append(skip.billing_week)
-        # wedbw = parse_billing_week(wednesday)
-        skipped = str(bw) in skipped_billing_weeks
-        # skipped = str(bw.next()) in skipped_billing_weeks
-        # import pdb; pdb.set_trace()
-
-
-        # -        weekday = timezone.now().weekday()
-        # -        wednesday = get_day(next_collection())
-        # -        if weekday == 3 and collection_point.collection_day != 'WED':
-        # -            # We still want any skips to refer to this week, so wind back a week
-        # -            wednesday = wednesday - timedelta(7)
-        # -        skipped = wednesday in request.user.customer.skips
-
-
-        # import pdb; pdb.set_trace()
-        # if weekday == 3 and collection_point.collection_day != 'WED':
-        #     # We still want any skips to refer to this week, so wind back a week
-        #     wed = bw.wed - timedelta(7)
-        # skipped = request.user.customer.skipped
+        skipped = len(
+            Skip.objects.order_by('billing_week').filter(
+                customer=request.user.customer,
+                billing_week=str(bw),
+            ).all()
+        ) > 0
         if weekday == 6:  # Sunday
             if collection_point.collection_day == 'WED':
                 collection_date = 'Wednesday'
@@ -650,7 +624,7 @@ def dashboard(request):
                 collection_date = 'Thursday'
             else:
                 collection_date = 'Wednesday and Thursday'
-            if timezone.now().hour < 15:
+            if timezone.now().hour < bw.end.hour:
                 deadline = '3pm today'
                 changes_affect = "next week's collection"
             else:
