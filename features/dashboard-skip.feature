@@ -7,7 +7,7 @@ Feature: Skip Weeks
   Scenario: Freeze time just before a deadline
     Given I freeze time at 2016-07-24 14:59:59
       And I login with "skip-weeks@example.com" and "123123ab"
-      And I follow the "Skip Weeks" link
+      And I follow the "Skip Weeks" link in "#navigation"
 
   Scenario: Make no changes
      When I click the "Confirm" button
@@ -60,7 +60,7 @@ Feature: Skip Weeks
   Scenario: Move time to just after the deadline
     Given I freeze time at 2016-07-24 15:00:00
       And I login with "skip-weeks@example.com" and "123123ab"
-      And I follow the "Skip Weeks" link
+      And I follow the "Skip Weeks" link in "#navigation"
 
   Scenario: Can no longer see the skipped week
      When I navigate to /dashboard/skip-weeks
