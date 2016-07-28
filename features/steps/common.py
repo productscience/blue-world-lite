@@ -68,15 +68,8 @@ CREATE_USER_STEPS = '''
          When I click the "Sign Up" button
          Then the browser moves to /confirm-email
           And I fetch the first sent email
-
-        Given I'm using the admin browser
-          And I login as a superuser
-          And I follow the "Email confirmations" link
-          And I follow the "{email} ({email_username})" link
-          And I capture the value of "#id_key" to the "key" variable
-
-        Given I switch to the user browser
-          And I navigate to the formatted url /confirm-email/{{key}}/
+          And I capture the value of "/confirm-email/(.*)/" in the message to the "key" variable
+         When I navigate to the formatted url /confirm-email/{{key}}/
           And I click the "Confirm" button
 '''
 

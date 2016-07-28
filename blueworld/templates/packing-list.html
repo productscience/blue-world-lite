@@ -1,32 +1,149 @@
-{% extends "base_join.html" %}
+{#{% extends "base_join.html" %}#}
+<html>
+<head>
+<style>
+h1, #packing-lists {
+  font-family: sans-serif;
+}
+#packing-lists td.holiday {
+  background: #eee;
+  text-align: center;
+}
+#packing-lists table {
+    border-collapse: collapse;
+}
+#packing-lists table, th, td {
+  border: 1px solid #000;
+  padding: 2px;
+}
+#packing-lists th, td.customer {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+#packing-lists td.quantity {
+  text-align: center;
+}
+#packing-lists td.new {
+  font-weight: bold;
+}
+#packing-lists td.new.label {
+  background: #eee;
+  text-transform: uppercase;
+}
+#packing-lists tr.totals {
+  font-weight: bold;
+}
+#packing-lists tr.totals td.total {
+  text-align: right;
+}
+</style>
+</head>
+<body>
 
-{% block head_title %}Packing List{% endblock %}
-{% block extra_head %}{% endblock %}
+    <!-- Content -->
+    <div id="content" class="{% block coltype %}colM{% endblock %}">
 {% block content %}
-    <div class="row">
+    <div class="row" id="packing-lists">
+      {% if now > deadline_date %}
       <h1>Packing Lists</h1>
-      <div id="packing-lists">
+      <p>
+        Generated at {{ now|date:"DATETIME_FORMAT" }}
+        for the collection starting {{ collection_date|date:"DATE_FORMAT" }}
+        with data as it was at deadline at {{ deadline_date|date:"DATETIME_FORMAT" }}.
+      </p>
+      {% else %}
+      <h1>Predicted Packing Lists</h1>
+      <p>
+        Generated at {{ now|date:"DATETIME_FORMAT" }}
+        for the collection starting {{ collection_date|date:"DATE_FORMAT" }}
+        with data as it is currently predicted to be at {{ deadline_date|date:"DATETIME_FORMAT" }}.
+      </p>
+
+      <h1>WARNING: This is only a prediction</h1>
+      {% endif %}
+      <div>
+        <h2>Summary</h2>
+        <table>
+          <tr>
+            <th>Pickup</th>
+            {% for bag_type in bag_types %}
+            <th>{{ bag_type }}</th>
+            {% endfor %}
+            <th>Total Bags</th>
+            <th>Holidaying Users</th>
+            <th>Collecting Users</th>
+          </tr>
+          {% for collection_point in collection_points %}
+            <tr>
+              <td>{{ collection_point }}</td>
+              {% for bag_type in bag_types %}
+                <td class="quantity">{{ collection_point_counts|get_item:collection_point|get_item:bag_type }}</td>
+              {% endfor %}
+              <td class="quantity">{{ total_by_collection_point|get_item:collection_point }}</td>
+              <td class="quantity">{{ collection_point_holiday_counts|get_item:collection_point|length }}</td>
+              <td class="quantity">{{ collection_point_user_counts|get_item:collection_point|length }}</td>
+            </tr>
+          {% endfor %}
+            <tr class="totals">
+              <td class="total">Totals</td>
+              {% for bag_type in bag_types %}
+                <td class="quantity">{{ total_by_bags|get_item:bag_type }}</td>
+              {% endfor %}
+              <td class="quantity">{{ total_bags }}</td>
+              <td class="quantity">{{ total_holidays }}</td>
+              <td class="quantity">{{ total_users }}</td>
+            </tr>
+        </table>
+      </div>
+      <div>
         {% for collection_point in collection_points %}
           <h2>{{ collection_point }}</h2>
+          <p>Collection days: {{ collection_point_days|get_item:collection_point }}</p>
           <table>
             <tr>
               <th>Customer</th>
+              <th class="label"></th>
               {% for bag_type in bag_types %}
-              <th>{{ bag_type }}</th>
+              <th class="customer">{{ bag_type }}</th>
               {% endfor %}
             </tr>
             {% for customer in collection_points|get_item:collection_point %}
-            <tr> 
+            <tr>
+              {% if customer in starters %}
+              <td class="new customer">{{ customer }}</td>
+              <td class="new label">New</td>
+              {% else %}
               <td class="customer">{{ customer }}</td>
-              {% for bag_type in bag_types %}
-              <td>{{ collection_points|get_item:collection_point|get_item:customer|get_item:bag_type|default_if_none:"" }}</td>
-              {% endfor %}
+              <td></td>
+              {% endif %}
+              {% if customer in skips %}
+                <td class="holiday" colspan={{ bag_types|length }}>
+                On holiday <em>(usually has
+                {% for bag_type in bag_types %}
+                  {% if collection_points|get_item:collection_point|get_item:customer|get_item:bag_type %}
+                  {{ bag_type }} x {{ collection_points|get_item:collection_point|get_item:customer|get_item:bag_type|default_if_none:"" }}
+                  {% endif %}
+                {% endfor %}
+                )</em>
+                </td>
+
+              {% else %}
+                {% for bag_type in bag_types %}
+                <td class="quantity">{{ collection_points|get_item:collection_point|get_item:customer|get_item:bag_type|default_if_none:"" }}</td>
+                {% endfor %}
+              {% endif %}
             </tr>
             {% endfor %}
+            <tr class="totals">
+              <td class="total" colspan="2">Totals</td>
+              {% for bag_type in bag_types %}
+                <td class="quantity">{{ collection_point_counts|get_item:collection_point|get_item:bag_type }}</td>
+              {% endfor %}
+            </tr>
           </table>
         {% endfor %}
       </div>
     </div>
 {% endblock %}
-{% block extra_body %}
-{% endblock %}
+</body>
+</html>

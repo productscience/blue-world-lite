@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block head_title %}Order History{% endblock %}
+{% block head_title %}Billing History{% endblock %}
 {% block extra_head %}
 <style>
 table#order-history tr:nth-of-type(even) {
@@ -13,19 +13,19 @@ table#order-history tr.line {
 {% endblock %}
 {% block content %}
     <div class="row">
-      <h1>Order History</h1>
+      <h1>Billing History</h1>
 
       <p>Your account was created on {{ created }}.</p>
 
-      {% for month in order_history %}
+      {% for month in billing_history %}
       <h2>{{ month|date:"F Y" }}</h2>
 
       <table id="order-history">
-        {% for minute in order_history|get_item:month %}
-        {% for changed, event_type, detail in order_history|get_item:month|get_item:minute %}
+        {% for minute in billing_history|get_item:month %}
+        {% for changed, event_type, detail in billing_history|get_item:month|get_item:minute %}
         {% if forloop.first %}
         <tr class="line">
-          <td style="vertical-align: top;" rowspan={{ order_history|get_item:month|get_item:minute|length }}>{{ minute }}</td>
+          <td style="vertical-align: top;" rowspan={{ billing_history|get_item:month|get_item:minute|length }}>{{ minute }}</td>
         {% else %}
         <tr>
           {% endif %}

@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import timedelta
 from decimal import Decimal
 from django import forms
 from django.conf import settings
@@ -12,10 +13,11 @@ from django.db import reset_queries
 from django.shortcuts import render
 from django.template import RequestContext
 from django.template.loader import get_template
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from hijack import settings as hijack_settings
-from join.helper import get_current_request
+from join.helper import get_current_request, render_bag_quantities
 from join.models import (
     AccountStatusChange,
     BagType,
@@ -26,7 +28,11 @@ from join.models import (
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
     CustomerTag,
+    Skip,
 )
+from django.contrib.admin import widgets as admin_widgets
+from django.core.exceptions import ValidationError
+
 
 
 class BlueWorldModelAdmin(admin.ModelAdmin):
@@ -38,6 +44,19 @@ class AccountStatusChangeAdmin(BlueWorldModelAdmin):
     pass
 
 
+
+class WednesdayDateField(forms.DateTimeField):
+    def validate(self, value):
+        # Use the parent's handling of required fields, etc.
+        super().validate(value)
+        if value.weekday() != 2:
+            raise ValidationError('Please choose a Wednesday')
+
+
+class DateForm(forms.Form):
+    collection_date = WednesdayDateField(widget=admin_widgets.AdminDateWidget())
+
+
 class CollectionPointAdmin(BlueWorldModelAdmin):
     actions = ['packing_list']
     list_display = (
@@ -47,54 +66,35 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
     )
 
     def packing_list(self, request, queryset):
-        # Can't use filter() with distinct() because Django applies the filter() first
-        # so instead we do all the joins manually in memory
-        bag_types = BagType.objects.order_by('name').distinct(
-            'name').values_list('name', flat=True)
-        collection_point_ids = [collection_point.id for collection_point in queryset]
-        cps = OrderedDict()
-        ccpcs = CustomerCollectionPointChange.objects.order_by(
-            'customer', '-changed'
-        ).distinct('customer').only('customer_id', 'collection_point_id')
-        customer_ids = [ccpc.customer_id for ccpc in ccpcs if ccpc.collection_point_id in collection_point_ids]
-        order_changes = CustomerOrderChange.objects.order_by(
-            'customer', '-changed'
-        ).distinct('customer').only('customer_id', 'id')
-        order_change_ids = [order_change.id for order_change in order_changes if order_change.customer_id in customer_ids]
-        bqs = CustomerOrderChangeBagQuantity.objects.filter(
-            customer_order_change__in=order_change_ids
-        )
-        for bq in bqs:
-            collection_point = bq.customer_order_change.customer.collection_point
-            if collection_point.name not in cps:
-                cps[collection_point.name] = OrderedDict()
-            if bq.customer_order_change.customer.full_name not in cps[collection_point.name]:
-                cps[collection_point.name][bq.customer_order_change.customer.full_name] = {
-                    bq.bag_type.name: bq.quantity
-                }
-            else:
-                assert bq.bag_type.name not in cps[collection_point.name][bq.customer_order_change.customer.full_name]
-                cps[collection_point.name][
-                    bq.customer_order_change.customer.full_name
-                ][bq.bag_type.name] = bq.quantity
-        rows_updated = len(cps)
-        if rows_updated == 1:
-            message_bit = '''
-                packing list generated successfully for 1 collection point
-            '''
+        if '_generate' in request.POST:
+            form = DateForm(request.POST)
+            if form.is_valid():
+                collection_date = form.cleaned_data['collection_date']
+                return generate_packing_list(
+                    self,
+                    request,
+                    queryset,
+                    collection_date,
+                )
         else:
-            message_bit = '''
-                packing lists generated successfully for %s collection points
-            ''' % rows_updated
-        self.message_user(request, "%s." % message_bit)
+            form = DateForm()
         return render(
             request,
-            'packing-list.html',
+            'packing-list-date.html',
             {
-                'collection_points': cps,
-                'bag_types': bag_types,
-            },
+                'form': form,
+                'post_vars': request.POST.lists(),
+
+                'opts': CollectionPoint._meta,
+                'change': True,
+                'is_popup': False,
+                'save_as': False,
+                'has_delete_permission': False,
+                'has_add_permission': False,
+                'has_change_permission': False,
+            }
         )
+
     packing_list.short_description = \
         "Generated packing list for selected collection points"
 
@@ -269,13 +269,7 @@ class CustomerAdmin(BlueWorldModelAdmin):
     # user_link.short_description = 'User'
 
     def bag_quantities(self, obj):
-        result = ''
-        for bag_quantity in obj.bag_quantities:
-            result += '{} x {}\n'.format(
-                bag_quantity.quantity,
-                bag_quantity.bag_type.name,
-            )
-        return result
+        return render_bag_quantities(obj.bag_quantities.all())
     bag_quantities.short_description = 'Bag quantities'
 
     def tags_field(self, obj):
@@ -336,6 +330,10 @@ class CustomerTagAdmin(BlueWorldModelAdmin):
     pass
 
 
+class SkipAdmin(BlueWorldModelAdmin):
+    pass
+
+
 admin.site.register(AccountStatusChange, AccountStatusChangeAdmin)
 admin.site.register(CollectionPoint, CollectionPointAdmin)
 admin.site.register(BagType, BagTypeAdmin)
@@ -350,6 +348,122 @@ admin.site.register(
     CustomerOrderChangeBagQuantityAdmin,
 )
 admin.site.register(CustomerTag, CustomerTagAdmin)
+admin.site.register(Skip, SkipAdmin)
 # admin.site.unregister(User)
 # admin.site.register(User, UserAdmin)
 admin.site.disable_action('delete_selected')
+
+
+def generate_packing_list(model_admin, request, queryset, collection_date):
+    # Can't use filter() with distinct() because Django applies the filter() first
+    # so instead we do all the joins manually in memory
+    # collection_date = (deadline_date + timedelta(3)).replace(hour=0)
+    deadline_day = collection_date - timedelta(3)
+    deadline_date = deadline_day.replace(
+        hour=15,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    print(deadline_date.isoformat())
+    #assert deadline_date.weekday() == 6 and deadline_date.hour == 15 and deadline_date.minute == 0 and deadline_date.second == 0 and deadline_date.microsecond == 0 and deadline_date.tzinfo == timezone.get_default_timezone(), 'Not a valid deadline date: {}'.format(deadline_date)
+    now = timezone.now()
+    #print(now, collection_date, deadline_date)
+    bag_types = BagType.objects.order_by('name').distinct(
+        'name').values_list('name', flat=True)
+    collection_point_ids = [collection_point.id for collection_point in queryset]
+    collection_point_days = dict([(collection_point.name, collection_point.get_collection_day_display()) for collection_point in queryset])
+    ccpcs = CustomerCollectionPointChange.objects.filter(changed__lt=deadline_date).order_by(
+        'customer', '-changed'
+    ).distinct('customer').only('customer_id', 'collection_point_id')
+    customer_ids = [ccpc.customer_id for ccpc in ccpcs if ccpc.collection_point_id in collection_point_ids]
+    starters = Customer.objects.filter(pk__in=customer_ids, tags__in=CustomerTag.objects.filter(tag='Starter')).values_list('full_name', flat=True)
+    order_changes = CustomerOrderChange.objects.order_by(
+        'customer', '-changed'
+    ).distinct('customer').only('customer_id', 'id')
+    order_change_ids = [order_change.id for order_change in order_changes if order_change.customer_id in customer_ids]
+    bqs = CustomerOrderChangeBagQuantity.objects.filter(
+        customer_order_change__in=order_change_ids
+    ).order_by('customer_order_change__customer__full_name').only('customer_order_change__customer')
+    # print(Skip.objects.filter(
+    #     customer_id__in=customer_ids,
+    #     collection_date=collection_date,
+    # ).query.__str__())
+    # import pdb; pdb.set_trace()
+    skips = Skip.objects.filter(
+        customer_id__in=customer_ids,
+        collection_date=collection_date,
+    ).values_list('customer__full_name', flat=True)
+    #print(customer_ids, skips)
+    cps = OrderedDict()
+    cp_counts = OrderedDict()
+    cp_holiday_counts = OrderedDict()
+    cp_user_counts = OrderedDict()
+    cp_total_by_bags = OrderedDict()
+    cp_total_by_collection_point = OrderedDict()
+    for bag_type in bag_types:
+        cp_total_by_bags[bag_type] = 0
+    for bq in bqs:
+        collection_point = bq.customer_order_change.customer.collection_point
+        if collection_point.name not in cps:
+            cps[collection_point.name] = OrderedDict()
+            cp_counts[collection_point.name] = OrderedDict()
+            cp_holiday_counts[collection_point.name] = []
+            cp_user_counts[collection_point.name] = []
+            cp_total_by_collection_point[collection_point.name] = 0
+            for bag_type in bag_types:
+                cp_counts[collection_point.name][bag_type] = 0
+        if bq.customer_order_change.customer.full_name not in cps[collection_point.name]:
+            cps[collection_point.name][bq.customer_order_change.customer.full_name] = {
+                bq.bag_type.name: bq.quantity
+            }
+        else:
+            assert bq.bag_type.name not in cps[collection_point.name][bq.customer_order_change.customer.full_name]
+            cps[collection_point.name][
+                bq.customer_order_change.customer.full_name
+            ][bq.bag_type.name] = bq.quantity
+        if bq.customer_order_change.customer.full_name not in skips:
+            cp_counts[collection_point.name][bq.bag_type.name] += bq.quantity
+            cp_total_by_bags[bq.bag_type.name] += bq.quantity
+            cp_total_by_collection_point[collection_point.name] += bq.quantity
+            if bq.customer_order_change.customer.full_name not in cp_user_counts[collection_point.name]:
+                # Want unique customers here, if the customer has more than one
+                # bag we could double count if we just added 1 each time.
+                cp_user_counts[collection_point.name].append(bq.customer_order_change.customer.full_name)
+        elif bq.customer_order_change.customer.full_name not in cp_holiday_counts[collection_point.name]:
+            # Want unique customers here, if the customer has more than one
+            # bag we could double count if we just added 1 each time.
+            cp_holiday_counts[collection_point.name].append(bq.customer_order_change.customer.full_name)
+    # rows_updated = len(cps)
+    # if rows_updated == 1:
+    #     message_bit = '''
+    #         packing list generated successfully for 1 collection point
+    #     '''
+    # else:
+    #     message_bit = '''
+    #         packing lists generated successfully for %s collection points
+    #     ''' % rows_updated
+    # model_admin.message_user(request, "%s." % message_bit)
+    assert sum(cp_total_by_bags.values()) == sum(cp_total_by_collection_point.values())
+    return render(
+        request,
+        'packing-list.html',
+        {
+            'collection_points': cps,
+            'collection_point_counts': cp_counts,
+            'collection_point_holiday_counts': cp_holiday_counts,
+            'collection_point_user_counts': cp_user_counts,
+            'total_by_bags': cp_total_by_bags,
+            'total_by_collection_point': cp_total_by_collection_point,
+            'total_holidays': sum([len(v) for v in cp_holiday_counts.values()]),
+            'total_users': sum([len(v) for v in cp_user_counts.values()]),
+            'total_bags': sum(cp_total_by_bags.values()),
+            'collection_point_days': collection_point_days,
+            'bag_types': bag_types,
+            'skips': skips,
+            'now': now,
+            'deadline_date': deadline_date,
+            'collection_date': collection_date,
+            'starters': starters,
+        },
+    )

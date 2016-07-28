@@ -184,6 +184,7 @@ class Customer(models.Model):
         on_delete=models.CASCADE,
         related_name='customer'
     )
+    # XXX ? created = models.DateTimeField(auto_now_add=True)
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
     mobile = models.CharField(max_length=30, default='', blank=True)
@@ -379,3 +380,10 @@ class Skip(models.Model):
         related_name='skip',
     )
     created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return '{} skiped week {} on {}'.format(
+            self.customer.full_name,
+            self.collection_date.isoformat(),
+            self.created.isoformat(),
+        )

@@ -193,13 +193,16 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Europe/London'
+# Strange things happen in timezones that aren't UTC
+TIME_ZONE = 'UTC'
+USE_TZ = True
 
 USE_I18N = True
 
 USE_L10N = True
-
-USE_TZ = True
+FORMAT_MODULE_PATH = [
+    'formats',
+]
 
 LOCALE_PATHS = (os.path.join(BASE_DIR, 'locale'),)
 

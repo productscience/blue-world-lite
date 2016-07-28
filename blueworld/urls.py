@@ -109,6 +109,11 @@ urlpatterns = [
         name='dashboard_order_history',
     ),
     url(
+        r'^dashboard/billing-history$',
+        join.views.dashboard_billing_history,
+        name='dashboard_billing_history',
+    ),
+    url(
         r'^dashboard/rejoin-scheme$',
         join.views.dashboard_rejoin_scheme,
         name='dashboard_rejoin_scheme',

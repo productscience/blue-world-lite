@@ -19,16 +19,20 @@ from django.http import (
 from django.core.mail import send_mail
 from django.shortcuts import render, redirect
 from django.template.defaulttags import register
-from django.utils import timezone
+from django.utils import formats, timezone
 from django.utils.html import format_html, escape
 import gocardless_pro
 
 from join.helper import (
+    get_day,
+    get_month,
+    get_minute,
     last_deadline,
     next_deadline,
     next_collection,
     start_of_the_month,
     get_pickup_dates,
+    render_bag_quantities,
 )
 from .models import (
     AccountStatusChange,
@@ -48,6 +52,7 @@ if settings.TIME_TRAVEL:
 
 @register.filter
 def get_item(dictionary, key):
+    assert isinstance(dictionary, dict), "Not a dict: {!r} so can't get {!r}. This can happen if you have specified the variable name of the dictionary incorrectly and it has been replaced with ''.".format(dictionary, key)
     return dictionary.get(key)
 
 
@@ -584,7 +589,7 @@ def dashboard(request):
         ).filter(customer=request.user.customer)[:1]
         collection_point = latest_cp_change[0].collection_point
         weekday = timezone.now().weekday()
-        wednesday = next_collection().replace(hour=0, minute=0, second=0, microsecond=0)
+        wednesday = get_day(next_collection())
         if weekday == 3 and collection_point.collection_day != 'WED':
             # We still want any skips to refer to this week, so wind back a week
             wednesday = wednesday - timedelta(7)
@@ -995,12 +1000,94 @@ if settings.TIME_TRAVEL:
         return HttpResponse('ok')
 
 
+def _add_change(changes, change):
+    change_month = get_month(change[0])
+    # if change_month.month == 12:
+    #     change_month = change_month.replace(year=change_month.year + 1, month=1)
+    # else:
+    #     change_month = change_month.replace(month=change_month.month + 1)
+    if change_month not in changes:
+        changes[change_month] = OrderedDict()
+    change_minute = get_minute(change[0])
+    if change_minute not in changes[change_month]:
+        changes[change_month][change_minute] = []
+    changes[change_month][change_minute].append(change)
+
+
+def get_order_history_events(customer):
+    # date, code, description, collection_affected, billing_month_affected, detail
+    # So: pretty much everything affexts the billing month after the next invoicing date
+    #      e.g. make change on 5th July, greater than 3rd july < 31st July => Affects August
+
+    # Display by
+    # find_billing_month_affected()
+
+
+    # This is going to get events by month, but we don't want to show changes that haven't been billed yet
+    # So, if we are in July and make changes, those changes aren't relevant until August.
+    # This means we display them against the next month.
+    created = None
+    changes = []
+    for order_change in CustomerOrderChange.objects.filter(customer=customer).order_by('-changed'):
+        if not created:
+             created = order_change.changed
+        changes.append((order_change.changed, 'ORDER_CHANGE', render_bag_quantities(order_change.bag_quantities.all())))
+    for collection_point_change in CustomerCollectionPointChange.objects.filter(customer=customer).order_by('-changed'):
+        changes.append((collection_point_change.changed, 'COLLECTION_POINT_CHANGE', collection_point_change.collection_point.name))
+    for account_status_change in AccountStatusChange.objects.filter(customer=customer).order_by('-changed'):
+        changes.append((account_status_change.changed, 'ACCOUNT_STATUS_CHANGE', account_status_change.get_status_display()))
+    for skip in Skip.objects.filter(customer=customer, created__lt=timezone.now()).order_by('-created'):
+        changes.append(
+            (
+                skip.created,
+                'SKIP_WEEK',
+                'Week commencing {}'.format(
+                    formats.date_format(skip.collection_date - timedelta(3), "DATE_FORMAT"),
+                )
+            )
+        )
+
+    # Get pickup dates since the account was created
+    pd = get_pickup_dates(created, None, timezone.now())
+    # import pdb; pdb.set_trace()
+    res = OrderedDict()
+    for change in sorted(changes):
+        _add_change(res, change)
+
+    # Now, for each month in
+    # XXX Perhaps should be < last billing date
+
+    return created, res
+
 
 @login_required
 @not_staff
 @gocardless_is_set_up
 def dashboard_order_history(request):
-    return render(request, 'dashboard/order-history.html')
+    created, order_history = get_order_history_events(request.user.customer)
+    return render(
+        request,
+        'dashboard/order-history.html',
+        {
+            'created': created,
+            'order_history': order_history,
+        }
+    )
+
+
+@login_required
+@not_staff
+@gocardless_is_set_up
+def dashboard_billing_history(request):
+    created, billing_history = get_order_history_events(request.user.customer)
+    return render(
+        request,
+        'dashboard/billing-history.html',
+        {
+            'created': created,
+            'billing_history': billing_history,
+        }
+    )
 
 
 @login_required
@@ -1031,9 +1118,22 @@ def gocardless_events_callback(request):
 
 def billing_dates(request):
     pickup_dates = get_pickup_dates(start_of_the_month(), 12)
+    for month in pickup_dates:
+        new_month = []
+        for week in pickup_dates[month]:
+            new_month.append(
+                dict(
+                    collection_day1=week,
+                    collection_day2=week + timedelta(1),
+                    commencing=week - timedelta(2),
+                    ending=week + timedelta(4),
+                    deadline = week - timedelta(3),
+                )
+            )
+            pickup_dates[month] = new_month
     billing_dates = OrderedDict()
     for month in pickup_dates:
-        billing_dates[month] = pickup_dates[month][0] - timedelta(days=3)
+        billing_dates[month] = pickup_dates[month][0]['deadline']
     return render(
         request,
         'billing-dates.html',

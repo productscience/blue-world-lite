@@ -72,6 +72,7 @@ Feature: Leave
      | /dashboard/change-collection-point |
      | /dashboard/bank-details            |
      | /dashboard/order-history           |
+     | /dashboard/billing-history           |
 
   Scenario Outline: Links I can follow after leaving
      Given I navigate to /dashboard

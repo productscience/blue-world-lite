@@ -21,7 +21,8 @@ Feature: Dashboard
      | Change Collection Point | /dashboard/change-collection-point | Your current collection point is          |
      | Bank Details            | /dashboard/bank-details            | change your bank direct debit details     |
      | Leave                   | /dashboard/leave                   | We're sorry to see you go                 |
-     | Order History           | /dashboard/order-history           | This functionality is not implemented yet |
+     | Order History           | /dashboard/order-history           | Your account was created on               |
+     | Billing History         | /dashboard/billing-history         | Your account was created on               |
 
   Scenario: Can't get the callback if you have completed GoCardless
     Given I'm using the user browser
@@ -51,6 +52,7 @@ Feature: Dashboard
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
      | /dashboard/order-history           |
+     | /dashboard/billing-history         |
      | /gocardless-callback               |
 
   Scenario: Create a user without GoCardless
@@ -71,3 +73,4 @@ Feature: Dashboard
      | /dashboard/bank-details            |
      | /dashboard/leave                   |
      | /dashboard/order-history           |
+     | /dashboard/billing-history         |
