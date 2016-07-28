@@ -1,1 +1,2 @@
 DATE_FORMAT="l j F Y"
+DATETIME_FORMAT="P, l j F Y"

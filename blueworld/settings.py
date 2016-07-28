@@ -18,6 +18,9 @@ TIME_TRAVEL = not str(os.environ.get('TIME_TRAVEL')).lower() == 'false'
 if TIME_TRAVEL:
     # Must import this before the datetime module (and hence before Django)
     import freezegun
+ALLOW_SKIP_CURRENT_WEEK = False
+if TIME_TRAVEL and str(os.environ.get('ALLOW_SKIP_CURRENT_WEEK')).lower() == 'true':
+    ALLOW_SKIP_CURRENT_WEEK = True
 
 
 import dj_database_url

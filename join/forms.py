@@ -1,4 +1,6 @@
 from django import forms
+from django.utils import timezone
+from billing_week import get_billing_week
 from .models import (
     AccountStatusChange,
     Customer,
@@ -14,7 +16,11 @@ class SignupForm(forms.Form):
     mobile = forms.CharField(max_length=30, label='Mobile', required=False)
 
     def signup(self, request, user):
+        now = timezone.now()
+        bw = get_billing_week(now)
         customer = Customer(
+            created=now,
+            created_in_billing_week=str(bw),
             full_name=self.cleaned_data['full_name'],
             nickname=self.cleaned_data['nickname'],
             mobile=self.cleaned_data['mobile'],
@@ -22,6 +28,8 @@ class SignupForm(forms.Form):
         )
         customer.save()
         account_status_change = AccountStatusChange(
+            changed=now,
+            changed_in_billing_week=str(bw),
             customer=customer,
             status=AccountStatusChange.AWAITING_DIRECT_DEBIT,
         )

@@ -1,8 +1,9 @@
+from billing_week import get_billing_week
 from collections import OrderedDict
 from decimal import Decimal
 from django.conf import settings
 from django.db import models
-from .helper import last_deadline
+from django.utils import timezone
 
 
 class CollectionPoint(models.Model):
@@ -107,7 +108,11 @@ class BagType(models.Model):
             '-changed'
         ).filter(bag_type=self)[:1]
         if not len(cost_changes) or cost_changes[0].weekly_cost != weekly_cost:
+            now = timezone.now()
+            bw = get_billing_week(now)
             cost_change = BagTypeCostChange(
+                changed=now,
+                changed_in_billing_week=str(bw),
                 weekly_cost=weekly_cost,
                 bag_type=self
             )
@@ -130,7 +135,8 @@ class BagType(models.Model):
 
 # XXX Cost should surely be price?
 class BagTypeCostChange(models.Model):
-    changed = models.DateTimeField(auto_now_add=True)
+    changed = models.DateTimeField()
+    changed_in_billing_week = models.CharField(max_length=9)
     bag_type = models.ForeignKey(
         BagType,
         # XXX Not sure about this yet
@@ -185,6 +191,8 @@ class Customer(models.Model):
         related_name='customer'
     )
     # XXX ? created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField()
+    created_in_billing_week = models.CharField(max_length=9)
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
     mobile = models.CharField(max_length=30, default='', blank=True)
@@ -222,7 +230,11 @@ class Customer(models.Model):
         return latest_cp.collection_point
 
     def _set_collection_point(self, collection_point_id):
+        now = timezone.now()
+        bw = get_billing_week(now)
         collection_point_change = CustomerCollectionPointChange(
+            changed=now,
+            changed_in_billing_week=str(bw),
             customer=self,
             collection_point_id=collection_point_id,
         )
@@ -239,7 +251,13 @@ class Customer(models.Model):
         return latest_order.bag_quantities.all()
 
     def _set_bag_quantities(self, bag_quantities):
-        customer_order_change = CustomerOrderChange(customer=self)
+        now = timezone.now()
+        bw = get_billing_week(now)
+        customer_order_change = CustomerOrderChange(
+            changed=now,
+            changed_in_billing_week=str(bw),
+            customer=self,
+        )
         customer_order_change.save()
         for bag_type_id, quantity in bag_quantities.items():
             bag_quantity = CustomerOrderChangeBagQuantity(
@@ -252,16 +270,16 @@ class Customer(models.Model):
 
     bag_quantities = property(_get_latest_bag_quantities, _set_bag_quantities)
 
-    def _get_latest_skips(self):
+    def _get_skipped(self):
         skipped_dates = []
-        ld = last_deadline()
-        for skip in Skip.objects.order_by(
-                'collection_date'
-           ).filter(customer=self, collection_date__gt=ld):
-            skipped_dates.append(skip.collection_date)
-        return skipped_dates
+        now = timezone.now()
+        bw = get_billing_week(now)
+        bwstr = str(bw)
+        if Skip.objects.filter(customer=self, billing_week=str(bwstr)).all():
+            return True
+        return False
 
-    skips = property(_get_latest_skips)
+    skipped = property(_get_skipped)
 
     def __str__(self):
         return '{} ({})'.format(self.full_name, self.nickname)
@@ -277,7 +295,8 @@ class AccountStatusChange(models.Model):
         (LEFT, 'Left'),
     )
     leaving_date = models.DateTimeField(null=True)
-    changed = models.DateTimeField(auto_now_add=True)
+    changed = models.DateTimeField()
+    changed_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
         Customer,
         # XXX Not sure about this yet
@@ -294,7 +313,8 @@ class AccountStatusChange(models.Model):
 
 
 class CustomerCollectionPointChange(models.Model):
-    changed = models.DateTimeField(auto_now_add=True)
+    changed = models.DateTimeField()
+    changed_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
         Customer,
         # XXX Not sure about this yet
@@ -315,7 +335,8 @@ class CustomerCollectionPointChange(models.Model):
 
 
 class CustomerOrderChange(models.Model):
-    changed = models.DateTimeField(auto_now_add=True)
+    changed = models.DateTimeField()
+    changed_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
         Customer,
         # XXX Not sure about this yet
@@ -372,14 +393,15 @@ class BillingCredit(models.Model):
 
 
 class Skip(models.Model):
-    collection_date = models.DateTimeField()
+    billing_week = models.CharField(max_length=9)
+    created = models.DateTimeField(auto_now_add=True)
+    created_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
         Customer,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
         related_name='skip',
     )
-    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return '{} skiped week {} on {}'.format(

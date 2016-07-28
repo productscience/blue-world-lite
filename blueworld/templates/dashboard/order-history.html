@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load tz %}
 
 {% block head_title %}Order History{% endblock %}
 {% block extra_head %}
@@ -12,6 +13,7 @@ table#order-history tr.line {
 </style>
 {% endblock %}
 {% block content %}
+    {% timezone "Europe/London" %}
     <div class="row">
       <h1>Order History</h1>
 
@@ -47,6 +49,7 @@ table#order-history tr.line {
       </table>
     {% endfor %}
     </div>
+    {% endtimezone %}
 {% endblock %}
 {% block extra_body %}
 {% endblock %}

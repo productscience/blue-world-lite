@@ -1,8 +1,11 @@
 {% extends "base_join.html" %}
+{% load tz %}
+
 
 {% block head_title %}Billing Dates{% endblock %}
 {% block extra_head %}{% endblock %}
 {% block content %}
+    {% timezone "Europe/London" %}
     <div class="row">
       <h1>Billing Dates</h1>
 
@@ -13,22 +16,20 @@
             <h2>{{ month|date:"F Y"}} - {{ pickup_dates|get_item:month|length }} Wednesday collections</h2>
             <p><strong>Invoicing date:</strong> <span class="invoicing-date">{{ billing_dates|get_item:month|date:"DATE_FORMAT" }}</span></p>
             <ol>
-              {% for week in pickup_dates|get_item:month %}
+              {% for bw in pickup_dates|get_item:month %}
               <li>
                   <p>
                       <strong>
-                    {{ week.commencing|date:"DATE_FORMAT" }}
-                    - {{ week.ending|date:"DATE_FORMAT" }}
+                    {{ bw.mon|date:"DATE_FORMAT" }} - {{ bw.sun|date:"DATE_FORMAT" }}
                       </strong>
                     <br>
-                    Wednesday collection:
-                      {{ week.collection_day1|date:"DATE_FORMAT" }}
+                    Wednesday collection: {{ bw.wed|date:"DATE_FORMAT" }}
                       <br>
                     Thursday collection:
-                      {{ week.collection_day2|date:"DATE_FORMAT" }}
+                      {{ bw.thurs|date:"DATE_FORMAT" }}
                       <br>
                     Deadline for changes:
-                      3pm {{ week.deadline|date:"DATE_FORMAT" }}
+                      {{ bw.start|date:"DATETIME_FORMAT" }}
                   </p>
               </li>
               {% endfor %}
@@ -36,6 +37,7 @@
           {% endfor %}
       </div>
     </div>
+    {% endtimezone %}
 {% endblock %}
 {% block extra_body %}
 {% endblock %}

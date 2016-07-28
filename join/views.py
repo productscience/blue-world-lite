@@ -1,8 +1,10 @@
 from datetime import timedelta
+import datetime
 import json
 import uuid
 from collections import OrderedDict
 
+from billing_week import get_billing_week, parse_billing_week
 from allauth.account.views import signup as allauth_signup
 from django import forms
 from django.conf import settings
@@ -23,17 +25,8 @@ from django.utils import formats, timezone
 from django.utils.html import format_html, escape
 import gocardless_pro
 
-from join.helper import (
-    get_day,
-    get_month,
-    get_minute,
-    last_deadline,
-    next_deadline,
-    next_collection,
-    start_of_the_month,
-    get_pickup_dates,
-    render_bag_quantities,
-)
+from billing_week import first_wed_of_month as start_of_the_month
+from join.helper import get_pickup_dates, render_bag_quantities
 from .models import (
     AccountStatusChange,
     BagType,
@@ -46,6 +39,7 @@ from .models import (
     CustomerOrderChangeBagQuantity,
     CustomerTag,
 )
+import pytz
 if settings.TIME_TRAVEL:
     import freezegun
 
@@ -189,8 +183,8 @@ class CollectionPointForm(forms.Form):
 
 
 class SkipForm(forms.Form):
+    id = forms.CharField(widget=forms.HiddenInput())
     skipped = forms.BooleanField(required=False)
-    collection_date = forms.DateTimeField(widget=forms.HiddenInput())
 
 
 class BaseSkipFormSet(BaseFormSet):
@@ -206,8 +200,7 @@ class BaseSkipFormSet(BaseFormSet):
                 "Please review your choices and try again."
             )
         for i, initial in enumerate(self.initial):
-            if self.cleaned_data[i]['collection_date'].strftime('%Y-%m-%d') \
-               != self.initial[i]['collection_date']:
+            if self.cleaned_data[i]['id'] != self.initial[i]['id']:
                 raise forms.ValidationError(
                     "Some of the data you had entered is no longer valid. "
                     "Please review your choices and try again."
@@ -218,6 +211,8 @@ class BaseSkipFormSet(BaseFormSet):
 @not_staff
 @gocardless_is_set_up
 def dashboard_skip_weeks(request):
+    now = timezone.now()
+    bw = get_billing_week(now)
     if request.method == 'POST' and request.POST.get('cancel'):
         messages.add_message(
             request,
@@ -225,26 +220,44 @@ def dashboard_skip_weeks(request):
             'Your skip weeks have not been changed.'
         )
         return redirect(reverse("dashboard"))
+
     SkipFormSet = formset_factory(
         SkipForm,
         extra=0,
         formset=BaseSkipFormSet,
     )
-    ld = next_deadline()
-    skipped_dates = request.user.customer.skips
+
+    # We want to see the next 9 skip weeks we can change
+    # We can't change things in the current billing week but
+    # but we can change things in the next billing week
+    skipped_billing_weeks = []
+    if settings.ALLOW_SKIP_CURRENT_WEEK:
+        startbw = bw
+        bwqstr = str(bw)
+    else:
+        startbw = bw.next()
+        bwqstr = str(startbw)
+    for skip in Skip.objects.order_by(
+            'billing_week'
+       ).filter(
+           customer=request.user.customer,
+           billing_week__gte=bwqstr,
+       ):
+        skipped_billing_weeks.append(skip.billing_week)
+
     valid_dates = {}
     initial_skips = []
     # Offer dates this month and for the next two.
-    for month, pickup_dates in get_pickup_dates(ld, 3).items():
-        for pickup_date in pickup_dates:
+    for month, pickup_dates in get_pickup_dates(startbw.wed, 9).items():
+        for skipbw in pickup_dates:
+            pickup_date = skipbw.wed
             skip_choice = {
-                'display_date': (pickup_date - timedelta(days=2)),
-                'collection_date': pickup_date.strftime('%Y-%m-%d'),
-                'collection_date_obj': pickup_date,
-                'skipped': pickup_date in skipped_dates,
+                'id': str(skipbw),
+                'skipbw': skipbw,
+                'skipped': str(skipbw) in skipped_billing_weeks,
             }
             initial_skips.append(skip_choice)
-            valid_dates[(pickup_date).strftime('%Y-%m-%d')] = skip_choice
+            valid_dates[str(skipbw)] = skip_choice
     if request.method == 'POST':
         formset = SkipFormSet(
             request.POST,
@@ -255,12 +268,12 @@ def dashboard_skip_weeks(request):
             to_skip = []
             to_unskip = []
             for row in formset.cleaned_data:
-                d = row['collection_date'].strftime('%Y-%m-%d')
-                if row['skipped'] != valid_dates[d]['skipped']:
+                skipbw = row['id']
+                if row['skipped'] != valid_dates[skipbw]['skipped']:
                     if row['skipped'] is True:
-                        to_skip.append(valid_dates[d]['collection_date_obj'])
+                        to_skip.append(skipbw)
                     else:
-                        to_unskip.append(valid_dates[d]['collection_date_obj'])
+                        to_unskip.append(skipbw)
             if not to_skip and not to_unskip:
                 messages.add_message(
                     request,
@@ -272,17 +285,19 @@ def dashboard_skip_weeks(request):
                     '''
                 )
                 return redirect(reverse("dashboard_skip_weeks"))
-            for collection_date in to_skip:
-                assert collection_date not in to_unskip
+            for skipbw in to_skip:
+                assert skipbw not in to_unskip
                 skip = Skip(
+                    created=now,
+                    created_in_billing_week=str(bw),
+                    billing_week=skipbw,
                     customer=request.user.customer,
-                    collection_date=collection_date,
                 )
                 skip.save()
-            for collection_date in to_unskip:
+            for skipbw in to_unskip:
                 skip = Skip.objects.filter(
                     customer=request.user.customer,
-                    collection_date=collection_date,
+                    billing_week=skipbw
                 ).get()
                 skip.delete()
             messages.add_message(
@@ -559,7 +574,11 @@ def gocardless_callback(request):
         mandate.gocardless_mandate_id = complete_redirect_flow.links.mandate
     mandate.in_use_for_customer = request.user.customer
     mandate.save()
+    now = timezone.now()
+    bw = get_billing_week(now)
     account_status_change = AccountStatusChange(
+        changed=now,
+        changed_in_billing_week=str(bw),
         customer=request.user.customer,
         status=AccountStatusChange.ACTIVE,
     )
@@ -588,12 +607,42 @@ def dashboard(request):
             '-changed'
         ).filter(customer=request.user.customer)[:1]
         collection_point = latest_cp_change[0].collection_point
-        weekday = timezone.now().weekday()
-        wednesday = get_day(next_collection())
-        if weekday == 3 and collection_point.collection_day != 'WED':
-            # We still want any skips to refer to this week, so wind back a week
-            wednesday = wednesday - timedelta(7)
-        skipped = wednesday in request.user.customer.skips
+        now = timezone.now()
+        bw = get_billing_week(now)
+        weekday = now.weekday()
+        # wednesday = bw.wed
+        # wednesday = pytz.utc.localize(datetime.datetime(wednesday.year, wednesday.month, wednesday.day, 12,0,0,0))
+
+        # if weekday == 3 and collection_point.collection_day != 'WED':
+        #     wednesday = wednesday - timedelta(7)
+
+        skipped_billing_weeks = []
+        for skip in Skip.objects.order_by(
+                'billing_week'
+           ).filter(
+               customer=request.user.customer,
+               billing_week__gte=str(bw),
+           ):
+            skipped_billing_weeks.append(skip.billing_week)
+        # wedbw = parse_billing_week(wednesday)
+        skipped = str(bw) in skipped_billing_weeks
+        # skipped = str(bw.next()) in skipped_billing_weeks
+        # import pdb; pdb.set_trace()
+
+
+        # -        weekday = timezone.now().weekday()
+        # -        wednesday = get_day(next_collection())
+        # -        if weekday == 3 and collection_point.collection_day != 'WED':
+        # -            # We still want any skips to refer to this week, so wind back a week
+        # -            wednesday = wednesday - timedelta(7)
+        # -        skipped = wednesday in request.user.customer.skips
+
+
+        # import pdb; pdb.set_trace()
+        # if weekday == 3 and collection_point.collection_day != 'WED':
+        #     # We still want any skips to refer to this week, so wind back a week
+        #     wed = bw.wed - timedelta(7)
+        # skipped = request.user.customer.skipped
         if weekday == 6:  # Sunday
             if collection_point.collection_day == 'WED':
                 collection_date = 'Wednesday'
@@ -937,7 +986,11 @@ def dashboard_leave(request):
                 fail_silently=False,
             )
             # Only save changes now in case there is a problem with the email
+            now = timezone.now()
+            bw = get_billing_week(now)
             account_status_change = AccountStatusChange(
+                changed=now,
+                changed_in_billing_week=str(bw),
                 customer=request.user.customer,
                 status=AccountStatusChange.LEFT,
             )
@@ -946,21 +999,11 @@ def dashboard_leave(request):
     # if a GET (or any other method) we'll create a blank form
     else:
         form = LeaveReasonForm()
-
-    now_date = timezone.now()
-    is_thursday = now_date.weekday() == 3
-    next_collection_datetime = next_collection()
-    next_collection_date = next_collection_datetime
     return render(
         request,
         'dashboard/leave.html',
         {
             'form': form,
-            'next_collection_datetime': next_collection_datetime,
-            'next_collection_date': next_collection_date,
-            'next_deadline': next_deadline(),
-            'now_date': now_date,
-            'is_thursday': is_thursday,
         }
     )
 
@@ -998,6 +1041,35 @@ if settings.TIME_TRAVEL:
         freezer.stop()
         freezer = None
         return HttpResponse('ok')
+
+
+def get_minute(start):
+    current_year = start.year
+    current_month = start.month
+    current_day = start.day
+    current_hour = start.hour
+    current_minute = start.minute
+    return datetime.datetime(
+        current_year,
+        current_month,
+        current_day,
+        current_hour,
+        current_minute,
+        0,
+        tzinfo=timezone.get_default_timezone()
+    )
+
+
+def get_month(start):
+    current_year = start.year
+    current_month = start.month
+    return datetime.datetime(
+        current_year,
+        current_month,
+        1,
+        0, 0, 0,
+        tzinfo=timezone.get_default_timezone()
+    )
 
 
 def _add_change(changes, change):
@@ -1042,13 +1114,13 @@ def get_order_history_events(customer):
                 skip.created,
                 'SKIP_WEEK',
                 'Week commencing {}'.format(
-                    formats.date_format(skip.collection_date - timedelta(3), "DATE_FORMAT"),
+                    formats.date_format(parse_billing_week(skip.billing_week).mon, "DATE_FORMAT"),
                 )
             )
         )
 
     # Get pickup dates since the account was created
-    pd = get_pickup_dates(created, None, timezone.now())
+    pd = get_pickup_dates(created, timezone.now())
     # import pdb; pdb.set_trace()
     res = OrderedDict()
     for change in sorted(changes):
@@ -1096,7 +1168,11 @@ def dashboard_billing_history(request):
 @have_left_scheme
 def dashboard_rejoin_scheme(request):
     if request.method == 'POST':
+        now = timezone.now()
+        bw = get_billing_week(now)
         account_status_change = AccountStatusChange(
+            changed=now,
+            changed_in_billing_week=str(bw),
             customer=request.user.customer,
             status=AccountStatusChange.ACTIVE,
         )
@@ -1117,23 +1193,10 @@ def gocardless_events_callback(request):
 
 
 def billing_dates(request):
-    pickup_dates = get_pickup_dates(start_of_the_month(), 12)
-    for month in pickup_dates:
-        new_month = []
-        for week in pickup_dates[month]:
-            new_month.append(
-                dict(
-                    collection_day1=week,
-                    collection_day2=week + timedelta(1),
-                    commencing=week - timedelta(2),
-                    ending=week + timedelta(4),
-                    deadline = week - timedelta(3),
-                )
-            )
-            pickup_dates[month] = new_month
+    pickup_dates = get_pickup_dates(start_of_the_month(timezone.now().year, timezone.now().month), 52, month_start=True)
     billing_dates = OrderedDict()
     for month in pickup_dates:
-        billing_dates[month] = pickup_dates[month][0]['deadline']
+        billing_dates[month] = pickup_dates[month][0].start
     return render(
         request,
         'billing-dates.html',

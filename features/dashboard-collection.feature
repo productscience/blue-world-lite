@@ -43,14 +43,15 @@ Feature: Dashboard
      Then the browser moves to /dashboard
 
    # 17th is a Sunday. IMPORTANT: Notice the behaviour on Thursday depends on the collection point chosen.
+   # NOTE: All the times are in UTC, so are an hour behind what you'd expect in BST for July
    Examples: Times where you can make changes for the next collection
      | date                | day       | collection_day         | week_to_skip       | skipped_collection_date             | collection_date                  | deadline        | changes_affect            |
-     | 2016-07-17 14:59:59 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                        | Wednesday                        | 3pm today       | next week's collection    |
-     | 2016-07-17 14:59:59 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                         | Thursday                         | 3pm today       | next week's collection    |
-     | 2016-07-17 14:59:59 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday            | Wednesday and Thursday           | 3pm today       | next week's collection    |
-     | 2016-07-17 15:00:00 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                        | Wednesday                        | 3pm next Sunday | the collection after next |
-     | 2016-07-17 15:00:00 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                         | Thursday                         | 3pm next Sunday | the collection after next |
-     | 2016-07-17 15:00:00 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday            | Wednesday and Thursday           | 3pm next Sunday | the collection after next |
+     | 2016-07-17 13:59:59 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                        | Wednesday                        | 3pm today       | next week's collection    |
+     | 2016-07-17 13:59:59 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                         | Thursday                         | 3pm today       | next week's collection    |
+     | 2016-07-17 13:59:59 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday            | Wednesday and Thursday           | 3pm today       | next week's collection    |
+     | 2016-07-17 14:00:00 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                        | Wednesday                        | 3pm next Sunday | the collection after next |
+     | 2016-07-17 14:00:00 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                         | Thursday                         | 3pm next Sunday | the collection after next |
+     | 2016-07-17 14:00:00 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday            | Wednesday and Thursday           | 3pm next Sunday | the collection after next |
      | 2016-07-18 00:00:00 | Monday    | Wednesday              | #id_form-0-skipped | on Wednesday                        | Wednesday                        | 3pm this Sunday | next week's collection    |
      | 2016-07-18 00:00:00 | Monday    | Thursday               | #id_form-0-skipped | on Thursday                         | Thursday                         | 3pm this Sunday | next week's collection    |
      | 2016-07-18 00:00:00 | Monday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday            | Wednesday and Thursday           | 3pm this Sunday | next week's collection    |
