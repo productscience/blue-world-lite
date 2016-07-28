@@ -25,43 +25,60 @@
 
       <div class="main" role="main">
 
-      {% block menu %}
         {% if user.is_authenticated %}
-        <div class="row">
-          <strong>Navigation:</strong>
-          <ul id="navigation">
-            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            {% if not user.customer.has_left %}
-              <li><a href="{% url 'account_email' %}">E-mail Addresses</a></li>
-              <li><a href="{% url 'account_change_password' %}">Change Password</a></li>
-              <li><a href="{% url 'dashboard_skip_weeks' %}">Skip Weeks</a></li>
-              <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
-              <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
-            {% endif %}
-            <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
-            {% if not user.customer.has_left %}
-              {% if user.customer.gocardless_current_mandate.gocardless_mandate_id %}
-                <li><a href="{% url 'dashboard_bank_details' %}">Bank Details</a></li>
-                <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
-              {% endif %}
-            {% endif %}
-            <li><a href="{% url 'account_logout' %}">Log Out</a></li>
+          <ul class="horizontal menu expanded global-nav">
+            <li><a href="{% url 'dashboard' %}#dashboard">home</a></li>
+            <li><a href="{% url 'dashboard' %}#your-order">your order</a></li>
+            <li><a href="{% url 'dashboard' %}#your-account">your account</a></li>
           </ul>
-        </div>
         {% endif %}
-      {% endblock %}
+
+
       {% if messages %}
         <div class="row">
-          <strong>Messages:</strong>
-          <ul id="messages">
+          <div id="messages">
             {% for message in messages %}
-            <li>{{message}}</li>
+            <div class="callout {{ message.tags }} ">
+              {{message}}
+            </div>
             {% endfor %}
-          </ul>
+          </div>
         </div>
       {% endif %}
       {% block content %}
       {% endblock %}
+
+      {% block menu %}
+        {% if user.is_authenticated %}
+        <div class="row">
+
+          <div id="navigation">
+            {# <a class="font-display button primary" href="{% url 'dashboard' %}">Home</a> #}
+
+            <h4 class="font-display">Your account</h4>
+            {% if not user.customer.has_left %}
+              <div class="button-group">
+                <a class="font-display button primary" href="{% url 'account_email' %}">E-mail Addresses</a>
+                <a class="font-display button primary" href="{% url 'account_change_password' %}">Change Password</a>
+
+                {% if user.customer.go_cardless %}
+                  <a class="font-display button primary small" href="{% url 'dashboard_bank_details' %}">Bank Details</a>
+                  <a class="font-display button primary small" href="{% url 'dashboard_leave' %}">Leave</a>
+                {% endif %}
+              {% endif %}
+              </div>
+
+            {% endif %}
+
+              {% if not user.customer.has_left %}
+              <a class="font-display button primary" href="{% url 'account_logout' %}">Log Out</a>
+          </div><!-- navigation -->
+        </div>
+        {% endif %}
+      {% endblock %}
+
+
+
     {% endblock %}
     {% block extra_body %}
     {% endblock %}
