@@ -6,7 +6,8 @@ Feature: Change email
 
   Scenario: Navigate from Dashboard
     Given I navigate to /dashboard
-     When I follow the "E-mail Addresses" link
+     And I hover over "#navigation .your_account"
+     When I follow the "E-mail Addresses" link in "#navigation"
      Then the browser moves to /email/
       And I see "E-mail Addresses" in "h1"
 

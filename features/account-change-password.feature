@@ -6,7 +6,8 @@ Feature: Change Password
 
   Scenario: Can navigate from dashbaord
     Given I navigate to /dashboard
-     When I follow the "Change Password" link
+     And I hover over "#navigation .your_account"
+     When I follow the "Change Password" link in "#navigation"
      Then the browser moves to /password/change/
       And I see "Change Password" in "h1"
 

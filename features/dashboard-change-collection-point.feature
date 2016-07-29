@@ -4,7 +4,8 @@ Feature: Change Collection Point
     Given I'm using the user browser
       And I create a started user "Change Collection Point", "change-collection-point", "change-collection-point@example.com" with password "123123ab"
       And I login with "change-collection-point@example.com" and "123123ab"
-      And I follow the "Change Collection Point" link
+      And I hover over "#navigation .your_order"
+      And I follow the "Change Collection Point" link in "#navigation"
 
   Scenario: Make no changes
      When I click the "Confirm" button
