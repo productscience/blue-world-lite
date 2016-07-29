@@ -14,6 +14,9 @@ confirm () {
     esac
 }
 
+echo "Pushing HEAD to Heroku"
+confirm || exit
+git push heroku HEAD:master
 
 echo "Resetting $HEROKU_PG_NAME on $HEROKU_APP_NAME"
 confirm || exit
