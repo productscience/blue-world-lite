@@ -5,10 +5,10 @@
 [![License: Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 This is a Django project that handles management and billing of a Growing
-Commuinities veg box scheme. It handles user registration and self-service,
+Communities veg box scheme. It handles user registration and self-service,
 pickup list generation and billing.
 
-The codebase exists as a different apps all found in the `apps` directory. Each app can be installed and tested on its own, or as part of the overall application.
+The codebase exists as a set of different apps all found in the `apps` directory. Each app can be installed and tested on its own, or as part of the overall application.
 
 * `blueworld` - the main codebase:
   * provides base templates and CSS assets
@@ -59,7 +59,7 @@ GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;
 
 ### Redis
 
-This is used by `rq` inside `worker.py` triggered from `clock.py`.
+This is used by `rq` inside `worker.py` triggered from `clock.py`. If deploying to Heroku or similar, you should be able to use one of the free hosted Redis services (i.e. RedisToGo)
 
 ```
 redis-server
@@ -83,6 +83,7 @@ LEAVER_EMAIL_TO='leaver-email@example.com; billing@example.com'
 GOCARDLESS_ACCESS_TOKEN='xxx'
 GOCARDLESS_ENVIRONMENT='sandbox|live'
 TIME_TRAVEL='false'
+
 # Local
 EMAIL_HOST='localhost'
 EMAIL_HOST_USER='username'
@@ -109,7 +110,7 @@ window like this:
 
 ### Django
 
-Make sure your environment is activates and configuration set:
+Make sure your environment is activated and configuration set:
 
 ```
 . .ve3/bin/activate
@@ -124,66 +125,42 @@ python manage.py migrate
 ```
 
 You can automate the setup of a super user and naming of the site with these
-bash commands that use the Djano shell, and the environment variables you've
-configured. (These are the commands used by Travis for example):
+commands that use the Django shell, and the environment variables you've
+configured. These are the commands used by Travis for example:
 
 ```
-echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', '123123ab')" | python manage.py shell
-echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save()" | python manage.py shell
+python manage.py loaddata data/user.json
+python manage.py loaddata data/initial.json
 ```
-
-It is a good idea to keep the password and name set above, because they are
-used in the tests.
-
 
 ### Data Migrations
 
 #### Export Existing Data
 
-You can export PostgreSQL data from another database by setting
-`PATH_TO_VAGRANT_DIR` to be the path of the VM running the PostgreSQL instance
-to migrate from and then running a `migrate.sh` script like this:
+If you're migrating data from the previous version of the Growing Communities app, you can export like to:
+
+the spin up the guest VM for the old Growing Communities project, using `vagrant up` in it's own project directory, then follow the steps outlined in `migrate.py` docstrings in _this_ project.
+
+Once you have made the changes to the guest VM setup, you should be able to access the guest machine's database through the newly forwarded port from the host machine, and run the migrate script to generate a new `initial.json` file in Django's preferred fixture format.
 
 ```
-#!/bin/bash
-
-set -e
-
-CUR_DIR=$PWD
-mkdir -p $CUR_DIR/data
-
-pushd $PATH_TO_VAGRANT_DIR
-echo "Migrating bag type ..."
-vagrant ssh -c "sudo -u postgres psql grocom -c \"COPY (select name,active,\\\"order\\\",round((price*12)/52, 2) as weekly_cost from joinforms_bagtype where group_id=1) to '/tmp/bag_type.csv' with csv\"";
-vagrant ssh -c "cat /tmp/bag_type.csv" > $CUR_DIR/data/bag_type.csv
-echo "done."
-
-echo "Migrating collection points ..."
-vagrant ssh -c "sudo -u postgres psql grocom -c \"COPY (select name,\\\"where\\\",latitude,longitude,available,display_order from joinforms_pickuppoint where group_id=1) to '/tmp/collection_point.csv' with CSV\"";
-vagrant ssh -c "cat /tmp/collection_point.csv" > $CUR_DIR/data/collection_point.csv
-echo "done."
-popd
+python migrate.py
 ```
-
-You'll end up with a set of `.csv` files in the `data` directory. You can adjust them as you like.
 
 #### Load Data
 
-You can reset the database and load data from the `data` directory you've created with a script like this:
+You can reset the database and load data from the `data` directory by calling the `load.sh` script. From the project root, call:
 
 ```
-#!/bin/bash
+chmod +x
+./load.sh
+```
 
-psql -c 'DROP DATABASE blueworld;'
-psql -c 'CREATE DATABASE blueworld;'
-psql -c 'GRANT ALL PRIVILEGES ON DATABASE blueworld TO blueworld;'
-python manage.py makemigrations
-python manage.py migrate
-echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', '123123ab')" | python manage.py shell
-echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save()" | python manage.py shell
+If you need to load in the data generated in _Export Existing Data_ section, you can do so with
 
-psql blueworld -c "COPY join_bagtype(name,active,display_order,weekly_cost) from '$PWD/data/bag_type.csv' with csv;"
-psql blueworld -c "COPY join_collectionpoint(name,location,latitude,longitude,active,display_order) from '$PWD/data/collection_point.csv' with csv"
+```
+# assuming you output the data to the default destination
+python manage.my loaddata initial.json
 ```
 
 ## Running Locally
@@ -377,12 +354,12 @@ chmod +x run-tests.sh
 If you just pass this script specific feature file paths, it will just run
 them. It will also pass any extra flags onto the `behave` command.
 
-When implementing a specific feature you can overrride the browser to `chrome`
+When implementing a specific feature you can override the browser to `chrome`
 using the `BROWSER` environment variable then run individual tests in debug
 mode like this (make sure you have chromedriver installed):
 
 ```
-BROWSER=chrome TEST_DEBUG=True ./run-tests.sh --no-capture features/dashboard.feature
+BROWSER=chrome TEST_DEBUG=True ./run-tests.sh --no-capture --tags=-phantomjs --tags=-offline features/dashboard.feature
 ```
 
 If the test fails, it will stop with a pdb prompt in the test and with the
@@ -467,7 +444,6 @@ heroku pg:info | grep "Add-on"
 
 To get the info to pass to `psql` look at the database URL you used in your settings.
 
-Here's the script (you'll need to change the superuser password):
 
 ```
 #!/bin/bash
@@ -475,13 +451,12 @@ Here's the script (you'll need to change the superuser password):
 heroku pg:reset DATABASE_ADD_ON_NAME --confirm APP_NAME
 heroku run python manage.py migrate
 
-echo "from django.contrib.auth.models import User; User.objects.create_superuser('superuser', 'james@example.com', 'superuserpassword'); exit()" | heroku run python manage.py shell
+```
 
-echo "from django.contrib.sites.models import Site; s = Site.objects.get(id=1); s.domain='localhost'; s.name='BlueWorld'; s.save(); exit()" | heroku run python manage.py shell
+To load your data in, because you can't write to the filesystem on Heroku, you'll need to run the migrate script, passing in the connection string for the database on Heroku.
 
-cat "$PWD/data/bag_type.csv" | PGPASSWORD=password psql -h host -U username database -c "COPY join_bagtype(name,active,display_order,weekly_cost) from stdin with csv;"
-
-cat "$PWD/data/collection_point.csv" | PGPASSWORD=password psql -h host -U username database -c "COPY join_collectionpoint(name,location,latitude,longitude,active,display_order) from stdin with csv"
+```
+# TODO add steps here
 ```
 
 You can start the clock and set up the worker process like this:
@@ -564,4 +539,4 @@ You can check source code style like this:
 pep8 blueworld join | grep -v "join/migrations/"
 ```
 
-We don't bother styling the automatically-generated mirgrations.
+We don't bother styling the automatically-generated migrations.
