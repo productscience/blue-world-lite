@@ -11,17 +11,18 @@ Feature: Dashboard
 
   Scenario Outline: Dashboard Links
     Given I navigate to /dashboard
-     When I follow the "<link>" link
+     And I hover over "<selector>"
+     When I follow the "<link>" link in "#navigation"
      Then the browser moves to <url>
       And I see "<expected>" in "p"
 
    Examples: Dashboard links
-     | link                    | url                                | expected                                  |
-     | Change Order            | /dashboard/change-order            | Your current order is                     |
-     | Change Collection Point | /dashboard/change-collection-point | Your current collection point is          |
-     | Bank Details            | /dashboard/bank-details            | change your bank direct debit details     |
-     | Leave                   | /dashboard/leave                   | We're sorry to see you go                 |
-     | Order History           | /dashboard/order-history           | This functionality is not implemented yet |
+     | link                    | selector                  | url                                | expected                                  |
+     | Change Order            | #navigation .your_order   | /dashboard/change-order            | Your current order is                     |
+     | Change Collection Point | #navigation .your_order   | /dashboard/change-collection-point | Your current collection point is          |
+     | Bank Details            | #navigation .your_account | /dashboard/bank-details            | change your bank direct debit details     |
+     | Leave                   | #navigation .your_order   | /dashboard/leave                   | We're sorry to see you go                 |
+     | Order History           | #navigation .your_order   | /dashboard/order-history           | This functionality is not implemented yet |
 
   Scenario: Can't get the callback if you have completed GoCardless
     Given I'm using the user browser
@@ -31,7 +32,8 @@ Feature: Dashboard
 
   Scenario: I can logout from the dashbaord
     Given I navigate to /dashboard
-     When I follow the "Log Out" link
+     And I hover over "#navigation .your_account"
+     When I follow the "Log Out" link in "#navigation"
      Then the browser moves to /logged-out
       And I see "You have signed out" in "#messages"
      When I navigate to /dashboard

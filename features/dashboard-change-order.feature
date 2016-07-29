@@ -8,7 +8,8 @@ Feature: Change Order
       And I see "1 x Large veg" in "#order li:nth-child(1)"
 
   Scenario: Visit the change order screen
-     When I follow the "Change Order" link
+     Given I hover over "#navigation .your_order"
+     When I follow the "Change Order" link in "#navigation"
      Then there is 1 "li" element in "#order"
       And I see "1 x Large veg" in "#order li:nth-child(1)"
 
@@ -93,4 +94,3 @@ Feature: Change Order
       And I follow the "Large veg" link
       And I click on "#id_active"
       And I click the "Save" button
-

@@ -75,6 +75,7 @@ Feature: Leave
 
   Scenario Outline: Links I can follow after leaving
      Given I navigate to /dashboard
+     And I hover over "<selector>"
      When I follow the "<link>" link
      Then the browser moves to <url>
       And I see "Home" in "#navigation"
@@ -82,10 +83,10 @@ Feature: Leave
       And I see "Log Out" in "#navigation"
 
    Examples: Links I can follow and their destination
-     | link             |  url                               |
-     | order            | /dashboard/change-order            |
-     | collection point | /dashboard/change-collection-point |
-     | bank details     | /dashboard/bank-details            |
+     | link             | selector                  | url                                |
+     | order            | #navigation .your_order   | /dashboard/change-order            |
+     | collection point | #navigation .your_order   | /dashboard/change-collection-point |
+     | bank details     | #navigation .your_account | /dashboard/bank-details            |
 
   Scenario: Rejoin
     Given I navigate to /dashboard

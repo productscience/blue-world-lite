@@ -1,7 +1,7 @@
 {% if user.is_authenticated %}
 <ul id="navigation" class="dropdown menu expanded global-nav" data-dropdown-menu>
   <li><a href="{% url 'dashboard' %}">Home</a></li>
-  <li>Your Order
+  <li><span class="your_order">Your Order</span>
     <ul class="menu">
       <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
       {% if not user.customer.has_left %}
@@ -13,7 +13,7 @@
     </ul>
   </li>
 
-  <li>Your Account
+  <li><span class="your_account">Your Account</span>
     <ul class="menu">
       {% if not user.customer.has_left %}
         <li><a href="{% url 'account_email' %}">E-mail Addresses</a></li>
