@@ -86,7 +86,7 @@ urlpatterns = [
     url(
         r'^billing-dates$',
         join.views.billing_dates,
-        name='join_billing_dates',
+        name='billing_dates',
     ),
     url(
         r'^dashboard$',

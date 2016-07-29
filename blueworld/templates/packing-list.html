@@ -44,22 +44,26 @@ h1, #packing-lists {
     <div id="content" class="{% block coltype %}colM{% endblock %}">
 {% block content %}
     <div class="row" id="packing-lists">
-      {% if now > deadline_date %}
-      <h1>Packing Lists</h1>
+      {% if now > pl_bw.start %}
+      <h1>Billing Week {{ pl_bw.week }}, {{ pl_bw.wed|date:"F Y" }} Packing Lists</h1>
+      <h2>Collections start {{ pl_bw.wed|date:"DATE_FORMAT" }}</h2>
       <p>
-        Generated at {{ now|date:"DATETIME_FORMAT" }}
-        for the collection starting {{ collection_date|date:"DATE_FORMAT" }}
-        with data as it was at deadline at {{ deadline_date|date:"DATETIME_FORMAT" }}.
+        Generated in billing week {{ now_bw.week }}, {{ now_bw.wed|date:"F Y" }}.<br>
+        Data from {{ pl_bw.start|date:"DATETIME_FORMAT" }} retrieved at {{ now|date:"DATETIME_FORMAT" }}.
       </p>
       {% else %}
-      <h1>Predicted Packing Lists</h1>
+      <h1>Billing Week {{ pl_bw.week }}, {{ pl_bw.wed|date:"F Y" }} <em>Predicted</em> Packing Lists</h1>
+      <h2>Collections start {{ pl_bw.wed|date:"DATE_FORMAT" }}</h2>
       <p>
-        Generated at {{ now|date:"DATETIME_FORMAT" }}
-        for the collection starting {{ collection_date|date:"DATE_FORMAT" }}
-        with data as it is currently predicted to be at {{ deadline_date|date:"DATETIME_FORMAT" }}.
+        Generated in billing week {{ now_bw.week }}, {{ now_bw.wed|date:"F Y" }}.<br>
+        Data predicted for {{ pl_bw.start|date:"DATETIME_FORMAT" }} retrieved at {{ now|date:"DATETIME_FORMAT" }}.
       </p>
 
       <h1>WARNING: This is only a prediction</h1>
+
+      <p><strong>The data was generated before the deadline date for this billing week,
+         so there is still time for customers to make changes.</strong></p>
+
       {% endif %}
       <div>
         <h2>Summary</h2>
@@ -67,7 +71,10 @@ h1, #packing-lists {
           <tr>
             <th>Pickup</th>
             {% for bag_type in bag_types %}
-            <th>{{ bag_type }}</th>
+            <th>
+                {{ bag_type }}<br>
+                <em>{{ bag_type_tag_color|get_item:bag_type }}</em>
+            </th>
             {% endfor %}
             <th>Total Bags</th>
             <th>Holidaying Users</th>
@@ -98,13 +105,18 @@ h1, #packing-lists {
       <div>
         {% for collection_point in collection_points %}
           <h2>{{ collection_point }}</h2>
+          {% if pl_bw == now_bw %}
           <p>Collection days: {{ collection_point_days|get_item:collection_point }}</p>
+          {% endif %}
           <table>
             <tr>
               <th>Customer</th>
               <th class="label"></th>
               {% for bag_type in bag_types %}
-              <th class="customer">{{ bag_type }}</th>
+              <th class="customer">
+                  {{ bag_type }}<br>
+                  <em>{{ bag_type_tag_color|get_item:bag_type }}</em>
+              </th>
               {% endfor %}
             </tr>
             {% for customer in collection_points|get_item:collection_point %}

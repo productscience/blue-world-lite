@@ -39,6 +39,7 @@ from .models import (
     CustomerOrderChangeBagQuantity,
     CustomerTag,
 )
+from operator import itemgetter
 import pytz
 if settings.TIME_TRAVEL:
     import freezegun
@@ -1047,14 +1048,14 @@ def get_month(start):
 
 
 def _add_change(changes, change):
-    change_month = get_month(change[0])
+    change_month = get_month(change['date'])
     # if change_month.month == 12:
     #     change_month = change_month.replace(year=change_month.year + 1, month=1)
     # else:
     #     change_month = change_month.replace(month=change_month.month + 1)
     if change_month not in changes:
         changes[change_month] = OrderedDict()
-    change_minute = get_minute(change[0])
+    change_minute = get_minute(change['date'])
     if change_minute not in changes[change_month]:
         changes[change_month][change_minute] = []
     changes[change_month][change_minute].append(change)
@@ -1077,27 +1078,47 @@ def get_order_history_events(customer):
     for order_change in CustomerOrderChange.objects.filter(customer=customer).order_by('-changed'):
         if not created:
              created = order_change.changed
-        changes.append((order_change.changed, 'ORDER_CHANGE', render_bag_quantities(order_change.bag_quantities.all())))
+        changes.append(
+            {
+                'date': order_change.changed,
+                'bw': parse_billing_week(order_change.changed_in_billing_week),
+                'type': 'ORDER_CHANGE',
+                'new_bag_quantities': render_bag_quantities(order_change.bag_quantities.all()),
+            }
+        )
     for collection_point_change in CustomerCollectionPointChange.objects.filter(customer=customer).order_by('-changed'):
-        changes.append((collection_point_change.changed, 'COLLECTION_POINT_CHANGE', collection_point_change.collection_point.name))
+        changes.append(
+            {
+                'date': collection_point_change.changed,
+                'bw': parse_billing_week(order_change.changed_in_billing_week),
+                'type': 'COLLECTION_POINT_CHANGE',
+                'new_collection_point': collection_point_change.collection_point.name,
+            }
+        )
     for account_status_change in AccountStatusChange.objects.filter(customer=customer).order_by('-changed'):
-        changes.append((account_status_change.changed, 'ACCOUNT_STATUS_CHANGE', account_status_change.get_status_display()))
+        changes.append(
+            {
+                'date': account_status_change.changed,
+                'bw': parse_billing_week(order_change.changed_in_billing_week),
+                'type': 'ACCOUNT_STATUS_CHANGE',
+                'new_account_status': account_status_change.get_status_display(),
+            }
+        )
     for skip in Skip.objects.filter(customer=customer, created__lt=timezone.now()).order_by('-created'):
         changes.append(
-            (
-                skip.created,
-                'SKIP_WEEK',
-                'Week commencing {}'.format(
-                    formats.date_format(parse_billing_week(skip.billing_week).mon, "DATE_FORMAT"),
-                )
-            )
+            {
+                'date': skip.created,
+                'bw': parse_billing_week(skip.created_in_billing_week),
+                'type': 'SKIP_WEEK',
+                'billing_week': parse_billing_week(skip.billing_week),
+            }
         )
 
     # Get pickup dates since the account was created
     pd = get_pickup_dates(created, timezone.now())
     # import pdb; pdb.set_trace()
     res = OrderedDict()
-    for change in sorted(changes):
+    for change in sorted(changes, key=itemgetter('date')): #, reverse=True):
         _add_change(res, change)
 
     # Now, for each month in

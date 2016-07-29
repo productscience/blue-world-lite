@@ -10,22 +10,13 @@
 </div>
 {% endblock %}
 
-{% block extrahead %}{{ block.super }}
-<script type="text/javascript" src="/static/admin/js/vendor/jquery/jquery.min.js"></script>
-<script type="text/javascript" src="/static/admin/js/jquery.init.js"></script>
-<script type="text/javascript" src="/static/admin/js/core.js"></script>
-{{ form.media }}
-{% endblock %}
-
 {% block content %}
   <h1>Choose date for packing lists</h1>
 
   <div id="content-main">
     <form method="post">
     {% csrf_token %}
-
     {{ form }}
-
     {% for name, values in post_vars %}
       {# We add a fresh token above so don't need the old one #}
       {% if name != 'csrfmiddlewaretoken' and name != 'collection_date' and name != '_generate' %}
@@ -40,7 +31,5 @@
       <input type="submit" value="Generate" class="default" name="_generate">
     </div>
     </form>
-
   </div>
 {% endblock %}
-

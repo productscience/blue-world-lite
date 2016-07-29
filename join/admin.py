@@ -32,7 +32,7 @@ from join.models import (
 )
 from django.contrib.admin import widgets as admin_widgets
 from django.core.exceptions import ValidationError
-from billing_week import get_billing_week
+from billing_week import get_billing_week, parse_billing_week
 
 
 
@@ -46,16 +46,24 @@ class AccountStatusChangeAdmin(BlueWorldModelAdmin):
 
 
 
-class WednesdayDateField(forms.DateTimeField):
+class BillingWeekField(forms.CharField):
     def validate(self, value):
         # Use the parent's handling of required fields, etc.
         super().validate(value)
-        if value.weekday() != 2:
-            raise ValidationError('Please choose a Wednesday')
+        try:
+            return parse_billing_week(value)
+        except Exception as e:
+            raise ValidationError('Not a valid billing week. Error was: {}'.format(e))
 
 
-class DateForm(forms.Form):
-    collection_date = WednesdayDateField(widget=admin_widgets.AdminDateWidget())
+class PackingListForm(forms.Form):
+    billing_week = BillingWeekField(
+        max_length=9,
+        strip=True,
+        help_text='Based on these <a href="{}">billing dates</a>. e.g. <tt>2016-07 4</tt>'.format(
+            '/billing-dates' # XXX Not working: reverse('blueworld:billing_dates')
+        ),
+    )
 
 
 class CollectionPointAdmin(BlueWorldModelAdmin):
@@ -67,18 +75,19 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
     )
 
     def packing_list(self, request, queryset):
+        now = timezone.now()
+        initial = {'billing_week': str(get_billing_week(now))}
         if '_generate' in request.POST:
-            form = DateForm(request.POST)
+            form = PackingListForm(request.POST, initial=initial)
             if form.is_valid():
-                collection_date = form.cleaned_data['collection_date']
                 return generate_packing_list(
                     self,
                     request,
                     queryset,
-                    get_billing_week(collection_date),
+                    parse_billing_week(form.cleaned_data['billing_week']),
                 )
         else:
-            form = DateForm()
+            form = PackingListForm(initial=initial)
         return render(
             request,
             'packing-list-date.html',
@@ -145,10 +154,11 @@ class BagTypeAdmin(BlueWorldModelAdmin):
                 'active',
                 'weekly_cost',
                 'cost_changes',
+                'tag_color',
             ),
         }),
     )
-    list_display = ('name', 'active', 'weekly_cost')
+    list_display = ('name', 'tag_color', 'active', 'weekly_cost')
 
     def cost_changes(self, obj):
         # XXX Not tested yet
@@ -355,7 +365,7 @@ admin.site.register(Skip, SkipAdmin)
 admin.site.disable_action('delete_selected')
 
 
-def generate_packing_list(model_admin, request, queryset, bw):
+def generate_packing_list(model_admin, request, queryset, pl_bw):
     #import pdb; pdb.set_trace()
     # Can't use filter() with distinct() because Django applies the filter() first
     # so instead we do all the joins manually in memory
@@ -372,12 +382,16 @@ def generate_packing_list(model_admin, request, queryset, bw):
 
     #assert deadline_date.weekday() == 6 and deadline_date.hour == 15 and deadline_date.minute == 0 and deadline_date.second == 0 and deadline_date.microsecond == 0 and deadline_date.tzinfo == timezone.get_default_timezone(), 'Not a valid deadline date: {}'.format(deadline_date)
     now = timezone.now()
+    bw = get_billing_week(now)
     #print(now, collection_date, deadline_date)
-    bag_types = BagType.objects.order_by('name').distinct(
-        'name').values_list('name', flat=True)
+    bag_types = []
+    bag_type_tag_color = {}
+    for bag_type in BagType.objects.order_by('name').distinct('name'):
+        bag_types.append(bag_type.name)
+        bag_type_tag_color[bag_type.name] = bag_type.tag_color
     collection_point_ids = [collection_point.id for collection_point in queryset]
     collection_point_days = dict([(collection_point.name, collection_point.get_collection_day_display()) for collection_point in queryset])
-    ccpcs = CustomerCollectionPointChange.objects.filter(changed_in_billing_week__lt=bw.start).order_by(
+    ccpcs = CustomerCollectionPointChange.objects.filter(changed_in_billing_week__lt=pl_bw.start).order_by(
         'customer', '-changed'
     ).distinct('customer').only('customer_id', 'collection_point_id')
     customer_ids = [ccpc.customer_id for ccpc in ccpcs if ccpc.collection_point_id in collection_point_ids]
@@ -396,7 +410,7 @@ def generate_packing_list(model_admin, request, queryset, bw):
     # import pdb; pdb.set_trace()
     skips = Skip.objects.filter(
         customer_id__in=customer_ids,
-        billing_week=str(bw),
+        billing_week=str(pl_bw),
         #collection_date=collection_date,
     ).values_list('customer__full_name', flat=True)
     #print(customer_ids, skips)
@@ -465,10 +479,11 @@ def generate_packing_list(model_admin, request, queryset, bw):
             'total_bags': sum(cp_total_by_bags.values()),
             'collection_point_days': collection_point_days,
             'bag_types': bag_types,
+            'bag_type_tag_color': bag_type_tag_color,
             'skips': skips,
             'now': now,
-            'deadline_date': bw.start,
-            'collection_date': bw.wed,
+            'now_bw': bw,
+            'pl_bw': pl_bw,
             'starters': starters,
         },
     )

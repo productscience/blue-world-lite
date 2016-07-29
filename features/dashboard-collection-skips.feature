@@ -15,7 +15,6 @@ Feature: Dashboard Collection Skips
       And I click on "#id_form-0-skipped"
      When I click the "Confirm" button
      Then the browser moves to /dashboard
-      #And I debug
 
   Scenario Outline: Dashboard information
     # Need to freeze time first, otherwise you get logged out because of the session time of 20 mins
@@ -29,42 +28,15 @@ Feature: Dashboard Collection Skips
       And I switch to the user browser
       And I login with "dashboard-collection-skips@example.com" and "123123ab"
      When I navigate to /dashboard
-   #    And I see "and your next collection is" in "#message"
-   #   Then I see "<collection_date>" in "#collection-date"
-   #    And I see "<deadline>" in "#deadline"
-   #    And I see "<changes_affect>" in "#changes-affect"
-   # Given I freeze time at 2016-07-15 14:00:00
-   #   And I login with "dashboard-collection-skips@example.com" and "123123ab"
-   #   And I navigate to /dashboard/skip-weeks
-   #   And "<week_to_skip>" is not checked
-   #   #And I see "Mon 25 Jul 2016" in "#id_form-0-display-date"
-   #   #And I see "Mon 01 Aug 2016" in "#id_form-1-display-date"
-   #   And I click on "<week_to_skip>"
-   #   #And I debug
-   #  When I click the "Confirm" button
-   #  Then the browser moves to /dashboard
-   # Given I freeze time at <date>
-   #   And I login with "dashboard-collection@example.com" and "123123ab"
-   #   And I navigate to /dashboard
      Then I see "but your next collection is skipped so there is nothing for you to pick up" in "#message"
       And I see "<skipped_collection_date>" in "#collection-date"
       And I see "<deadline>" in "#deadline"
       And I see "<changes_affect>" in "#changes-affect"
-   # Given I freeze time at 2016-07-15 14:00:00
-   #   And I login with "dashboard-collection@example.com" and "123123ab"
-   # Given I navigate to /dashboard/skip-weeks
-   #   And "<week_to_skip>" is checked
-   #   And I click on "<week_to_skip>"
-   #  When I click the "Confirm" button
-   #  Then the browser moves to /dashboard
 
    # 17th is a Sunday. IMPORTANT: Notice the behaviour on Thursday depends on the collection point chosen.
    # NOTE: All the times are in UTC, so are an hour behind what you'd expect in BST for July
    Examples: Times where you can make changes for the next collection
      | date                | day       | collection_day         | week_to_skip       | skipped_collection_date            | deadline        | changes_affect            |
-     # | 2016-07-17 13:59:59 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                       | 3pm today       | next week's collection    |
-     # | 2016-07-17 13:59:59 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                        | 3pm today       | next week's collection    |
-     # | 2016-07-17 13:59:59 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday           | 3pm today       | next week's collection    |
      | 2016-07-17 14:00:00 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                       | 3pm next Sunday | the collection after next |
      | 2016-07-17 14:00:00 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                        | 3pm next Sunday | the collection after next |
      | 2016-07-17 14:00:00 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday           | 3pm next Sunday | the collection after next |

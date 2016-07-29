@@ -135,6 +135,8 @@ class BillingWeek(object):
         self._sun = None
         self._next = None
         self._prev = None
+        self._next_month = None
+        self._prev_month = None
 
     def _get_start(self):
         if not self._start:
@@ -190,6 +192,30 @@ class BillingWeek(object):
             self._next = get_billing_week(self.end)
         return self._next
 
+    def next_month(self):
+        if not self._next_month:
+            month = self.wed.month
+            year = self.wed.year
+            if month == 12:
+                month = 1
+                year += 1
+            else:
+                month += 1
+            self._next_month = datetime.date(year,month,1)
+        return self._next_month
+
+    def prev_month(self):
+        if not self._prev_month:
+            month = self.wed.month
+            year = self.wed.year
+            if month == 1:
+                month = 12
+                year -= 1
+            else:
+                month -= 1
+            self._prev_month = datetime.date(year,month,1)
+        return self._prev_month
+
     def prev(self):
         if not self._prev:
             self._prev = get_billing_week(self.start - timedelta(1))
@@ -202,17 +228,35 @@ class BillingWeek(object):
         return '<BillingWeek {} at {}>'.format(str(self), id(self))
 
 
+    def __lt__(self, other):
+        return str(self) < str(other)
+    def __le__(self, other):
+        return str(self) <= str(other)
+    def __eq__(self, other):
+        return str(self) == str(other)
+    def __ne__(self, other):
+        return str(self) != str(other)
+    def __gt__(self, other):
+        return str(self) > str(other)
+    def __ge__(self, other):
+        return str(self) >= str(other)
+
+
+
 def parse_billing_week(billing_week_string):
     """Takes a billing week string and returns a BillingWeek object."""
     year = int(billing_week_string[:4])
     month = int(billing_week_string[5:7])
     week = int(billing_week_string[8])
     if week > 5:
-        raise ValidationError(_("Invalid input for a Hand instance"))
+        raise ValueError("Months cannot have more than 5 billing weeks")
     first_wed = first_wed_of_month(year, month)
+    our_wed = first_wed+timedelta((week-1)*7)
+    if first_wed.month != our_wed.month:
+        raise ValueError('No week {} in this billing month'.format(week))
     assert isinstance(first_wed, datetime.date)
     return BillingWeek(
-        first_wed+timedelta((week-1)*7),
+        our_wed,
         week,
     )
 
@@ -224,6 +268,34 @@ if __name__ == '__main__':
 
 
     class TestBillingWeek(unittest.TestCase):
+        def test_comparison(self):
+            first = parse_billing_week('2017-07 1')
+            also_first = parse_billing_week('2017-07 1')
+            second = parse_billing_week('2017-07 2')
+
+            self.assertTrue(first<second)
+            self.assertFalse(second<first)
+            self.assertFalse(first<also_first)
+
+            self.assertTrue(first<=second)
+            self.assertTrue(first<=also_first)
+            self.assertFalse(second<=first)
+
+            self.assertTrue(first==also_first)
+            self.assertFalse(first==second)
+
+            self.assertFalse(first!=also_first)
+            self.assertTrue(first!=second)
+
+            self.assertFalse(first>second)
+            self.assertTrue(second>first)
+            self.assertFalse(first>also_first)
+
+            self.assertFalse(first>=second)
+            self.assertTrue(first>=also_first)
+            self.assertTrue(second>=first)
+
+
         def test_timezone_behaviour(self):
             tz = pytz.timezone("Europe/London")
             summer = datetime.datetime(2017,7,17,15)
@@ -276,6 +348,12 @@ if __name__ == '__main__':
             self.assertEqual(bw.next().start, utc.localize(datetime.datetime(2017,2,5,15,0,0,0)))
             self.assertEqual(bw.next().prev().start, utc.localize(datetime.datetime(2017,1,29,15)))
 
+            self.assertEqual(bw.next_month(), datetime.date(2017,3,1))
+            self.assertEqual(bw.prev_month(), datetime.date(2017,1,1))
+            nbw = get_billing_week(utc.localize(datetime.datetime(2017,12,30,17)))
+            self.assertEqual(nbw.next_month(), datetime.date(2018,1,1))
+            nbw = get_billing_week(utc.localize(datetime.datetime(2018,1,5,17)))
+            self.assertEqual(nbw.prev_month(), datetime.date(2017,12,1))
     
         def test_get_billing_week(self):
             utc = pytz.timezone("UTC")
@@ -359,5 +437,8 @@ if __name__ == '__main__':
             self.assertEqual(parse_billing_week('2017-02 1').start, utc.localize(datetime.datetime(2017,1,29,15)))
             # self.assertEqual(parse_billing_week('2017-02 1').end, utc.localize(datetime.datetime(2017,2,5,14,59,59,1000000-1)))
             self.assertEqual(parse_billing_week('2017-02 1').end, utc.localize(datetime.datetime(2017,2,5,15,0,0,0)))
+            self.assertRaises(ValueError, parse_billing_week, '2017-07-6')
+            self.assertRaises(ValueError, parse_billing_week, '2017-07-5')
+            self.assertEqual(parse_billing_week('2016-08 1').wed, datetime.date(2016,8,3))
 
     unittest.main()

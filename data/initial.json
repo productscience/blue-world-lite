@@ -4,7 +4,8 @@
     "fields": {
         "name": "Large veg",
         "active": true,
-        "display_order": 5
+        "display_order": 5,
+        "tag_color": "Light brown"
     },
     "model": "join.bagtype"
 },
@@ -22,7 +23,8 @@
     "fields": {
         "name": "Large no pots",
         "active": true,
-        "display_order": 7
+        "display_order": 7,
+        "tag_color": "Lime green"
     },
     "model": "join.bagtype"
 },
@@ -40,7 +42,8 @@
     "fields": {
         "name": "Small fruit",
         "active": true,
-        "display_order": 9
+        "display_order": 9,
+        "tag_color": "No tag"
     },
     "model": "join.bagtype"
 },
@@ -58,7 +61,8 @@
     "fields": {
         "name": "Small veg",
         "active": false,
-        "display_order": 10
+        "display_order": 10,
+        "tag_color": "Red"
     },
     "model": "join.bagtype"
 },

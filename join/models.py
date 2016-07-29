@@ -88,6 +88,13 @@ class BagType(models.Model):
         null=False,
         unique=True,
     )
+    tag_color = models.CharField(
+        max_length=50,
+        help_text="String used on the packing list for the bag colour",
+        null=True,
+        default='',
+        blank=True,
+    )
     display_order = models.IntegerField(
         null=True,
         blank=True,
