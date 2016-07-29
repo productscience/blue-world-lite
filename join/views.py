@@ -1,16 +1,18 @@
+from collections import OrderedDict
 from datetime import timedelta
+from operator import itemgetter
 import datetime
 import json
 import uuid
-from collections import OrderedDict
 
-from billing_week import get_billing_week, parse_billing_week
 from allauth.account.views import signup as allauth_signup
+from billing_week import get_billing_week, parse_billing_week
 from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.core.mail import send_mail
 from django.forms import BaseFormSet
 from django.forms import formset_factory
 from django.http import (
@@ -18,12 +20,12 @@ from django.http import (
     HttpResponseBadRequest,
     HttpResponseForbidden,
 )
-from django.core.mail import send_mail
 from django.shortcuts import render, redirect
 from django.template.defaulttags import register
 from django.utils import formats, timezone
 from django.utils.html import format_html, escape
 import gocardless_pro
+import pytz
 
 from billing_week import first_wed_of_month as start_of_the_month
 from join.helper import get_pickup_dates, render_bag_quantities
@@ -31,23 +33,27 @@ from .models import (
     AccountStatusChange,
     BagType,
     BillingGoCardlessMandate,
-    Skip,
     CollectionPoint,
     Customer,
     CustomerCollectionPointChange,
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
     CustomerTag,
+    Skip,
 )
-from operator import itemgetter
-import pytz
+
+
 if settings.TIME_TRAVEL:
     import freezegun
 
 
 @register.filter
 def get_item(dictionary, key):
-    assert isinstance(dictionary, dict), "Not a dict: {!r} so can't get {!r}. This can happen if you have specified the variable name of the dictionary incorrectly and it has been replaced with ''.".format(dictionary, key)
+    assert isinstance(dictionary, dict), (
+        """Not a dict: {!r} so can't get {!r}. This can happen if you
+        have specified the variable name of the dictionary incorrectly
+        and it has been replaced with ''."""
+    ).format(dictionary, key)
     return dictionary.get(key)
 
 
@@ -684,7 +690,10 @@ def dashboard(request):
         ).all()
         if skipped:
             collection_date = collection_date.replace(' and ', ' or ')
-            if not (collection_date.startswith('today') or collection_date.startswith('tomorrow')):
+            if not (
+                collection_date.startswith('today') or
+                collection_date.startswith('tomorrow')
+            ):
                 collection_date = 'on '+collection_date
         return render(
             request,
@@ -1049,10 +1058,6 @@ def get_month(start):
 
 def _add_change(changes, change):
     change_month = get_month(change['date'])
-    # if change_month.month == 12:
-    #     change_month = change_month.replace(year=change_month.year + 1, month=1)
-    # else:
-    #     change_month = change_month.replace(month=change_month.month + 1)
     if change_month not in changes:
         changes[change_month] = OrderedDict()
     change_minute = get_minute(change['date'])
@@ -1062,49 +1067,65 @@ def _add_change(changes, change):
 
 
 def get_order_history_events(customer):
-    # date, code, description, collection_affected, billing_month_affected, detail
-    # So: pretty much everything affexts the billing month after the next invoicing date
-    #      e.g. make change on 5th July, greater than 3rd july < 31st July => Affects August
-
-    # Display by
-    # find_billing_month_affected()
-
-
-    # This is going to get events by month, but we don't want to show changes that haven't been billed yet
-    # So, if we are in July and make changes, those changes aren't relevant until August.
-    # This means we display them against the next month.
     created = None
     changes = []
-    for order_change in CustomerOrderChange.objects.filter(customer=customer).order_by('-changed'):
+    for order_change in CustomerOrderChange.objects.filter(
+        customer=customer
+    ).order_by(
+        '-changed'
+    ):
         if not created:
-             created = order_change.changed
+            created = order_change.changed
         changes.append(
             {
                 'date': order_change.changed,
-                'bw': parse_billing_week(order_change.changed_in_billing_week),
+                'bw': parse_billing_week(
+                    order_change.changed_in_billing_week
+                ),
                 'type': 'ORDER_CHANGE',
-                'new_bag_quantities': render_bag_quantities(order_change.bag_quantities.all()),
+                'new_bag_quantities': render_bag_quantities(
+                    order_change.bag_quantities.all()
+                ),
             }
         )
-    for collection_point_change in CustomerCollectionPointChange.objects.filter(customer=customer).order_by('-changed'):
+    for collection_point_change in CustomerCollectionPointChange.objects.filter(
+        customer=customer
+    ).order_by(
+        '-changed'
+    ):
         changes.append(
             {
                 'date': collection_point_change.changed,
-                'bw': parse_billing_week(order_change.changed_in_billing_week),
+                'bw': parse_billing_week(
+                    order_change.changed_in_billing_week
+                ),
                 'type': 'COLLECTION_POINT_CHANGE',
-                'new_collection_point': collection_point_change.collection_point.name,
+                'new_collection_point':
+                    collection_point_change.collection_point.name,
             }
         )
-    for account_status_change in AccountStatusChange.objects.filter(customer=customer).order_by('-changed'):
+    for account_status_change in AccountStatusChange.objects.filter(
+        customer=customer
+    ).order_by(
+        '-changed'
+    ):
         changes.append(
             {
                 'date': account_status_change.changed,
-                'bw': parse_billing_week(order_change.changed_in_billing_week),
+                'bw': parse_billing_week(
+                    order_change.changed_in_billing_week
+                ),
                 'type': 'ACCOUNT_STATUS_CHANGE',
-                'new_account_status': account_status_change.get_status_display(),
+                'new_account_status':
+                    account_status_change.get_status_display(),
             }
         )
-    for skip in Skip.objects.filter(customer=customer, created__lt=timezone.now()).order_by('-created'):
+    for skip in Skip.objects.filter(
+        customer=customer,
+        created__lt=timezone.now()
+    ).order_by(
+        '-created'
+    ):
         changes.append(
             {
                 'date': skip.created,
@@ -1113,17 +1134,11 @@ def get_order_history_events(customer):
                 'billing_week': parse_billing_week(skip.billing_week),
             }
         )
-
     # Get pickup dates since the account was created
     pd = get_pickup_dates(created, timezone.now())
-    # import pdb; pdb.set_trace()
     res = OrderedDict()
-    for change in sorted(changes, key=itemgetter('date')): #, reverse=True):
+    for change in sorted(changes, key=itemgetter('date')):
         _add_change(res, change)
-
-    # Now, for each month in
-    # XXX Perhaps should be < last billing date
-
     return created, res
 
 
@@ -1183,12 +1198,15 @@ def dashboard_rejoin_scheme(request):
 
 
 def gocardless_events_callback(request):
-    # XXX import pdb; pdb.set_trace()
     pass
 
 
 def billing_dates(request):
-    pickup_dates = get_pickup_dates(start_of_the_month(timezone.now().year, timezone.now().month), 52, month_start=True)
+    pickup_dates = get_pickup_dates(
+        start_of_the_month(timezone.now().year, timezone.now().month),
+        52,
+        month_start=True
+    )
     billing_dates = OrderedDict()
     for month in pickup_dates:
         billing_dates[month] = pickup_dates[month][0].start

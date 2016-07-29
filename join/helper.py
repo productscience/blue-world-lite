@@ -1,4 +1,14 @@
+from collections import OrderedDict
+from datetime import timedelta
+from django.utils import timezone
+import datetime
+import pytz
 import threading
+
+from billing_week import (
+    current_billing_week,
+    get_billing_week,
+)
 
 
 _thread_locals = threading.local()
@@ -17,22 +27,11 @@ class ThreadLocals(object):
         _thread_locals.request = request
 
 
-from django.utils import timezone
-from datetime import timedelta
-import datetime
-from collections import OrderedDict
-import pytz
-
-
-from billing_week import (
-    current_billing_week,
-    get_billing_week,
-)
-
-
 def get_pickup_dates(start, stop, month_start=False):
     if isinstance(start, datetime.date):
-        start = pytz.utc.localize(datetime.datetime(start.year, start.month, start.day, 12))
+        start = pytz.utc.localize(
+            datetime.datetime(start.year, start.month, start.day, 12)
+        )
     bw = get_billing_week(start)
     if month_start:
         while bw.week != 1:
@@ -49,12 +48,14 @@ def get_pickup_dates(start, stop, month_start=False):
             if bw.start > stop:
                 return result
         bw = get_billing_week(bw.end + timedelta(hours=1))
-        d = datetime.date(bw.year, bw.month, 1) 
+        d = datetime.date(bw.year, bw.month, 1)
         if d not in result:
             result[d] = []
         result[d].append(bw)
         counter += 1
-    raise Exception('Found more than 1000 or so pickup dates, perhaps there is a problem?')
+    raise Exception(
+        'Found more than 1000 or so pickup dates, perhaps there is a problem?'
+    )
 
 
 def render_bag_quantities(obj):
