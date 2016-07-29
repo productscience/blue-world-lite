@@ -86,7 +86,7 @@ urlpatterns = [
     url(
         r'^billing-dates$',
         join.views.billing_dates,
-        name='join_billing_dates',
+        name='billing_dates',
     ),
     url(
         r'^dashboard$',
@@ -107,6 +107,11 @@ urlpatterns = [
         r'^dashboard/order-history$',
         join.views.dashboard_order_history,
         name='dashboard_order_history',
+    ),
+    url(
+        r'^dashboard/billing-history$',
+        join.views.dashboard_billing_history,
+        name='dashboard_billing_history',
     ),
     url(
         r'^dashboard/rejoin-scheme$',

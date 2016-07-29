@@ -1,22 +1,43 @@
 {% extends "base_join.html" %}
+{% load tz %}
+
 
 {% block head_title %}Billing Dates{% endblock %}
 {% block extra_head %}{% endblock %}
 {% block content %}
+    {% timezone "Europe/London" %}
     <div class="row">
       <h1>Billing Dates</h1>
+
+      <p>Billing dates are based on the number of Wednesday collections in each month.</p>
+
       <div id="billing-dates">
-          {% for key in pickup_dates %}
-            <h2>{{ key|date:"M Y"}} - {{ pickup_dates|get_item:key|length }} weeks</h2>
-            <p><strong>Invoicing date:</strong> <span class="invoicing-date">{{ billing_dates|get_item:key|date:"D d M Y" }}</span></p>
-            <ul>
-              {% for value in pickup_dates|get_item:key %}
-              <li>{{ value|date:"D d M Y" }}</li>
+          {% for month in pickup_dates %}
+            <h2>{{ month|date:"F Y"}} - {{ pickup_dates|get_item:month|length }} Wednesday collections</h2>
+            <p><strong>Invoicing date:</strong> <span class="invoicing-date">{{ billing_dates|get_item:month|date:"DATE_FORMAT" }}</span></p>
+            <ol>
+              {% for bw in pickup_dates|get_item:month %}
+              <li>
+                  <p>
+                      <strong>
+                    {{ bw.mon|date:"DATE_FORMAT" }} - {{ bw.sun|date:"DATE_FORMAT" }}
+                      </strong>
+                    <br>
+                    Wednesday collection: {{ bw.wed|date:"DATE_FORMAT" }}
+                      <br>
+                    Thursday collection:
+                      {{ bw.thurs|date:"DATE_FORMAT" }}
+                      <br>
+                    Deadline for changes:
+                      {{ bw.start|date:"DATETIME_FORMAT" }}
+                  </p>
+              </li>
               {% endfor %}
-            </ul>
+            </ol>
           {% endfor %}
       </div>
     </div>
+    {% endtimezone %}
 {% endblock %}
 {% block extra_body %}
 {% endblock %}

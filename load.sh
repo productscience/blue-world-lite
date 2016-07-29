@@ -3,7 +3,7 @@
 . .ve3/bin/activate
 . .env.sh
 
-psql -c 'DROP DATABASE blueworld;'
+psql -c 'DROP DATABASE blueworld;' || exit
 psql -c 'CREATE DATABASE blueworld;'
 
 python manage.py collectstatic --noinput

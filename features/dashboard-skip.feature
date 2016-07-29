@@ -5,7 +5,8 @@ Feature: Skip Weeks
       And I create a started user "Skip Weeks", "skip-weeks", "skip-weeks@example.com" with password "123123ab"
 
   Scenario: Freeze time just before a deadline
-    Given I freeze time at 2016-07-24 14:59:59
+    # Using UTC so this is an hour behind
+    Given I freeze time at 2016-07-24 13:59:59
       And I login with "skip-weeks@example.com" and "123123ab"
       And I hover over "#navigation .your_order"
       And I follow the "Skip Weeks" link in "#navigation"
@@ -59,7 +60,8 @@ Feature: Skip Weeks
      Then the browser moves to /dashboard
 
   Scenario: Move time to just after the deadline
-    Given I freeze time at 2016-07-24 15:00:00
+    # Using UTC so this is an hour behind
+    Given I freeze time at 2016-07-24 14:00:00
       And I login with "skip-weeks@example.com" and "123123ab"
       And I hover over "#navigation .your_order"
       And I follow the "Skip Weeks" link in "#navigation"

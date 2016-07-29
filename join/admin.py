@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import timedelta
 from decimal import Decimal
 from django import forms
 from django.conf import settings
@@ -12,10 +13,11 @@ from django.db import reset_queries
 from django.shortcuts import render
 from django.template import RequestContext
 from django.template.loader import get_template
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from hijack import settings as hijack_settings
-from join.helper import get_current_request
+from join.helper import get_current_request, render_bag_quantities
 from join.models import (
     AccountStatusChange,
     BagType,
@@ -26,7 +28,11 @@ from join.models import (
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
     CustomerTag,
+    Skip,
 )
+from django.contrib.admin import widgets as admin_widgets
+from django.core.exceptions import ValidationError
+from billing_week import get_billing_week, parse_billing_week
 
 
 class BlueWorldModelAdmin(admin.ModelAdmin):
@@ -38,6 +44,32 @@ class AccountStatusChangeAdmin(BlueWorldModelAdmin):
     pass
 
 
+class BillingWeekField(forms.CharField):
+    def validate(self, value):
+        # Use the parent's handling of required fields, etc.
+        super().validate(value)
+        try:
+            return parse_billing_week(value)
+        except Exception as e:
+            raise ValidationError(
+                'Not a valid billing week. Error was: {}'.format(e)
+            )
+
+
+class PackingListForm(forms.Form):
+    billing_week = BillingWeekField(
+        max_length=9,
+        strip=True,
+        help_text=(
+            'Based on these <a href="{}">billing dates</a>. '
+            'e.g. <tt>2016-07 4</tt>'
+        ).format(
+            # XXX Not working: reverse('blueworld:billing_dates')
+            '/billing-dates'
+        ),
+    )
+
+
 class CollectionPointAdmin(BlueWorldModelAdmin):
     actions = ['packing_list']
     list_display = (
@@ -47,54 +79,36 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
     )
 
     def packing_list(self, request, queryset):
-        # Can't use filter() with distinct() because Django applies the filter() first
-        # so instead we do all the joins manually in memory
-        bag_types = BagType.objects.order_by('name').distinct(
-            'name').values_list('name', flat=True)
-        collection_point_ids = [collection_point.id for collection_point in queryset]
-        cps = OrderedDict()
-        ccpcs = CustomerCollectionPointChange.objects.order_by(
-            'customer', '-changed'
-        ).distinct('customer').only('customer_id', 'collection_point_id')
-        customer_ids = [ccpc.customer_id for ccpc in ccpcs if ccpc.collection_point_id in collection_point_ids]
-        order_changes = CustomerOrderChange.objects.order_by(
-            'customer', '-changed'
-        ).distinct('customer').only('customer_id', 'id')
-        order_change_ids = [order_change.id for order_change in order_changes if order_change.customer_id in customer_ids]
-        bqs = CustomerOrderChangeBagQuantity.objects.filter(
-            customer_order_change__in=order_change_ids
-        )
-        for bq in bqs:
-            collection_point = bq.customer_order_change.customer.collection_point
-            if collection_point.name not in cps:
-                cps[collection_point.name] = OrderedDict()
-            if bq.customer_order_change.customer.full_name not in cps[collection_point.name]:
-                cps[collection_point.name][bq.customer_order_change.customer.full_name] = {
-                    bq.bag_type.name: bq.quantity
-                }
-            else:
-                assert bq.bag_type.name not in cps[collection_point.name][bq.customer_order_change.customer.full_name]
-                cps[collection_point.name][
-                    bq.customer_order_change.customer.full_name
-                ][bq.bag_type.name] = bq.quantity
-        rows_updated = len(cps)
-        if rows_updated == 1:
-            message_bit = '''
-                packing list generated successfully for 1 collection point
-            '''
+        now = timezone.now()
+        initial = {'billing_week': str(get_billing_week(now))}
+        if '_generate' in request.POST:
+            form = PackingListForm(request.POST, initial=initial)
+            if form.is_valid():
+                return generate_packing_list(
+                    self,
+                    request,
+                    queryset,
+                    parse_billing_week(form.cleaned_data['billing_week']),
+                )
         else:
-            message_bit = '''
-                packing lists generated successfully for %s collection points
-            ''' % rows_updated
-        self.message_user(request, "%s." % message_bit)
+            form = PackingListForm(initial=initial)
         return render(
             request,
-            'packing-list.html',
+            'packing-list-date.html',
             {
-                'collection_points': cps,
-                'bag_types': bag_types,
-            },
+                'form': form,
+                'post_vars': request.POST.lists(),
+
+                'opts': CollectionPoint._meta,
+                'change': True,
+                'is_popup': False,
+                'save_as': False,
+                'has_delete_permission': False,
+                'has_add_permission': False,
+                'has_change_permission': False,
+            }
         )
+
     packing_list.short_description = \
         "Generated packing list for selected collection points"
 
@@ -144,10 +158,11 @@ class BagTypeAdmin(BlueWorldModelAdmin):
                 'active',
                 'weekly_cost',
                 'cost_changes',
+                'tag_color',
             ),
         }),
     )
-    list_display = ('name', 'active', 'weekly_cost')
+    list_display = ('name', 'tag_color', 'active', 'weekly_cost')
 
     def cost_changes(self, obj):
         # XXX Not tested yet
@@ -176,7 +191,6 @@ class BagTypeAdmin(BlueWorldModelAdmin):
     # def formfield_for_dbfield(self, db_field, **kwargs):
     #     field = super(BagTypeAdmin, self).formfield_for_dbfield(
     #         db_field, **kwargs)
-    #     import pdb; pdb.set_trace()
     #     return field
 
 
@@ -199,7 +213,9 @@ class AccountStatusListFilter(admin.SimpleListFilter):
         ascs = AccountStatusChange.objects.order_by(
             'customer', '-changed'
         ).distinct('customer').only('id')
-        customer_ids = [c.customer_id for c in ascs if c.status == self.value()]
+        customer_ids = [
+            c.customer_id for c in ascs if c.status == self.value()
+        ]
         return queryset.filter(pk__in=customer_ids)
 
 
@@ -221,7 +237,10 @@ class CollectionPointFilter(admin.SimpleListFilter):
         ccpcs = CustomerCollectionPointChange.objects.order_by(
             'customer', '-changed'
         ).distinct('customer').only('id')
-        customer_ids = [c.customer_id for c in ccpcs if c.collection_point.pk == int(self.value())]
+        customer_ids = [
+            c.customer_id for c in ccpcs
+            if c.collection_point.pk == int(self.value())
+        ]
         return queryset.filter(pk__in=customer_ids)
 
 
@@ -269,13 +288,7 @@ class CustomerAdmin(BlueWorldModelAdmin):
     # user_link.short_description = 'User'
 
     def bag_quantities(self, obj):
-        result = ''
-        for bag_quantity in obj.bag_quantities:
-            result += '{} x {}\n'.format(
-                bag_quantity.quantity,
-                bag_quantity.bag_type.name,
-            )
-        return result
+        return render_bag_quantities(obj.bag_quantities.all())
     bag_quantities.short_description = 'Bag quantities'
 
     def tags_field(self, obj):
@@ -336,6 +349,10 @@ class CustomerTagAdmin(BlueWorldModelAdmin):
     pass
 
 
+class SkipAdmin(BlueWorldModelAdmin):
+    pass
+
+
 admin.site.register(AccountStatusChange, AccountStatusChangeAdmin)
 admin.site.register(CollectionPoint, CollectionPointAdmin)
 admin.site.register(BagType, BagTypeAdmin)
@@ -350,6 +367,158 @@ admin.site.register(
     CustomerOrderChangeBagQuantityAdmin,
 )
 admin.site.register(CustomerTag, CustomerTagAdmin)
+admin.site.register(Skip, SkipAdmin)
 # admin.site.unregister(User)
 # admin.site.register(User, UserAdmin)
 admin.site.disable_action('delete_selected')
+
+
+def generate_packing_list(model_admin, request, queryset, pl_bw):
+    """
+    model_admin: The ModelAdmin instance
+    request:     The Django HttpRequest
+    queryset:    A prepared Queryset holding all the collection points
+                 selected from the Django admin list view
+    pl_bw:       A BillingWeek *instance* set up for the week we are
+                 generating the packing list for.
+    """
+    # XXX TODO Assumes customer names are unique, which is not enforced
+    now = timezone.now()
+    bw = get_billing_week(now)
+    bag_types = []
+    bag_type_tag_color = {}
+    for bag_type in BagType.objects.order_by('name').distinct('name'):
+        bag_types.append(bag_type.name)
+        bag_type_tag_color[bag_type.name] = bag_type.tag_color
+    collection_point_ids = [
+        collection_point.id for collection_point in queryset
+    ]
+    collection_point_days = dict([
+        (collection_point.name, collection_point.get_collection_day_display())
+        for collection_point in queryset
+    ])
+    # Find the *one* most recent collection point change for each customer
+    # that happend before the start of the week we are generating
+    # the packing list for.
+    ccpcs = CustomerCollectionPointChange.objects.filter(
+        changed_in_billing_week__lt=pl_bw.start
+    ).order_by(
+        'customer', '-changed'
+    ).distinct(
+        'customer'
+    ).only(
+        'customer_id', 'collection_point_id'
+    )
+    # Filter the collection points in Python
+    customer_ids = [
+        ccpc.customer_id for ccpc in ccpcs
+        if ccpc.collection_point_id in collection_point_ids
+    ]
+    # Find out if these customers have the "Starter" tag
+    # still attached to them
+    starters = Customer.objects.filter(
+        pk__in=customer_ids,
+        tags__in=CustomerTag.objects.filter(tag='Starter')
+    ).values_list(
+        'full_name', flat=True
+    )
+    # Now for the order part:
+    # 1. Find the *one* most recent order change for each customer
+    #    that happend before the start of the week we are generating
+    #    the packing list for.
+    order_changes = CustomerOrderChange.objects.order_by(
+        'customer', '-changed'
+    ).distinct(
+        'customer'
+    ).only(
+        'customer_id', 'id'
+    )
+    # Filter the order changes by the customers we want in Python
+    order_change_ids = [
+        order_change.id for order_change in order_changes
+        if order_change.customer_id in customer_ids
+    ]
+    # 2. Find the bag quantities in those orders
+    bqs = CustomerOrderChangeBagQuantity.objects.filter(
+        customer_order_change__in=order_change_ids
+    ).order_by(
+        'customer_order_change__customer__full_name'
+    ).only(
+        'customer_order_change__customer'
+    )
+    # Customers that are on holiday this week
+    # skips is in the form: ['John Smith', 'Toby Ben']
+    skips = Skip.objects.filter(
+        customer_id__in=customer_ids,
+        billing_week=str(pl_bw),
+    ).values_list(
+        'customer__full_name', flat=True
+    )
+    cps = OrderedDict()
+    cp_counts = OrderedDict()
+    cp_holiday_counts = OrderedDict()
+    cp_user_counts = OrderedDict()
+    cp_total_by_bags = OrderedDict()
+    cp_total_by_collection_point = OrderedDict()
+    for bag_type in bag_types:
+        cp_total_by_bags[bag_type] = 0
+    for bq in bqs:
+        collection_point = bq.customer_order_change.customer.collection_point
+        if collection_point.name not in cps:
+            cps[collection_point.name] = OrderedDict()
+            cp_counts[collection_point.name] = OrderedDict()
+            cp_holiday_counts[collection_point.name] = []
+            cp_user_counts[collection_point.name] = []
+            cp_total_by_collection_point[collection_point.name] = 0
+            for bag_type in bag_types:
+                cp_counts[collection_point.name][bag_type] = 0
+        customer_name = bq.customer_order_change.customer.full_name
+        if customer_name not in cps[collection_point.name]:
+            cps[collection_point.name][customer_name] = {
+                bq.bag_type.name: bq.quantity
+            }
+        else:
+            assert bq.bag_type.name not in \
+               cps[collection_point.name][customer_name]
+            cps[collection_point.name][customer_name][
+                bq.bag_type.name
+            ] = bq.quantity
+        if bq.customer_order_change.customer.full_name not in skips:
+            cp_counts[collection_point.name][bq.bag_type.name] += bq.quantity
+            cp_total_by_bags[bq.bag_type.name] += bq.quantity
+            cp_total_by_collection_point[collection_point.name] += bq.quantity
+            if customer_name not in cp_user_counts[collection_point.name]:
+                # Want unique customers here, if the customer has more than one
+                # bag we could double count if we just added 1 each time.
+                cp_user_counts[collection_point.name].append(customer_name)
+        elif customer_name not in cp_holiday_counts[collection_point.name]:
+            # Want unique customers here, if the customer has more than one
+            # bag we could double count if we just added 1 each time.
+            cp_holiday_counts[collection_point.name].append(customer_name)
+    assert sum(cp_total_by_bags.values()) == \
+        sum(cp_total_by_collection_point.values())
+    return render(
+        request,
+        'packing-list.html',
+        {
+            'collection_points': cps,
+            'collection_point_counts': cp_counts,
+            'collection_point_holiday_counts': cp_holiday_counts,
+            'collection_point_user_counts': cp_user_counts,
+            'total_by_bags': cp_total_by_bags,
+            'total_by_collection_point': cp_total_by_collection_point,
+            'total_holidays': sum(
+                [len(v) for v in cp_holiday_counts.values()]
+            ),
+            'total_users': sum([len(v) for v in cp_user_counts.values()]),
+            'total_bags': sum(cp_total_by_bags.values()),
+            'collection_point_days': collection_point_days,
+            'bag_types': bag_types,
+            'bag_type_tag_color': bag_type_tag_color,
+            'skips': skips,
+            'now': now,
+            'now_bw': bw,
+            'pl_bw': pl_bw,
+            'starters': starters,
+        },
+    )

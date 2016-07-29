@@ -1,12 +1,73 @@
 {% extends "base.html" %}
+{% load tz %}
 
 {% block head_title %}Order History{% endblock %}
-{% block extra_head %}{% endblock %}
+{% block extra_head %}
+<style>
+table#order-history tr:nth-of-type(even) {
+    background-color: transparent !important;
+}
+table#order-history tr.line {
+    border-top: 1px solid #666;
+}
+table#order-history td {
+    vertical-align: top;
+}
+</style>
+{% endblock %}
 {% block content %}
+    {% timezone "Europe/London" %}
     <div class="row">
       <h1>Order History</h1>
-      <p>This functionality is not implemented yet</p>
+
+      <p>Your account was created on {{ created }}.</p>
+
+      {% for month in order_history %}
+      <h2>{{ month|date:"F Y" }}</h2>
+
+      <table id="order-history">
+        {% for minute in order_history|get_item:month %}
+        {% for event in order_history|get_item:month|get_item:minute %}
+        {% if forloop.first %}
+        <tr class="line">
+          <td style="vertical-align: top;" rowspan={{ order_history|get_item:month|get_item:minute|length }}>{{ minute }}</td>
+        {% else %}
+        <tr>
+        {% endif %}
+          <td>
+            {% if event.type == 'ORDER_CHANGE' %}
+            Order changed
+            {% elif event.type == 'COLLECTION_POINT_CHANGE' %}
+            Collection point changed
+            {% elif event.type == 'ACCOUNT_STATUS_CHANGE' %}
+            Account status changed
+            {% elif event.type == 'SKIP_WEEK' %}
+            Holiday request made
+            {% endif %}
+          </td>
+          <td>
+            {% if event.type == 'ORDER_CHANGE' %}
+            Order changed to <strong>{{ event.new_bag_quantities }}</strong>.<br>
+            Your new order will be available from {{ event.bw.next_month|date:"DATE_FORMAT"}}.<br>
+            Your new order will be invoiced in {{ event.bw.next_month|date:"F"}}, including any adjustments needed.
+            {% elif event.type == 'COLLECTION_POINT_CHANGE' %}
+            Collection point changed to <strong>{{ event.new_collection_point }}</strong>.<br>
+            Please start collecting here from {{ event.bw.next_month|date:"DATE_FORMAT"}}.
+            {% elif event.type == 'ACCOUNT_STATUS_CHANGE' %}
+            Account status changed to <strong>{{ event.new_account_status }}</strong>.
+            {% elif event.type == 'SKIP_WEEK' %}
+            No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
+            You'll be refunded in {{ event.bw.next_month|date:"F"}} for skipping this week
+            (you already pre-paid for it in {{ event.bw.prev_month|date:"F"}} as part of your regular order).
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </table>
+    {% endfor %}
     </div>
+    {% endtimezone %}
 {% endblock %}
 {% block extra_body %}
 {% endblock %}
