@@ -160,6 +160,8 @@ db_from_env = dj_database_url.config()
 DATABASES = {'default': {}}
 DATABASES['default'].update(db_from_env)
 
+FIXTURE_DIRS = [os.path.join(BASE_DIR, 'data')]
+
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
 
