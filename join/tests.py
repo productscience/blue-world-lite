@@ -11,3 +11,12 @@ class CountingUserTestCase(TransactionTestCase):
     def testStartingCountIsHighEnough(self):
         for u in self.users:
             self.assertGreater(u.pk, 10000)
+
+    def testNewUsersStartwithHighIdsAsWell(self):
+        self.users = models.User.objects.all()
+        m = models.User.objects.create(
+            email="foo@bar.com",
+            password="sekrit",
+            username="new_user"
+        )
+        self.assertGreater(m.pk, 10000)
