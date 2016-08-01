@@ -3,6 +3,11 @@ from django.test import TransactionTestCase
 # from join.models import Customer
 
 class CountingUserTestCase(TransactionTestCase):
+    """
+    In this case, we're actually testing that our fixtures have a
+    sufficiently high primary key to start with, so we can import old users
+    from the older Blue World app without their ids clashing
+    """
     fixtures = ['../data/user.json']
 
     def setUp(self):
