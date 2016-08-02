@@ -91,7 +91,8 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
                     queryset,
                     parse_billing_week(form.cleaned_data['billing_week'])
                 )
-                context['now_billing_week'] = bw
+                # context['now_billing_week'] = bw
+                context['now_billing_week'] = context['billing_week']
                 context['now'] = now
                 return render(request, 'packing-list.html', context)
         else:
@@ -413,7 +414,7 @@ def packing_list(collection_points, billing_week):
         collection_point.collection_day
 
         collection_point.total.bags.all
-        collection_point.total.bags.by_id[bag_id] 
+        collection_point.total.bags.by_id[bag_id]
         collection_point.total.customers.all
         collection_point.total.customers.on_holiday
         collection_point.total.customers.collecting
@@ -469,7 +470,12 @@ def packing_list(collection_points, billing_week):
         .only('customer_order_change__customer_id', 'bag_type_id', 'quantity')
     )
     _bags_by_customer = OrderedDict()
-    _no_bags = dict([(bag_type, 0) for bag_type in bag_types])
+    # Must be an OrderedDict to keep everything in the right order
+    _no_bags = OrderedDict([(bag_type, 0) for bag_type in bag_types])
+    _user_totals = OrderedDict([
+        ('collecting', 0),
+        ('holiday', 0),
+    ])
     for bag_quantity in _latest_bag_quantities:
         customer = bag_quantity.customer_order_change.customer
         if customer not in _bags_by_customer:
@@ -487,24 +493,50 @@ def packing_list(collection_points, billing_week):
             'collection_point__collection_day',
         )
     )
+    summary_totals = OrderedDict()
+    for bag_type in bag_types:
+        summary_totals[bag_type] = 0
+    for column in ['collecting_users', 'holidaying_users', 'collecting_bags', 'holidaying_bags']:
+        summary_totals[column] = 0
     packing_list = OrderedDict()
+    bag_totals = OrderedDict()
     for change in _latest_collection_points:
         cp = change.collection_point
         customer = change.customer
         if cp not in packing_list:
             packing_list[cp] = {
                 'customers': OrderedDict(),
+                'collecting_bag_totals_by_type': _no_bags.copy(),
+                'user_totals_by_category': _user_totals.copy(),
+                'holiday_bag_total': 0,
+                'collecting_bag_total': 0,
             }
+        # XXX Outside the tests, all customers should have at least one bag
+        _bags = _bags_by_customer.get(customer, _no_bags)
+        holiday = customer.id in _is_on_holiday and True or False
+        for bag_type, quantity in _bags.items():
+            if not holiday:
+                packing_list[cp]['collecting_bag_totals_by_type'][bag_type] += quantity
+                packing_list[cp]['collecting_bag_total'] += quantity
+                summary_totals[bag_type] += quantity
+                summary_totals['collecting_bags'] += quantity
+            else:
+                packing_list[cp]['holiday_bag_total'] += quantity
+                summary_totals['holidaying_bags'] += quantity
         packing_list[cp]['customers'][customer] = {
-            # XXX Outside the tests, all customers should have at least one bag
-            'bags': _bags_by_customer.get(customer, _no_bags),
+            'bags': _bags,
             'new': customer.id in _is_starter and True or False,
-            'holiday': customer.id in _is_on_holiday and True or False,
+            'holiday': holiday,
         }
+        if packing_list[cp]['customers'][customer]['holiday']:
+             packing_list[cp]['user_totals_by_category']['holiday'] += 1
+             summary_totals['holidaying_users'] += 1
+        else:
+             packing_list[cp]['user_totals_by_category']['collecting'] += 1
+             summary_totals['collecting_users'] += 1
     return {
         'billing_week': billing_week,
         'bag_types': bag_types,
-        #'collection_point_names': collection_point_name,
-        #'customer_names': customer_name,
         'packing_list': packing_list,
+        'summary_totals': summary_totals,
     }

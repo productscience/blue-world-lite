@@ -128,6 +128,14 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             )
         )
 
+    def strip_result(self, result):
+        for collection_point in result:
+            del result[collection_point]['user_totals_by_category']
+            del result[collection_point]['holiday_bag_total']
+            del result[collection_point]['collecting_bag_totals_by_type']
+            del result[collection_point]['collecting_bag_total']
+        return result
+
     def test_packing_list(self):
         customers = OrderedDict([
             (
@@ -158,7 +166,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             result['billing_week'],
             parse_billing_week('2016-06 1'),
         )
-        self.assertEqual(result['packing_list'], expected)
+        self.assertEqual(self.strip_result(result['packing_list']), expected)
         # Test in the week after (both in collection point 21)
         result = packing_list(
             CollectionPoint.objects.all(),
@@ -170,7 +178,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             parse_billing_week('2016-06 2'),
         )
         expected = OrderedDict([(self.cp1, {'customers': customers})])
-        self.assertEqual(result['packing_list'], expected)
+        self.assertEqual(self.strip_result(result['packing_list']), expected)
         # Test in the last week (should be collection point 22)
         result = packing_list(
             CollectionPoint.objects.all(),
@@ -182,7 +190,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             parse_billing_week('2016-06 3'),
         )
         expected = OrderedDict([(self.cp2, {'customers': customers})])
-        self.assertEqual(result['packing_list'], expected)
+        self.assertEqual(self.strip_result(result['packing_list']), expected)
         # Test in the last week (should be collection point 23)
         result = packing_list(
             CollectionPoint.objects.all(),
@@ -194,7 +202,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             parse_billing_week('2016-06 4'),
         )
         expected = OrderedDict([(self.cp3, {'customers': customers})])
-        self.assertEqual(result['packing_list'], expected)
+        self.assertEqual(self.strip_result(result['packing_list']), expected)
 
     def test_distinct_on_subquery(self):
         ccpcs = (
