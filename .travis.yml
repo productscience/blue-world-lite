@@ -8,7 +8,8 @@ services:
 before_script:
 - "lathermail > log_lathermail.txt 2>&1 &"
 - psql -c 'CREATE DATABASE blueworld;' -U postgres
-- psql -c "CREATE USER blueworld with password 'blueworld'" -U postgres
+- psql -c "CREATE USER blueworld with password 'blueworld';" -U postgres
+- psql -c "ALTER USER blueworld CREATEDB;" -U postgres
 - "python manage.py collectstatic --noinput"
 - python manage.py makemigrations
 - python manage.py migrate

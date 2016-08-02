@@ -455,7 +455,6 @@ def packing_list(collection_points, billing_week):
         .only('customer_id')
         .values_list('customer__id', flat=True)
     )
-    print(_is_on_holiday)
     _is_starter = (
         Customer.objects
         .filter(

@@ -38,65 +38,6 @@ def _strip(string):
     )
 
 
-# class DistinctOnBehaviourTestCase(TestCase):
-#     """
-#     Our billing change model relies on ditinct on working predictably in
-#     Django.
-# 
-#     This test just makes sure Django is generating the SQL we expect and
-#     returning the data we expect.
-#     """
-#     @classmethod
-#     def setUpClass(cls):
-#         super().setUpClass()
-#         with freezegun.freeze_time('2016-07-01 11:00', tick=False):
-#             cp1 = CollectionPoint.objects.create(pk=1, name="Distinct First")
-#             cp2 = CollectionPoint.objects.create(pk=2, name="Distinct Second")
-#             cp3 = CollectionPoint.objects.create(pk=3, name="Distinct Third")
-#             customer1 = Customer.objects.create_now(pk=1, full_name='One')
-#         with freezegun.freeze_time('2016-07-01 12:00', tick=False):
-#             customer1.collection_point = cp1
-#         with freezegun.freeze_time('2016-07-01 12:30', tick=False):
-#             customer1.collection_point = cp2
-#         with freezegun.freeze_time('2016-07-21 13:00', tick=False):
-#             customer1.collection_point = cp3
-# 
-# 
-#     def test_distinct_on(self):
-#         self.assertEqual(
-#             tuple(
-#                 CustomerCollectionPointChange.objects
-#                 .order_by('customer', '-changed')
-#                 .values_list('collection_point__name', flat=True)
-#             ),
-#             ('Distinct Third', 'Distinct Second', 'Distinct First')
-#         )
-#         self.assertEqual(
-#             tuple(
-#                 CustomerCollectionPointChange.objects
-#                 .order_by('customer', '-changed')
-#                 .distinct('customer')
-#                 .values_list('collection_point__name', flat=True)
-#             ),
-#             ('Distinct Third',)
-#         )
-#         self.assertEqual(
-#             tuple(
-#                 CustomerCollectionPointChange.objects
-#                 .order_by('customer', '-changed')
-#                 .filter(
-#                     changed__lt=datetime.datetime(
-#                         2016, 7, 1, 12, 45,
-#                         tzinfo=pytz.utc
-#                     )
-#                 )
-#                 .distinct('customer')
-#                 .values_list('collection_point__name', flat=True)
-#             ),
-#             ('Distinct Second',)
-#         )
-
-
 class DistinctOnSubQueryBehaviourTestCase(TestCase):
     """
     Our billing change model relies on ditinct on working predictably in
@@ -184,16 +125,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             result['billing_week'],
             parse_billing_week('2016-06 2'),
         )
-        expected = OrderedDict([
-            (
-                self.cp1,
-                {
-                    'customers': customers,
-                    'collection_day': 'WED',
-                    'name': 'First',
-                }
-            )
-        ])
+        expected = OrderedDict([(self.cp1, {'customers': customers})])
         self.assertEqual(result['packing_list'], expected)
         # Test in the last week (should be collection point 22)
         result = packing_list(
@@ -205,16 +137,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             result['billing_week'],
             parse_billing_week('2016-06 3'),
         )
-        expected = OrderedDict([
-            (
-                self.cp2,
-                {
-                    'customers': customers,
-                    'collection_day': 'WED',
-                    'name': 'Second',
-                }
-            )
-        ])
+        expected = OrderedDict([(self.cp2, {'customers': customers})])
         self.assertEqual(result['packing_list'], expected)
         # Test in the last week (should be collection point 23)
         result = packing_list(
@@ -226,16 +149,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             result['billing_week'],
             parse_billing_week('2016-06 4'),
         )
-        expected = OrderedDict([
-            (
-                self.cp3,
-                {
-                    'customers': customers,
-                    'collection_day': 'WED',
-                    'name': 'Third',
-                }
-            )
-        ])
+        expected = OrderedDict([(self.cp3, {'customers': customers})])
         self.assertEqual(result['packing_list'], expected)
 
     def test_distinct_on_subquery(self):
