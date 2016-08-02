@@ -428,16 +428,6 @@ def packing_list(collection_points, billing_week):
     are only valid until the last deadline.
     '''
     bag_types = BagType.objects.all().only('id', 'name', 'tag_color')
-    # bag_name = dict(
-    #     [
-    #         (
-    #             bag.id,
-    #             {'name': bag.name, 'tag_color': bag.tag_color}
-    #         )
-    #         for bag in BagType.objects.all()
-    #             .only('id', 'name', 'tag_color')
-    #     ]
-    # )
     collection_point_name = dict(
         CollectionPoint.objects.all()
         .filter(pk__in=collection_points)
@@ -479,10 +469,11 @@ def packing_list(collection_points, billing_week):
         .only('customer_order_change__customer_id', 'bag_type_id', 'quantity')
     )
     _bags_by_customer = OrderedDict()
+    _no_bags = dict([(bag_type, 0) for bag_type in bag_types])
     for bag_quantity in _latest_bag_quantities:
         customer = bag_quantity.customer_order_change.customer
         if customer not in _bags_by_customer:
-            _bags_by_customer[customer] = {}
+            _bags_by_customer[customer] = _no_bags.copy()
         _bags_by_customer[customer][bag_quantity.bag_type] = \
             bag_quantity.quantity
     _latest_collection_points = (
@@ -505,7 +496,8 @@ def packing_list(collection_points, billing_week):
                 'customers': OrderedDict(),
             }
         packing_list[cp]['customers'][customer] = {
-            'bags': _bags_by_customer.get(customer, {}),
+            # XXX Outside the tests, all customers should have at least one bag
+            'bags': _bags_by_customer.get(customer, _no_bags),
             'new': customer.id in _is_starter and True or False,
             'holiday': customer.id in _is_on_holiday and True or False,
         }

@@ -1,0 +1,1 @@
+Test the GoCardless in Chrome - PhantomJS can't deal with it.

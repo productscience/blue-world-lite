@@ -97,28 +97,24 @@ h1, #packing-lists {
               {% if customer_info.holiday %}
                 <td class="holiday" colspan={{ bag_types|length }}>
                 On holiday <em>(usually has
-                {% for bag_type in bag_types %}
-                  {% if customer_info.bags|get_item:bag_type %}
-                  {{ bag_type.name }} x {{ customer_info.bags|get_item:bag_type|default_if_none:"" }}
+                {% for bag_type, quantity in customer_info.bags.items %}
+                  {% if quantity %}
+                  {{ bag_type.name }} x {{ quantity }}
                   {% endif %}
                 {% endfor %}
                 )</em>
                 </td>
 
               {% else %}
-                {% for bag_type in bag_types %}
+                {% for bag_type, quantity in customer_info.bags.items %}
                 <td class="quantity">
-                  {{ customer_info.bags|get_item:bag_type|default_if_none:"" }}
+                  {% if quantity %}
+                    {{ quantity }}
+                  {% endif %}
                 {% endfor %}
               {% endif %}
             </tr>
             {% endfor %}
-            {# <tr class="totals"> #}
-            {#   <td class="total" colspan="2">Totals</td> #}
-            {#   {% for bag_type in bag_types %}#}
-            {#     <td class="quantity">{{ collection_point_counts|get_item:collection_point|get_item:bag_type }}</td>#}
-            {#   {% endfor %}#}
-            {# </tr>#}
           </table>
         {% endfor %}
       </div>

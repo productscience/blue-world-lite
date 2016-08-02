@@ -24,18 +24,62 @@ TestCase.maxDiff = None
 import unittest; unittest.util._MAX_LENGTH=1000
 
 
-def _strip(string):
-    string = string.replace('\n', ' ')
-    while '  ' in string:
-        string = string.replace('  ', ' ')
-    return (
-        string
-        .replace('( ', '(')
-        .replace(' )',  '')
-        .replace(' ,',  '')
-        .replace(', ', '')
-        .strip()
-    )
+class DistinctOnBehaviourTestCase(TestCase):
+    """
+    Our billing change model relies on ditinct on working predictably in
+    Django.
+
+    This test just makes sure Django is generating the SQL we expect and
+    returning the data we expect.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with freezegun.freeze_time('2016-07-01 11:00', tick=False):
+            cp1 = CollectionPoint.objects.create(pk=1, name="Distinct First")
+            cp2 = CollectionPoint.objects.create(pk=2, name="Distinct Second")
+            cp3 = CollectionPoint.objects.create(pk=3, name="Distinct Third")
+            customer1 = Customer.objects.create_now(pk=1, full_name='One')
+        with freezegun.freeze_time('2016-07-01 12:00', tick=False):
+            customer1.collection_point = cp1
+        with freezegun.freeze_time('2016-07-01 12:30', tick=False):
+            customer1.collection_point = cp2
+        with freezegun.freeze_time('2016-07-21 13:00', tick=False):
+            customer1.collection_point = cp3
+
+    def test_distinct_on(self):
+        self.assertEqual(
+            tuple(
+                CustomerCollectionPointChange.objects
+                .order_by('customer', '-changed')
+                .values_list('collection_point__name', flat=True)
+            ),
+            ('Distinct Third', 'Distinct Second', 'Distinct First')
+        )
+        self.assertEqual(
+            tuple(
+                CustomerCollectionPointChange.objects
+                .order_by('customer', '-changed')
+                .distinct('customer')
+                .values_list('collection_point__name', flat=True)
+            ),
+            ('Distinct Third',)
+        )
+        self.assertEqual(
+            tuple(
+                CustomerCollectionPointChange.objects
+                .order_by('customer', '-changed')
+                .filter(
+                    changed__lt=datetime.datetime(
+                        2016, 7, 1, 12, 45,
+                        tzinfo=pytz.utc
+                    )
+                )
+                .distinct('customer')
+                .values_list('collection_point__name', flat=True)
+            ),
+            ('Distinct Second',)
+        )
 
 
 class DistinctOnSubQueryBehaviourTestCase(TestCase):
@@ -90,7 +134,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
                 self.customer1,
                 {
                     'holiday': False,
-                    'bags': {},
+                    'bags': {self.large_veg: 0, self.small_fruit: 0},
                     'new': False,
                 }
             ),
