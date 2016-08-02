@@ -34,7 +34,7 @@ def current_billing_week():
     return get_billing_week(timezone.now())
 
 
-def get_billing_week(d):
+def get_billing_week(d, _recursively_called=False):
     """
     Find the billing week a particular time occurs in
     """
@@ -67,6 +67,10 @@ def get_billing_week(d):
                 datetime.time(15, 0, 0, 0)
             ), is_dst=None
         ).astimezone(pytz.utc)
+        if counter == 0 and d < start_of_billing_week:
+            if _recursively_called:
+                raise Exception("Date led to recursion, this is the new date: {}".format(d))
+            return get_billing_week(deadline_tz.localize(datetime.datetime(d.year, d.month,1)-timedelta(1)), True)
         end_of_billing_week = deadline_tz.localize(
             datetime.datetime.combine(
                 first_sunday + timedelta(7*(counter+1)),
@@ -87,8 +91,7 @@ def get_billing_week(d):
             # possible it is actually part of next month's billing cycle
             # e.g. 31st Jan 2017 is a Feb billing week
             wed = (start_of_billing_week + timedelta(3)).date()
-            # print(start_of_billing_week,  end_of_billing_week, d, wed.strftime('%c'))
-            if (start_of_billing_week + timedelta(3)).month > start_of_billing_week.month:
+            if (wed.year, wed.month) > (start_of_billing_week.year, start_of_billing_week.month):
                 # The wed month and year are the same as the end date one
                 return BillingWeek(
                     wed,
@@ -228,7 +231,7 @@ class BillingWeek(object):
         return '{0}-{1:02d} {2}'.format(self.year, self.month, self.week)
 
     def __repr__(self):
-        return '<BillingWeek {} at {}>'.format(str(self), id(self))
+        return '<BillingWeek {}>'.format(str(self))
 
     def __lt__(self, other):
         return str(self) < str(other)
@@ -247,6 +250,9 @@ class BillingWeek(object):
 
     def __ge__(self, other):
         return str(self) >= str(other)
+
+    def __hash__(self):
+        return int('{0}{1:02d}{2}'.format(self.year, self.month, self.week))
 
 
 def parse_billing_week(billing_week_string):
@@ -443,5 +449,65 @@ if __name__ == '__main__':
             self.assertRaises(ValueError, parse_billing_week, '2017-07-6')
             self.assertRaises(ValueError, parse_billing_week, '2017-07-5')
             self.assertEqual(parse_billing_week('2016-08 1').wed, datetime.date(2016, 8, 3))
+
+        def test_freezegun(self):
+            utc = pytz.timezone("UTC")
+            self.assertEqual(first_wed_of_month(2016, 7), datetime.date(2016, 7, 6))
+            self.assertEqual(str(get_billing_week(utc.localize(datetime.datetime(2016, 7, 1, 11)))), '2016-06 5')
+            self.assertEqual(str(get_billing_week(utc.localize(datetime.datetime(2016, 7, 2, 11)))), '2016-06 5')
+            self.assertEqual(str(get_billing_week(utc.localize(datetime.datetime(2016, 7, 3, 11)))), '2016-06 5')
+            self.assertEqual(str(get_billing_week(utc.localize(datetime.datetime(2016, 7, 3, 16)))), '2016-07 1')
+            import freezegun
+            with freezegun.freeze_time('2016-07-01 11:00', tick=False):
+                self.assertEqual(str(get_billing_week(timezone.now())), '2016-06 5')
+            self.assertEqual(str(get_billing_week(utc.localize(datetime.datetime(2016, 8, 2, 11)))), '2016-08 1')
+
+        def test_hash(self):
+            from collections import OrderedDict
+            billing_weeks = OrderedDict()
+            billing_weeks[parse_billing_week('2016-06 5')] = 1
+            billing_weeks[parse_billing_week('2016-06 3')] = 1
+            billing_weeks[parse_billing_week('2016-06 3')] += 1
+            self.assertEqual(billing_weeks, OrderedDict([(parse_billing_week('2016-06 5'), 1), (parse_billing_week('2016-06 3'), 2)]))
+
+        def test_brute(self):
+            utc = pytz.timezone("UTC")
+            # Let's just check we can get a billing date for every 30 mins in 
+            # the next 10 years, and that they are all in order
+
+            s = utc.localize(datetime.datetime(2012, 5, 1, 0))
+            s_12 = utc.localize(datetime.datetime(2012, 5, 1, 12))
+            half_day_later = s + timedelta(minutes=60*12)
+            assert s_12 == half_day_later
+            self.assertEqual(str(get_billing_week(s)), '2012-05 1')
+            self.assertEqual(str(get_billing_week(s_12)), '2012-05 1')
+            self.assertEqual(str(get_billing_week(half_day_later)), '2012-05 1')
+
+            from collections import OrderedDict
+
+            for mins in [60*12]:
+                billing_weeks = OrderedDict()
+                first = utc.localize(datetime.datetime(2012, 1, 1, 16)) # Start of billing week
+                end = utc.localize(datetime.datetime(2022, 1, 1, 16))
+                start = first - timedelta(minutes=mins)
+                last_bw = get_billing_week(start)
+                last_pw = parse_billing_week(str(last_bw))
+                while start <= end: 
+                    orig = start
+                    start = start + timedelta(minutes=mins)
+                    bw = get_billing_week(start)
+                    self.assertGreaterEqual(bw, last_bw)
+                    if bw not in billing_weeks:
+                        billing_weeks[bw] = 0
+                    billing_weeks[bw] += 1
+                    if bw != last_bw:
+                         pw = parse_billing_week(str(bw))
+                         self.assertEqual(pw, bw)
+                         self.assertGreater(pw, last_pw)
+                         last_pw = pw
+                    last_bw = bw
+                for i, bwkey in enumerate(billing_weeks):
+                    self.assertEqual(billing_weeks[bwkey], 14)
+                self.assertEqual(len(billing_weeks), (((end-first).days)+1)/7.0)
 
     unittest.main()

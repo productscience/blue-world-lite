@@ -80,16 +80,20 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
 
     def packing_list(self, request, queryset):
         now = timezone.now()
-        initial = {'billing_week': str(get_billing_week(now))}
+        bw = get_billing_week(now)
+        initial = {
+            'billing_week': str(bw)
+        }
         if '_generate' in request.POST:
             form = PackingListForm(request.POST, initial=initial)
             if form.is_valid():
-                return generate_packing_list(
-                    self,
-                    request,
+                context = packing_list(
                     queryset,
-                    parse_billing_week(form.cleaned_data['billing_week']),
+                    parse_billing_week(form.cleaned_data['billing_week'])
                 )
+                context['now_billing_week'] = bw
+                context['now'] = now
+                return render(request, 'packing-list.html', context)
         else:
             form = PackingListForm(initial=initial)
         return render(
@@ -373,152 +377,143 @@ admin.site.register(Skip, SkipAdmin)
 admin.site.disable_action('delete_selected')
 
 
-def generate_packing_list(model_admin, request, queryset, pl_bw):
-    """
-    model_admin: The ModelAdmin instance
-    request:     The Django HttpRequest
-    queryset:    A prepared Queryset holding all the collection points
-                 selected from the Django admin list view
-    pl_bw:       A BillingWeek *instance* set up for the week we are
-                 generating the packing list for.
-    """
-    # XXX TODO Assumes customer names are unique, which is not enforced
-    now = timezone.now()
-    bw = get_billing_week(now)
-    bag_types = []
-    bag_type_tag_color = {}
-    for bag_type in BagType.objects.order_by('name').distinct('name'):
-        bag_types.append(bag_type.name)
-        bag_type_tag_color[bag_type.name] = bag_type.tag_color
-    collection_point_ids = [
-        collection_point.id for collection_point in queryset
-    ]
-    collection_point_days = dict([
-        (collection_point.name, collection_point.get_collection_day_display())
-        for collection_point in queryset
-    ])
-    # Find the *one* most recent collection point change for each customer
-    # that happend before the start of the week we are generating
-    # the packing list for.
-    ccpcs = CustomerCollectionPointChange.objects.filter(
-        changed_in_billing_week__lt=pl_bw.start
-    ).order_by(
-        'customer', '-changed'
-    ).distinct(
-        'customer'
-    ).only(
-        'customer_id', 'collection_point_id'
+def packing_list(collection_points, billing_week):
+    '''
+    We'll need the following data strucutures:
+
+    `bag_name`:                         A lookup of bag ID to bag name
+    `collection_point_name`:            A lookup of bag ID to bag name
+    `customer_name`:                    A lookup of customer ID to customer
+                                        name
+    `customer_latest_bag_quantities`
+    `customer_latest_collection_point`
+
+    Although it would be faster to do all this in the database, in terms of
+    scalability, assembling everything in Django from separate data means
+    the database does less work, and that the database could be partitioned
+    in future.
+
+    Although it would be easier to start with just the collection points
+    and then just use model attributes to assemble everything else, that
+    would be a lot slower (as it would create thousands of queries)
+
+    Although it would be neater to use custom querysets and model hacks
+    to make all this look seamless, that would be more complex and less
+    maintainable in the long term.
+
+    So we create a "reporting model" which is a tree a bit like a model
+    but where each stage of the hierarchy is keyed by an ID, and which
+    only has the properties we've already fetched from the database.
+
+    Then we'll put it all together into a big packing_list that looks like
+    this:
+
+        collection_point = packing_list[collection_point_id]
+        collection_point.name
+        collection_point.collection_day
+
+        collection_point.total.bags.all
+        collection_point.total.bags.by_id[bag_id] 
+        collection_point.total.customers.all
+        collection_point.total.customers.on_holiday
+        collection_point.total.customers.collecting
+
+        customer = collection_point.current_customer[customer_id]
+        customer.bags[bag_id] = bag_quantity
+        customer.new          = True/False
+        customer.holiday      = True/False
+
+    Note that although we can go backwards in time on holiday status,
+    collection points and orders, the names, collection_day and Starter status
+    are only valid until the last deadline.
+    '''
+    bag_types = BagType.objects.all().only('id', 'name', 'tag_color')
+    # bag_name = dict(
+    #     [
+    #         (
+    #             bag.id,
+    #             {'name': bag.name, 'tag_color': bag.tag_color}
+    #         )
+    #         for bag in BagType.objects.all()
+    #             .only('id', 'name', 'tag_color')
+    #     ]
+    # )
+    collection_point_name = dict(
+        CollectionPoint.objects.all()
+        .filter(pk__in=collection_points)
+        .only('id', 'name')
+        .values_list('id', 'name')
     )
-    # Filter the collection points in Python
-    customer_ids = [
-        ccpc.customer_id for ccpc in ccpcs
-        if ccpc.collection_point_id in collection_point_ids
-    ]
-    # Find out if these customers have the "Starter" tag
-    # still attached to them
-    starters = Customer.objects.filter(
-        pk__in=customer_ids,
-        tags__in=CustomerTag.objects.filter(tag='Starter')
-    ).values_list(
-        'full_name', flat=True
+    customer_name = dict(
+        Customer.objects.all()
+        .only('id', 'full_name')
+        .values_list('id', 'full_name')
     )
-    # Now for the order part:
-    # 1. Find the *one* most recent order change for each customer
-    #    that happend before the start of the week we are generating
-    #    the packing list for.
-    order_changes = CustomerOrderChange.objects.order_by(
-        'customer', '-changed'
-    ).distinct(
-        'customer'
-    ).only(
-        'customer_id', 'id'
+    _is_on_holiday = (
+        Skip.objects
+        .filter(billing_week=str(billing_week))
+        .only('customer_id')
+        .values_list('customer__id', flat=True)
     )
-    # Filter the order changes by the customers we want in Python
-    order_change_ids = [
-        order_change.id for order_change in order_changes
-        if order_change.customer_id in customer_ids
-    ]
-    # 2. Find the bag quantities in those orders
-    bqs = CustomerOrderChangeBagQuantity.objects.filter(
-        customer_order_change__in=order_change_ids
-    ).order_by(
-        'customer_order_change__customer__full_name'
-    ).only(
-        'customer_order_change__customer'
+    print(_is_on_holiday)
+    _is_starter = (
+        Customer.objects
+        .filter(
+            pk__in=customer_name.keys(),
+            tags__in=CustomerTag.objects.filter(tag='Starter')
+        )
+        .only('id')
+        .values_list('id', flat=True)
     )
-    # Customers that are on holiday this week
-    # skips is in the form: ['John Smith', 'Toby Ben']
-    skips = Skip.objects.filter(
-        customer_id__in=customer_ids,
-        billing_week=str(pl_bw),
-    ).values_list(
-        'customer__full_name', flat=True
-    )
-    cps = OrderedDict()
-    cp_counts = OrderedDict()
-    cp_holiday_counts = OrderedDict()
-    cp_user_counts = OrderedDict()
-    cp_total_by_bags = OrderedDict()
-    cp_total_by_collection_point = OrderedDict()
-    for bag_type in bag_types:
-        cp_total_by_bags[bag_type] = 0
-    for bq in bqs:
-        collection_point = bq.customer_order_change.customer.collection_point
-        if collection_point.name not in cps:
-            cps[collection_point.name] = OrderedDict()
-            cp_counts[collection_point.name] = OrderedDict()
-            cp_holiday_counts[collection_point.name] = []
-            cp_user_counts[collection_point.name] = []
-            cp_total_by_collection_point[collection_point.name] = 0
-            for bag_type in bag_types:
-                cp_counts[collection_point.name][bag_type] = 0
-        customer_name = bq.customer_order_change.customer.full_name
-        if customer_name not in cps[collection_point.name]:
-            cps[collection_point.name][customer_name] = {
-                bq.bag_type.name: bq.quantity
-            }
-        else:
-            assert bq.bag_type.name not in \
-               cps[collection_point.name][customer_name]
-            cps[collection_point.name][customer_name][
-                bq.bag_type.name
-            ] = bq.quantity
-        if bq.customer_order_change.customer.full_name not in skips:
-            cp_counts[collection_point.name][bq.bag_type.name] += bq.quantity
-            cp_total_by_bags[bq.bag_type.name] += bq.quantity
-            cp_total_by_collection_point[collection_point.name] += bq.quantity
-            if customer_name not in cp_user_counts[collection_point.name]:
-                # Want unique customers here, if the customer has more than one
-                # bag we could double count if we just added 1 each time.
-                cp_user_counts[collection_point.name].append(customer_name)
-        elif customer_name not in cp_holiday_counts[collection_point.name]:
-            # Want unique customers here, if the customer has more than one
-            # bag we could double count if we just added 1 each time.
-            cp_holiday_counts[collection_point.name].append(customer_name)
-    assert sum(cp_total_by_bags.values()) == \
-        sum(cp_total_by_collection_point.values())
-    return render(
-        request,
-        'packing-list.html',
-        {
-            'collection_points': cps,
-            'collection_point_counts': cp_counts,
-            'collection_point_holiday_counts': cp_holiday_counts,
-            'collection_point_user_counts': cp_user_counts,
-            'total_by_bags': cp_total_by_bags,
-            'total_by_collection_point': cp_total_by_collection_point,
-            'total_holidays': sum(
-                [len(v) for v in cp_holiday_counts.values()]
+    _latest_bag_quantities = (
+        CustomerOrderChangeBagQuantity.objects
+        .filter(
+            customer_order_change__in=(
+                CustomerOrderChange.objects
+                .filter(changed_in_billing_week__lt=str(billing_week))
+                .order_by('customer', '-changed')
+                .distinct('customer')
+                .only('id')
             ),
-            'total_users': sum([len(v) for v in cp_user_counts.values()]),
-            'total_bags': sum(cp_total_by_bags.values()),
-            'collection_point_days': collection_point_days,
-            'bag_types': bag_types,
-            'bag_type_tag_color': bag_type_tag_color,
-            'skips': skips,
-            'now': now,
-            'now_bw': bw,
-            'pl_bw': pl_bw,
-            'starters': starters,
-        },
+        )
+        .order_by('customer_order_change__customer__full_name')
+        .only('customer_order_change__customer_id', 'bag_type_id', 'quantity')
     )
+    _bags_by_customer = OrderedDict()
+    for bag_quantity in _latest_bag_quantities:
+        customer = bag_quantity.customer_order_change.customer
+        if customer not in _bags_by_customer:
+            _bags_by_customer[customer] = {}
+        _bags_by_customer[customer][bag_quantity.bag_type] = \
+            bag_quantity.quantity
+    _latest_collection_points = (
+        CustomerCollectionPointChange.objects
+        .filter(changed_in_billing_week__lt=str(billing_week))
+        .order_by('customer', '-changed')
+        .distinct('customer')
+        .only(
+            'customer_id',
+            'collection_point_id',
+            'collection_point__collection_day',
+        )
+    )
+    packing_list = OrderedDict()
+    for change in _latest_collection_points:
+        cp = change.collection_point
+        customer = change.customer
+        if cp not in packing_list:
+            packing_list[cp] = {
+                'customers': OrderedDict(),
+            }
+        packing_list[cp]['customers'][customer] = {
+            'bags': _bags_by_customer.get(customer, {}),
+            'new': customer.id in _is_starter and True or False,
+            'holiday': customer.id in _is_on_holiday and True or False,
+        }
+    return {
+        'billing_week': billing_week,
+        'bag_types': bag_types,
+        #'collection_point_names': collection_point_name,
+        #'customer_names': customer_name,
+        'packing_list': packing_list,
+    }

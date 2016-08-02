@@ -4,9 +4,22 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+
+
+# class CurrentCustomersQuerySet(models.QuerySet):
+#     def at(self, at):
+#         ccpcs = CustomerCollectionPointChange.objects \
+#         .order_by('customer', '-changed')\
+#         .filter(changed__lte=at)\
+#         .distinct('customer')
+#         return CollectionPoint.objects\
+#         .filter(collectionpoint_change__id__in=ccpcs)\
+#         .select_related('customer')
 
 
 class CollectionPoint(models.Model):
+    # currect_customers = CurrentCustomersQuerySet.as_manager()
     name = models.CharField(
         max_length=40,
         help_text="e.g. 'The Old Fire Station'",
@@ -190,12 +203,35 @@ class BillingGoCardlessMandate(models.Model):
     )
 
 
+
+class CustomerManager(models.Manager):
+    def create_now(self, **p):
+        assert 'created' not in p
+        assert 'created_in_billing_week' not in p
+        if 'now' not in p:
+            p['now'] = timezone.now()
+        now = p['now']
+        del p['now']
+        p['created'] = now
+        p['created_in_billing_week'] = str(get_billing_week(now))
+        return self.create(**p)
+
+
 class Customer(models.Model):
+
+    def save(self, *args, **kwargs):
+        if not self.full_name:
+            raise ValidationError('The full_name field is required')
+        super(Customer, self).save(*args, **kwargs)
+
+    objects = CustomerManager()
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
-        related_name='customer'
+        related_name='customer',
+        null=True
     )
     # XXX ? created = models.DateTimeField(auto_now_add=True)
     created = models.DateTimeField()
@@ -237,6 +273,8 @@ class Customer(models.Model):
         return latest_cp.collection_point
 
     def _set_collection_point(self, collection_point_id):
+        if not isinstance(collection_point_id, int):
+            collection_point_id = collection_point_id.id
         now = timezone.now()
         bw = get_billing_week(now)
         collection_point_change = CustomerCollectionPointChange(
@@ -266,12 +304,19 @@ class Customer(models.Model):
             customer=self,
         )
         customer_order_change.save()
-        for bag_type_id, quantity in bag_quantities.items():
-            bag_quantity = CustomerOrderChangeBagQuantity(
-                customer_order_change=customer_order_change,
-                bag_type_id=bag_type_id,
-                quantity=quantity,
-            )
+        for bag_type, quantity in bag_quantities.items():
+            if not isinstance(bag_type, BagType):
+                bag_quantity = CustomerOrderChangeBagQuantity(
+                    customer_order_change=customer_order_change,
+                    bag_type_id=int(bag_type),
+                    quantity=quantity,
+                )
+            else:
+                bag_quantity = CustomerOrderChangeBagQuantity(
+                    customer_order_change=customer_order_change,
+                    bag_type=bag_type,
+                    quantity=quantity,
+                )
             # XXX Do we need the save?
             bag_quantity.save()
 

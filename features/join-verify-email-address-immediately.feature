@@ -33,20 +33,7 @@ Feature: Join - Verify Email Address Immediately
       And I see "Set up Go Cardless" in "h1"
       And I click the "Set up Go Cardless" button
 
-  @phantomjs
-  Scenario: Skip
-     When I navigate to /gocardless-callback?skip=True
-      And I see "Dashboard" in "h1"
-      And I navigate to /logout
-
-  @offline
-  Scenario: Skip
-     When I navigate to /gocardless-callback?skip=True
-      And I see "Dashboard" in "h1"
-      And I navigate to /logout
-
-      # Only works in Chrome:
-  @chrome @online
+  @chrome @gocardless
   Scenario: Complete GoCardless
     Given I type "First Name" into "#customer_given_name"
       And I type "Last Name" into "#customer_family_name"
@@ -64,5 +51,6 @@ Feature: Join - Verify Email Address Immediately
       # And I click the "Confirm" button
       And I click on "div.account-details__confirm button"
 
-      And I see "Dashboard" in "h1"
+  Scenario: Callback
+    Given I see "Dashboard" in "h1"
       And I navigate to /logout

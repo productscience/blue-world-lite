@@ -283,10 +283,11 @@ if 'RAVEN_DSN' in os.environ:
 # https://gocardless.com/blog/goingcardless-an-introduction-to-gocardless/
 GOCARDLESS_ENVIRONMENT = os.environ.get(
     'GOCARDLESS_ENVIRONMENT',
-    'sandbox'
+    'none'
 )
 
 GOCARDLESS_ACCESS_TOKEN = os.environ['GOCARDLESS_ACCESS_TOKEN']
+SKIP_GOCARDLESS = str(os.environ.get('SKIP_GOCARDLESS', 'true')).lower() == 'true'
 
 
 SMALL_FRUIT_BAG_NAME='Small fruit'

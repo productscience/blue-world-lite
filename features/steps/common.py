@@ -128,7 +128,6 @@ def step_impl(context, fullname, nickname, email, password):
              Then the browser moves to /dashboard/gocardless
               And I see "Set up Go Cardless" in "h1"
               And I click the "Set up Go Cardless" button
-              And I navigate to /gocardless-callback?skip=True
               And I see "Dashboard" in "h1"
               And I navigate to /logout
             '''
