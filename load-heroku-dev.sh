@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 
 confirm () {
     # call with a prompt string or use a default
@@ -15,8 +16,7 @@ confirm () {
 }
 
 echo "Pushing HEAD to Heroku"
-confirm || exit
-git push heroku HEAD:master
+confirm || git push heroku HEAD:master
 
 echo "Resetting $HEROKU_PG_NAME on $HEROKU_APP_NAME"
 confirm || exit
@@ -30,3 +30,4 @@ heroku run python manage.py migrate
 heroku run python manage.py loaddata data/user.json
 heroku run python manage.py loaddata data/initial.json
 heroku ps:scale clock=1
+echo "Success."

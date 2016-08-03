@@ -83,6 +83,7 @@ LEAVER_EMAIL_TO='leaver-email@example.com; billing@example.com'
 GOCARDLESS_ACCESS_TOKEN='xxx'
 GOCARDLESS_ENVIRONMENT='sandbox|live'
 TIME_TRAVEL='false'
+SKIP_GOCARDLESS='false'
 
 # Local
 EMAIL_HOST='localhost'
@@ -92,6 +93,8 @@ EMAIL_PORT=2525
 EMAIL_USE_TLS='False'
 DEFAULT_FROM_EMAIL='no-reply@blueworld.example.com'
 ALLOWED_HOSTS='localhost, 127.0.0.1'
+HEROKU_PG_NAME='xxx'
+HEROKU_APP_NAME='xxx'
 ```
 
 For local development it is recommended you create a file called `.env.sh`

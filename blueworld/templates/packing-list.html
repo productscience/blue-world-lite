@@ -44,19 +44,19 @@ h1, #packing-lists {
     <div id="content" class="{% block coltype %}colM{% endblock %}">
 {% block content %}
     <div class="row" id="packing-lists">
-      {% if now > pl_bw.start %}
-      <h1>Billing Week {{ pl_bw.week }}, {{ pl_bw.wed|date:"F Y" }} Packing Lists</h1>
-      <h2>Collections start {{ pl_bw.wed|date:"DATE_FORMAT" }}</h2>
+      {% if now > billing_week.start %}
+      <h1>Billing Week {{ billing_week.week }}, {{ billing_week.wed|date:"F Y" }} Packing Lists</h1>
+      <h2>Collections start {{ billing_week.wed|date:"DATE_FORMAT" }}</h2>
       <p>
-        Generated in billing week {{ now_bw.week }}, {{ now_bw.wed|date:"F Y" }}.<br>
-        Data from {{ pl_bw.start|date:"DATETIME_FORMAT" }} retrieved at {{ now|date:"DATETIME_FORMAT" }}.
+        Generated in billing week {{ now_billing_week.week }}, {{ now_billing_week.wed|date:"F Y" }}.<br>
+        Data from {{ billing_week.start|date:"DATETIME_FORMAT" }} retrieved at {{ now|date:"DATETIME_FORMAT" }}.
       </p>
       {% else %}
-      <h1>Billing Week {{ pl_bw.week }}, {{ pl_bw.wed|date:"F Y" }} <em>Predicted</em> Packing Lists</h1>
-      <h2>Collections start {{ pl_bw.wed|date:"DATE_FORMAT" }}</h2>
+      <h1>Billing Week {{ billing_week.week }}, {{ billing_week.wed|date:"F Y" }} <em>Predicted</em> Packing Lists</h1>
+      <h2>Collections start {{ billing_week.wed|date:"DATE_FORMAT" }}</h2>
       <p>
-        Generated in billing week {{ now_bw.week }}, {{ now_bw.wed|date:"F Y" }}.<br>
-        Data predicted for {{ pl_bw.start|date:"DATETIME_FORMAT" }} retrieved at {{ now|date:"DATETIME_FORMAT" }}.
+        Generated in billing week {{ now_billing_week.week }}, {{ now_billing_week.wed|date:"F Y" }}.<br>
+        Data predicted for {{ billing_week.start|date:"DATETIME_FORMAT" }} retrieved at {{ now|date:"DATETIME_FORMAT" }}.
       </p>
 
       <h1>WARNING: This is only a prediction</h1>
@@ -65,93 +65,116 @@ h1, #packing-lists {
          so there is still time for customers to make changes.</strong></p>
 
       {% endif %}
+
+      <p><span id="num_collection_points">{{ packing_list|length }}</span> collection points shown.</p>
+
       <div>
-        <h2>Summary</h2>
-        <table>
-          <tr>
-            <th>Pickup</th>
-            {% for bag_type in bag_types %}
-            <th>
-                {{ bag_type }}<br>
-                <em>{{ bag_type_tag_color|get_item:bag_type }}</em>
-            </th>
-            {% endfor %}
-            <th>Total Bags</th>
-            <th>Holidaying Users</th>
-            <th>Collecting Users</th>
-          </tr>
-          {% for collection_point in collection_points %}
-            <tr>
-              <td>{{ collection_point }}</td>
-              {% for bag_type in bag_types %}
-                <td class="quantity">{{ collection_point_counts|get_item:collection_point|get_item:bag_type }}</td>
-              {% endfor %}
-              <td class="quantity">{{ total_by_collection_point|get_item:collection_point }}</td>
-              <td class="quantity">{{ collection_point_holiday_counts|get_item:collection_point|length }}</td>
-              <td class="quantity">{{ collection_point_user_counts|get_item:collection_point|length }}</td>
-            </tr>
+      <h2>Summary</h2>
+    
+      <table>
+        <tr>
+          <th>Pickup</th>
+          {% for bag_type in bag_types %}
+          <th>
+              {{ bag_type.name }}<br>
+              {% if billing_week >= now_billing_week %}
+              <em>{{ bag_type.tag_color }}</em>
+              {% endif %}
+          </th>
           {% endfor %}
-            <tr class="totals">
-              <td class="total">Totals</td>
-              {% for bag_type in bag_types %}
-                <td class="quantity">{{ total_by_bags|get_item:bag_type }}</td>
-              {% endfor %}
-              <td class="quantity">{{ total_bags }}</td>
-              <td class="quantity">{{ total_holidays }}</td>
-              <td class="quantity">{{ total_users }}</td>
-            </tr>
-        </table>
+          <th>Collecting Users</th>
+          <th>Holidaying Users</th>
+          <th>Collecting Bags</th>
+          <th>Skipping Bags</th>
+        </tr>
+        {% for collection_point, collection_point_info in packing_list.items %}
+        <tr>
+           <td>{{ collection_point.name }}</td>
+          {% for bag_type, total in collection_point_info.collecting_bag_totals_by_type.items %}
+            <td class="quantity">{{ total }}</td>
+          {% endfor %}
+          {% for user_category, total in collection_point_info.user_totals_by_category.items %}
+            <td class="quantity">{{ total }}</td>
+          {% endfor %}
+          <td class="quantity">{{ collection_point_info.collecting_bag_total }}</td>
+          <td class="quantity">{{ collection_point_info.holiday_bag_total }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="totals">
+          <td class="total">Totals</td>
+          {% for total in summary_totals.values %}
+            <td class="quantity">{{ total }}</td>
+          {% endfor %}
+        </tr>
+      </table>
       </div>
       <div>
-        {% for collection_point in collection_points %}
-          <h2>{{ collection_point }}</h2>
-          {% if pl_bw == now_bw %}
-          <p>Collection days: {{ collection_point_days|get_item:collection_point }}</p>
+        {% for collection_point, collection_point_info in packing_list.items %}
+          <h2>{{ collection_point.name }}</h2>
+          {% if billing_week >= now_billing_week %}
+          <p>Collection days: {{ collection_point.get_collection_day_display }}</p>
           {% endif %}
           <table>
             <tr>
               <th>Customer</th>
+              {% if billing_week >= now_billing_week %}
               <th class="label"></th>
+              {% endif %}
               {% for bag_type in bag_types %}
               <th class="customer">
                   {{ bag_type }}<br>
-                  <em>{{ bag_type_tag_color|get_item:bag_type }}</em>
+                  {% if billing_week >= now_billing_week %}
+                  <em>{{ bag_type.tag_color }}</em>
+                  {% endif %}
               </th>
               {% endfor %}
             </tr>
-            {% for customer in collection_points|get_item:collection_point %}
+            {% for customer, customer_info in collection_point_info.customers.items %}
             <tr>
-              {% if customer in starters %}
-              <td class="new customer">{{ customer }}</td>
-              <td class="new label">New</td>
+              {% if billing_week >= now_billing_week %}
+                {% if customer_info.new %}
+                  <td class="new customer">{{ customer.full_name }}</td>
+                  <td class="new label">New</td>
+                {% else %}
+                  <td class="customer">{{ customer.full_name }}</td>
+                  <td class=""></td>
+                {% endif %}
               {% else %}
-              <td class="customer">{{ customer }}</td>
-              <td></td>
+                <td class="customer">{{ customer.full_name }}</td>
               {% endif %}
-              {% if customer in skips %}
+              {% if customer_info.holiday %}
                 <td class="holiday" colspan={{ bag_types|length }}>
                 On holiday <em>(usually has
-                {% for bag_type in bag_types %}
-                  {% if collection_points|get_item:collection_point|get_item:customer|get_item:bag_type %}
-                  {{ bag_type }} x {{ collection_points|get_item:collection_point|get_item:customer|get_item:bag_type|default_if_none:"" }}
+                {% for bag_type, quantity in customer_info.bags.items %}
+                  {% if quantity %}
+                  {{ bag_type.name }} x {{ quantity }}
                   {% endif %}
                 {% endfor %}
                 )</em>
                 </td>
 
               {% else %}
-                {% for bag_type in bag_types %}
-                <td class="quantity">{{ collection_points|get_item:collection_point|get_item:customer|get_item:bag_type|default_if_none:"" }}</td>
+                {% for bag_type, quantity in customer_info.bags.items %}
+                <td class="quantity">
+                  {% if quantity %}
+                    {{ quantity }}
+                  {% endif %}
                 {% endfor %}
               {% endif %}
             </tr>
-            {% endfor %}
+          {% endfor %}
+
             <tr class="totals">
+              {% if billing_week >= now_billing_week %}
               <td class="total" colspan="2">Totals</td>
-              {% for bag_type in bag_types %}
-                <td class="quantity">{{ collection_point_counts|get_item:collection_point|get_item:bag_type }}</td>
+              {% else %}
+              <td class="total" colspan="1">Totals</td>
+              {% endif %}
+              {% for bag_type, total in collection_point_info.collecting_bag_totals_by_type.items %}
+                <td class="quantity">{{ total }}</td>
               {% endfor %}
             </tr>
+
           </table>
         {% endfor %}
       </div>

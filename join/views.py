@@ -56,6 +56,13 @@ def get_item(dictionary, key):
     ).format(dictionary, key)
     return dictionary.get(key)
 
+# Also see https://docs.djangoproject.com/en/dev/ref/templates/builtins/?from=olddocs#include
+@register.filter
+def key(d, key_name):
+    """{{ dict|key:key_name }}"""
+    return d[key_name]
+
+
 
 # XXX Should this be global?
 gocardless_client = gocardless_pro.Client(
@@ -63,7 +70,7 @@ gocardless_client = gocardless_pro.Client(
     environment=settings.GOCARDLESS_ENVIRONMENT,
 )
 
-
+print(settings.GOCARDLESS_ACCESS_TOKEN, settings.GOCARDLESS_ENVIRONMENT)
 ERROR_TEMPLATE = '''
 <html>
   <h3>{heading}</h3>
@@ -528,30 +535,24 @@ def dashboard_gocardless(request):
             request.META['HTTP_HOST'],
             reverse('gocardless_callback'),
         )
-        try:
+        if not settings.SKIP_GOCARDLESS:
             redirect_flow = gocardless_client.redirect_flows.create(params={
                 'description': 'Your Growing Communities Veg Box Order',
                 'session_token': session_token,
                 'success_redirect_url': success_redirect_url,
                 # 'scheme': ... DD scheme.
             })
-        except:
-            if not settings.TIME_TRAVEL:
-                raise
-            else:
-                offline_mode = True
-                redirect_flow = _RF()
-                redirect_flow.id = str(uuid.uuid4())
         else:
-            offline_mode = False
+            redirect_flow = _RF()
+            redirect_flow.id = str(uuid.uuid4())
         mandate = BillingGoCardlessMandate(
             session_token=session_token,
             gocardless_redirect_flow_id=redirect_flow.id,
             customer=request.user.customer,
         )
         mandate.save()
-        if offline_mode:
-            return HttpResponse('Offline, did not set up mandate')
+        if settings.SKIP_GOCARDLESS:
+            return redirect(reverse('gocardless_callback')+'?skip=true')
         else:
             return redirect(redirect_flow.redirect_url)
     else:
@@ -564,9 +565,10 @@ def dashboard_gocardless(request):
 def gocardless_callback(request):
     if settings.GOCARDLESS_ENVIRONMENT == 'sandbox' and \
        request.GET.get('skip', '').lower() == 'true':
-        mandate = BillingGoCardlessMandate.objects.filter(
+        assert settings.SKIP_GOCARDLESS
+        mandate = list(BillingGoCardlessMandate.objects.filter(
             customer=request.user.customer,
-        ).get()
+        ).all())[-1]
         mandate.gocardless_mandate_id = str(uuid.uuid4())
     else:
         mandate = BillingGoCardlessMandate.objects.filter(

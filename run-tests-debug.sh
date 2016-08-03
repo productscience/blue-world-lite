@@ -24,7 +24,8 @@ sleep 1
 echo "done."
 
 echo "Running tests ..."
-python billing_week.py && behave "$@" || echo '++++++++++++++++++++++++++ FAILED ++++++++++++++++++++++++'
+# python billing_week.py && python manage.py test --failfast && behave "$@" || echo '++++++++++++++++++++++++++ FAILED ++++++++++++++++++++++++'
+behave "$@" || echo '++++++++++++++++++++++++++ FAILED ++++++++++++++++++++++++'
 echo "done"
 
 echo "Stopping lathermail ..."
