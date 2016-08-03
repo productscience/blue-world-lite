@@ -6,18 +6,18 @@ The DB user needs permission to create the test_blueworld database:
     ALTER USER blueworld CREATEDB;
 """
 
-
-from django.test import TestCase
-from join.admin import packing_list
-from join.models import CollectionPoint, CustomerCollectionPointChange
-from join.models import Customer, BagType
-from billing_week import get_billing_week, parse_billing_week
-from django.utils import timezone
-import freezegun
 import pytz
 import datetime
 from collections import OrderedDict
 
+from django.contrib.auth import models
+from django.test import TestCase, TransactionTestCase
+import freezegun
+
+from billing_week import get_billing_week, parse_billing_week
+from join.admin import packing_list
+from join.models import CollectionPoint, CustomerCollectionPointChange
+from join.models import Customer, BagType
 
 from unittest import TestCase
 TestCase.maxDiff = None
@@ -222,3 +222,27 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             ],
             [('Two', 'Second')]
         )
+
+class CountingUserTestCase(TransactionTestCase):
+    """
+    In this case, we're actually testing that our fixtures have a
+    sufficiently high primary key to start with, so we can import old users
+    from the older Blue World app without their ids clashing
+    """
+    fixtures = ['../data/user.json']
+
+    def setUp(self):
+        self.users = models.User.objects.all()
+
+    def testStartingCountIsHighEnough(self):
+        for u in self.users:
+            self.assertGreater(u.pk, 10000)
+
+    def testNewUsersStartwithHighIdsAsWell(self):
+        self.users = models.User.objects.all()
+        m = models.User.objects.create(
+            email="foo@bar.com",
+            password="sekrit",
+            username="new_user"
+        )
+        self.assertGreater(m.pk, 10000)
