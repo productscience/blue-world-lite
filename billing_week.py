@@ -11,15 +11,14 @@ import pytz
 
 
 def first_wed_of_month(year, month):
-    d = datetime.date(year, month, 1)
-    first_day_of_month = d - timedelta(days=d.day-1)
+    first_day_of_month = datetime.date(year, month, 1)
     if first_day_of_month.weekday() == 2:
-        return d
+        return first_day_of_month
     else:
         days_until_wed = 2 - first_day_of_month.weekday()
         if days_until_wed < 0:
             days_until_wed += 7
-        return d + timedelta(days_until_wed)
+        return first_day_of_month + timedelta(days_until_wed)
 
 
 def in_dst(dt):

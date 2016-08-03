@@ -91,8 +91,8 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
                     queryset,
                     parse_billing_week(form.cleaned_data['billing_week'])
                 )
-                # context['now_billing_week'] = bw
-                context['now_billing_week'] = context['billing_week']
+                context['now_billing_week'] = bw
+                # context['now_billing_week'] = context['billing_week']
                 context['now'] = now
                 return render(request, 'packing-list.html', context)
         else:
