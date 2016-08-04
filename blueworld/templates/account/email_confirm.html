@@ -1,0 +1,39 @@
+{% extends "account/base.html" %}
+
+{% load i18n %}
+{% load account %}
+
+{% block head_title %}{% trans "Confirm E-mail Address" %}{% endblock %}
+
+
+{% block content %}
+<h1>{% trans "Confirm E-mail" %}</h1>
+
+{% if confirmation %}
+
+{% user_display confirmation.email_address.user as user_display %}
+
+<p>{% blocktrans with confirmation.email_address.email as email %}Okay, we've got your email address as <a href="mailto:{{ email }}">{{ email }}</a>.{% endblocktrans %}</p>
+
+<p>
+  Is this correct?
+</p>
+
+<form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+{% csrf_token %}
+    <button type="submit" class="button primary font-display">{% trans 'Yes, this is my email address' %}</button>
+</form>
+
+{% else %}
+
+{% url 'account_email' as email_url %}
+
+<p>{% blocktrans %}This e-mail confirmation link expired or is invalid.></p>
+
+<p>You can send another confirmation email below, or contact us at <a href="mailto:boxscheme@growingcommunities.org">boxscheme@growingcommunities.org</a> for help.</p>
+
+<p><a class="button font-display" href="{{ email_url }}">new e-mail confirmation request</a>.{% endblocktrans %}</p>
+
+{% endif %}
+
+{% endblock %}
