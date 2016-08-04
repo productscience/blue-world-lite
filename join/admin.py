@@ -325,7 +325,6 @@ class CustomerAdmin(BlueWorldModelAdmin):
 
     # controls which fields to display in the change form
     fields = [
-        'user',
         'account_status',
         'full_name',
         'nickname',
