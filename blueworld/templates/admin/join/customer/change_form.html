@@ -4,6 +4,36 @@
 {% block object-tools %}
   <ul class="object-tools">
     <li><a href="https://secure.helpscout.net/search/convos/?query={{ name_for_helpscout }}">Look up on Helpscout</a></li>
+    <li>
+      <style media="screen">
+        .object-tools button{
+          border-radius: 15px;
+          display: block;
+          float: left;
+          padding: 6px 12px 6px 12px;
+          border:0;
+          background: #999;
+          font-weight: 400;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #fff;
+        }
+
+        .object-tools button:focus, .object-tools button:hover {
+          background-color: #417690;
+        }
+
+        .object-tools button:focus{
+          text-decoration: none;
+        }
+      </style>
+      {# allows for hikjack from a customer detail view as well #}
+      <form action="/hijack/{{ customer_user }}/" method="post">
+          {% csrf_token %}
+      <button type="submit">Become {{ name_for_helpscout }} </button>
+      </form>
+    </li>
   {% if has_add_permission %}
       {% block object-tools-items %}
         <li>
