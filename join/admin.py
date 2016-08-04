@@ -323,6 +323,7 @@ class CustomerAdmin(BlueWorldModelAdmin):
     def has_add_permission(self, request, obj=None):
         return False
 
+    # controls which fields to display in the change form
     fields = [
         'user',
         'account_status',
@@ -336,6 +337,18 @@ class CustomerAdmin(BlueWorldModelAdmin):
         'balance_carried_over',
         'tags',
     ]
+
+    def change_view(self, request, object_id, extra_context=None):
+        """
+        Overrides the normal change form view to lets us add vars, for linking
+        to external services, like Helpscout.
+        """
+        obj = Customer.objects.get(pk=object_id)
+        my_context = {
+            'name_for_helpscout': obj.full_name
+        }
+        return super(CustomerAdmin, self).change_view(request, object_id,
+            extra_context=my_context)
 
 
 class CustomerOrderChangeAdmin(BlueWorldModelAdmin):

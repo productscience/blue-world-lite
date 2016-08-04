@@ -4,6 +4,8 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+from django.conf import settings
+
 from join.models import AccountStatusChange
 from join.models import Customer
 
@@ -34,10 +36,16 @@ class Command(BaseCommand):
         Creates a new user for the customer record passed in.
         Returns a newlt created user instance
         """
+
         username = "{}_{}".format(
             customer['fields'].get('first_name', '__').lower(),
             customer['pk'])
-        email = customer['fields'].get('email')
+        if settings.FAKE_IMPORTED_EMAILS:
+            email = "{}.{}@example.com".format(
+                customer['fields'].get('first_name', '__').lower(),
+                customer['fields'].get('surname', '__').lower())
+        else:
+            email = customer['fields'].get('email')
         password = "123123ab"
 
 
@@ -58,6 +66,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         json_path = options['path']
 
+        self.stdout.write(self.style.NOTICE("looking up this path: {}".format(json_path)))
         with open(json_path) as data_file:
             blob_o_stuff = json.load(data_file)
 
@@ -65,8 +74,12 @@ class Command(BaseCommand):
             bag_choices = [item for item in blob_o_stuff if item['model'] == 'customers.bagchoice']
             gc_subs = [item for item in blob_o_stuff if item['model'] == 'customers.gcsubscription']
 
+            self.stdout.write(self.style.NOTICE("Found {} customer entries".format(len(customers))))
+            self.stdout.write(self.style.NOTICE("Found {} bagchoice entries".format(len(bag_choices))))
+            self.stdout.write(self.style.NOTICE("Found {} gc_sub entries".format(len(gc_subs))))
 
-            for c in customers:
+            total_customers = len(customers)
+            for (index, c) in enumerate(customers):
                 user = self._make_user(c)
 
                 now = timezone.now()
@@ -100,10 +113,8 @@ class Command(BaseCommand):
                 customer.bag_quantities = self._convert_bag_choices(old_bag_choices)
 
                 customer.collection_point = cf['pickup']
-
+                self.stdout.write(self.style.SUCCESS("Imported {} of {}: {}".format(
+                    index,
+                    total_customers,
+                    customer.full_name)))
                 # TODO Make a corresponding BillingGoCardlessMandate
-
-        self.stdout.write(self.style.SUCCESS("looking up this path: {}".format(json_path)))
-        self.stdout.write(self.style.SUCCESS("Found {} customer entries".format(len(customers))))
-        self.stdout.write(self.style.SUCCESS("Found {} bagchoice entries".format(len(bag_choices))))
-        self.stdout.write(self.style.SUCCESS("Found {} gc_sub entries".format(len(gc_subs))))

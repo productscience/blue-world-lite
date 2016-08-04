@@ -38,6 +38,7 @@ SECRET_KEY = 'yw$xz=xr#r4@pd+cw1vg6el%s%6vpls00ylg(u_p-)t2kpd%w='
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ['DEBUG'].lower() == 'true'
+FAKE_IMPORTED_EMAILS = os.environ['FAKE_IMPORTED_EMAILS'].lower() == 'true'
 
 ALLOWED_HOSTS = []
 
