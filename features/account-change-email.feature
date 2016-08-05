@@ -65,7 +65,7 @@ Feature: Change email
     Given I switch to the user browser
       And I navigate to the formatted url /confirm-email/{key}/
       And I see "Confirm E-mail Address" in "h1"
-     When I click the "Confirm" button
+     When I click on ".confirm button"
      Then the browser moves to /dashboard
       And I see "You have confirmed email-changer-2@example.com." in "#messages"
 

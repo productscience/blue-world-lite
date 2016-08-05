@@ -7,7 +7,7 @@
 
 
 {% block content %}
-<h1>{% trans "Confirm E-mail" %}</h1>
+<h1>{% trans "Confirm E-mail Address" %}</h1>
 
 {% if confirmation %}
 
@@ -19,7 +19,7 @@
   Is this correct?
 </p>
 
-<form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+<form class="confirm" method="post" action="{% url 'account_confirm_email' confirmation.key %}">
 {% csrf_token %}
     <button type="submit" class="button primary font-display">{% trans 'Yes, this is my email address' %}</button>
 </form>

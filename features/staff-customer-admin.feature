@@ -22,9 +22,6 @@ Feature: Customer admin
 
   Scenario: Customer view
      When I follow the "Customer One" link
-
-     Then I see "User" in ".field-user label"
-      And there are 0 "input" elements in ".field-user"
       And I see "Account status" in ".field-account_status label"
       And there are 0 "input" elements in ".field-account_status"
       And I see "Full name" in ".field-full_name label"
@@ -49,7 +46,7 @@ Feature: Customer admin
      | full_name    | nickname     | mobile       |
      |              | customer-one | 01234 567890 |
      | Customer One |              | 01234 567890 |
-  
+
 
   Scenario: Can save with empty mobile
     Given I navigate to /admin/join/customer/

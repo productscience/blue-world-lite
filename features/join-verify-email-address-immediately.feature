@@ -27,8 +27,8 @@ Feature: Join - Verify Email Address Immediately
       And I capture the value of "/confirm-email/(.*)/" in the message to the "key" variable
      When I navigate to the formatted url /confirm-email/{key}/
      Then I see "Confirm E-mail Address" in "h1"
-      And I see "Please confirm that join-verify-immediately@example.com is an e-mail address for user join-verify-immediately." in "body"
-     When I click the "Confirm" button
+      And I see "join-verify-immediately@example.com" in "body"
+      And I click on ".confirm button"
      Then the browser moves to /dashboard/gocardless
       And I see "Set up Go Cardless" in "h1"
       And I click the "Set up Go Cardless" button

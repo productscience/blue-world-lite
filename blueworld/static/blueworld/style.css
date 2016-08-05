@@ -3519,7 +3519,7 @@ table.hover tr:nth-of-type(even):hover {
 
 h1, h2, h3, .font-display {
   font-family: "GC Display", "Impact", "Arial", sans-serif;
-  text-transform: uppercase; }
+}
 
 .font-text {
   font-family: "Domaine Text Regular", "Times New Roman", Georgia, serif;
