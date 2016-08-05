@@ -27,6 +27,8 @@ def step_impl(context, text, container_selector):
     elements[0].click()
 
 
+
+
 @step('I login as a superuser')
 def step_impl(context):
     context.execute_steps(
@@ -93,7 +95,7 @@ CREATE_USER_STEPS = '''
           And I fetch the first sent email
           And I capture the value of "/confirm-email/(.*)/" in the message to the "key" variable
          When I navigate to the formatted url /confirm-email/{{key}}/
-          And I click the "Confirm" button
+          And I click on ".confirm button"
 '''
 
 

@@ -325,7 +325,6 @@ class CustomerAdmin(BlueWorldModelAdmin):
 
     # controls which fields to display in the change form
     fields = [
-        'user',
         'account_status',
         'full_name',
         'nickname',
@@ -344,8 +343,10 @@ class CustomerAdmin(BlueWorldModelAdmin):
         to external services, like Helpscout.
         """
         obj = Customer.objects.get(pk=object_id)
+
         my_context = {
-            'name_for_helpscout': obj.full_name
+            'name_for_helpscout': obj.full_name,
+            'customer_user': obj.user.id
         }
         return super(CustomerAdmin, self).change_view(request, object_id,
             extra_context=my_context)

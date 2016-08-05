@@ -14,7 +14,7 @@ Feature: Dashboard
      And I hover over "<selector>"
      When I follow the "<link>" link in "#navigation"
      Then the browser moves to <url>
-      And I see "<expected>" in "p"
+      And I see "<expected>" in ".main"
 
    Examples: Dashboard links
      | link                    | selector                  | url                                | expected                                  |

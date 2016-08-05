@@ -1,0 +1,2 @@
+web: python manage.py runserver
+mail: rm -f `pwd`lathermail.db; lathermail --db-uri sqlite:////`pwd`lathermail.db
