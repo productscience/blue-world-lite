@@ -13,7 +13,7 @@ Feature: Become user
 
   @wip
   Scenario: Set a reminder
-    Given I switch to the staff browser
+    Given I switch to the admin browser
       When I view the customer profile for "Reminder"
       And I create an incomplete reminder for the next week
       Then I should see the reminder on their profile
