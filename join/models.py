@@ -461,3 +461,25 @@ class Skip(models.Model):
             self.collection_date.isoformat(),
             self.created.isoformat(),
         )
+
+class Reminder(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+    )
+    title = models.CharField(max_length=30)
+    date = models.DateField(null=True, blank=True)
+    details = models.TextField(null=True, blank=True)
+    done = models.BooleanField(default=False)
+
+    def __unicode__(self):
+        return self.title
+
+    class Meta:
+        ordering = ['-date']
+
+    def is_due(self):
+        return self.date <= timezone.now()
+        # return self.date <= datetime.date.today()
