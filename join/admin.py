@@ -380,15 +380,6 @@ admin.site.disable_action('delete_selected')
 
 def packing_list(collection_points, billing_week):
     '''
-    We'll need the following data strucutures:
-
-    `bag_name`:                         A lookup of bag ID to bag name
-    `collection_point_name`:            A lookup of bag ID to bag name
-    `customer_name`:                    A lookup of customer ID to customer
-                                        name
-    `customer_latest_bag_quantities`
-    `customer_latest_collection_point`
-
     Although it would be faster to do all this in the database, in terms of
     scalability, assembling everything in Django from separate data means
     the database does less work, and that the database could be partitioned
@@ -406,35 +397,13 @@ def packing_list(collection_points, billing_week):
     but where each stage of the hierarchy is keyed by an ID, and which
     only has the properties we've already fetched from the database.
 
-    Then we'll put it all together into a big packing_list that looks like
-    this:
-
-        collection_point = packing_list[collection_point_id]
-        collection_point.name
-        collection_point.collection_day
-
-        collection_point.total.bags.all
-        collection_point.total.bags.by_id[bag_id]
-        collection_point.total.customers.all
-        collection_point.total.customers.on_holiday
-        collection_point.total.customers.collecting
-
-        customer = collection_point.current_customer[customer_id]
-        customer.bags[bag_id] = bag_quantity
-        customer.new          = True/False
-        customer.holiday      = True/False
+    Then we'll put it all together into a big packing_list
 
     Note that although we can go backwards in time on holiday status,
     collection points and orders, the names, collection_day and Starter status
     are only valid until the last deadline.
     '''
     bag_types = BagType.objects.all().only('id', 'name', 'tag_color')
-    collection_point_name = dict(
-        CollectionPoint.objects.all()
-        .filter(pk__in=collection_points)
-        .only('id', 'name')
-        .values_list('id', 'name')
-    )
     customer_name = dict(
         Customer.objects.all()
         .only('id', 'full_name')
@@ -484,7 +453,10 @@ def packing_list(collection_points, billing_week):
             bag_quantity.quantity
     _latest_collection_points = (
         CustomerCollectionPointChange.objects
-        .filter(changed_in_billing_week__lt=str(billing_week))
+        .filter(
+            changed_in_billing_week__lt=str(billing_week),
+            collection_point__in=collection_points,
+        )
         .order_by('customer', '-changed')
         .distinct('customer')
         .only(

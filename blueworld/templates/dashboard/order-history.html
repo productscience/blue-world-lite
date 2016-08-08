@@ -43,6 +43,8 @@ table#order-history td {
             Account status changed
             {% elif event.type == 'SKIP_WEEK' %}
             Holiday request made
+            {% elif event.type == 'OUT_OF_CYCLE_PAYMENT' %}
+            Payment
             {% endif %}
           </td>
           <td>
@@ -55,6 +57,8 @@ table#order-history td {
             Please start collecting here from {{ event.bw.next_month|date:"DATE_FORMAT"}}.
             {% elif event.type == 'ACCOUNT_STATUS_CHANGE' %}
             Account status changed to <strong>{{ event.new_account_status }}</strong>.
+            {% elif event.type == 'OUT_OF_CYCLE_PAYMENT' %}
+            Payment requested for <strong>£{{ event.amount }}</strong> (current status: <tt>{{ event.status }}</tt>).
             {% elif event.type == 'SKIP_WEEK' %}
             No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
             You'll be refunded in {{ event.bw.next_month|date:"F"}} for skipping this week

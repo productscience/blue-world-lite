@@ -4,11 +4,11 @@
 {% block head_title %}Billing History{% endblock %}
 {% block extra_head %}
 <style>
-table#order-history tr:nth-of-type(even) {
-    background-color: transparent !important;
+#billing-history tr th {
+    text-align: left;
 }
-table#order-history tr.line {
-    border-top: 1px solid #666;
+.total {
+    text-align: right;
 }
 </style>
 {% endblock %}
@@ -17,37 +17,32 @@ table#order-history tr.line {
     <div class="row">
       <h1>Billing History</h1>
 
-      <p>Your account was created on {{ created }}.</p>
+      <table id="billing-history">
+      <tr>
+        <th>Date</th><th>Requested</th><th>Received</th>
+      </tr>
 
-      {% for month in billing_history %}
-      <h2>{{ month|date:"F Y" }}</h2>
-
-      <table id="order-history">
-        {% for minute in billing_history|get_item:month %}
-        {% for changed, event_type, detail in billing_history|get_item:month|get_item:minute %}
-        {% if forloop.first %}
-        <tr class="line">
-          <td style="vertical-align: top;" rowspan={{ billing_history|get_item:month|get_item:minute|length }}>{{ minute }}</td>
-        {% else %}
-        <tr>
+      {% for payment in payments %}
+      <tr>
+        <td>{{ payment.created }}</td>
+        <td>£{{ payment.amount }}</td>
+        <td>
+          {% if payment.completed %}
+          £{{ payment.amount }}
+          {% else %}
+          <tt>{{ payment.status }}</tt>
           {% endif %}
-          <td>
-            {% if event_type == 'ORDER_CHANGE' %}
-            Order changed to:
-            {% elif event_type == 'COLLECTION_POINT_CHANGE' %}
-            Collection point changed to:
-            {% elif event_type == 'ACCOUNT_STATUS_CHANGE' %}
-            Account status changed to:
-            {% elif event_type == 'SKIP_WEEK' %}
-            Requested to skip the following collection:
-            {% endif %}
-          </td>
-          <td>{{ detail }}</td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </table>
-    {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+      </table> 
+      <h3 class="total"><strong>Balance: 
+      {% if balance > 0 %}
+      -£{{ balance }}
+      {% else %}
+      £{{ balance }}
+      {% endif %}
+      </strong></h3>
     </div>
     {% endtimezone %}
 {% endblock %}

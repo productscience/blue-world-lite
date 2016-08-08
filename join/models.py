@@ -2,6 +2,7 @@ from billing_week import get_billing_week
 from collections import OrderedDict
 from decimal import Decimal
 from django.conf import settings
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -193,6 +194,11 @@ class BillingGoCardlessMandate(models.Model):
     session_token = models.CharField(max_length=255, default='')
     gocardless_redirect_flow_id = models.CharField(max_length=255, default='')
     gocardless_mandate_id = models.CharField(max_length=255, default='')
+    created = models.DateTimeField()
+    created_in_billing_week = models.CharField(max_length=9)
+    completed = models.DateTimeField(null=True, blank=True)
+    completed_in_billing_week = models.CharField(max_length=9, null=True, blank=True)
+    amount_notified = models.DecimalField(max_digits=6, decimal_places=2)
     customer = models.ForeignKey(
         # Has to be a string because Customer is not defined yet.
         'Customer',
@@ -353,7 +359,7 @@ class AccountStatusChange(models.Model):
         Customer,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
-        related_name='account_status_change',
+        related_name='account_status_changes',
     )
     status = models.CharField(max_length=255, choices=STATUS_CHOICES)
 
@@ -461,3 +467,128 @@ class Skip(models.Model):
             self.collection_date.isoformat(),
             self.created.isoformat(),
         )
+
+class Payment(models.Model):
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='payments',
+    )
+    created = models.DateTimeField()
+    created_in_billing_week = models.CharField(max_length=9)
+    completed = models.DateTimeField(null=True, blank=True)
+    completed_in_billing_week = models.CharField(max_length=9, null=True, blank=True)
+    gocardless_mandate_id = models.CharField(max_length=255)
+    amount=models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=False,
+        blank=False,
+    )
+    gocardless_payment_id= models.CharField(max_length=255)
+
+
+    def _get_latest_status(self):
+        return self.status_changes.order_by('-changed')[0].status
+    status = property(_get_latest_status)
+
+
+class OutOfCyclePayment(Payment):
+    JOIN_WITH_COLLECTIONS_AVAILABLE = 'JOIN_WITH_COLLECTIONS_AVAILABLE'
+    REASON_CHOICES = (
+        (JOIN_WITH_COLLECTIONS_AVAILABLE, 'Joined with collections available in the current month'),
+    )
+    reason = models.CharField(max_length=255, choices=REASON_CHOICES)
+
+class RegularPayment(Payment):
+    pass
+
+
+class Invoice(models.Model):
+    billing_week = models.CharField(max_length=9)
+    payment = models.ForeignKey(
+        RegularPayment,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='invoice',
+    )
+
+
+class LineItem(models.Model):
+    created = models.DateTimeField()
+    created_in_billing_week = models.CharField(max_length=9)
+    invoice = models.ForeignKey(
+        Invoice,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='payment_status_changes',
+    )
+    amount=models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=False,
+        blank=False,
+    )
+    
+
+class ManualAdjustment(LineItem):
+    description = models.CharField(max_length=255)
+
+
+class PredictedWeeklyOrder(LineItem):
+    predicted_weekly_order = models.ForeignKey(
+        CustomerOrderChange,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='order_change',
+    )
+
+
+class SkippedWeekCredit(LineItem):
+    refund_from = models.ForeignKey(
+        PredictedWeeklyOrder,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='skip_credit',
+    )
+    skip = models.ForeignKey(
+        Skip,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='credit',
+    )
+
+
+class OrderChangeCredit(LineItem):
+    actually_received = models.ForeignKey(
+        PredictedWeeklyOrder,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='skipped_by',
+    )
+
+
+
+
+class PaymentStatusChange(models.Model):
+    changed = models.DateTimeField()
+    changed_in_billing_week = models.CharField(max_length=9)
+    payment = models.ForeignKey(
+        Payment,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='status_changes',
+    )
+    status = models.CharField(max_length=255)
+
+    def __str__(self):
+        return 'Payment Status Change to {} for {} on {}'.format(
+            self.status,
+            self.payment.customer.full_name,
+            self.changed.strftime('%Y-%m-%d'),
+        )
+
+
+class GoCardlessEvent(models.Model):
+    event = JSONField()
