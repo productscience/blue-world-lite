@@ -530,7 +530,7 @@ class LineItem(models.Model):
         null=False,
         blank=False,
     )
-    
+
 
 class ManualAdjustment(LineItem):
     description = models.CharField(max_length=255)

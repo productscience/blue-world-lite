@@ -3,6 +3,8 @@ from datetime import timedelta
 from decimal import Decimal
 from operator import itemgetter
 import datetime
+import hmac
+import hashlib
 import json
 import uuid
 
@@ -645,7 +647,7 @@ def gocardless_callback(request):
     params = {
         "amount": int(amount) * 100, # This is in pence
         "currency": "GBP",
-        # If not specified means ASAP. 
+        # If not specified means ASAP.
         "charge_date": next_possible_charge_date, #now.date().isoformat(), #datetime.date.now().strftime('%Y-%m-%d'),
         # "reference": "GROCOM",
         "metadata": {
@@ -1305,8 +1307,11 @@ def gocardless_events_webhook(request):
     # https://developer.gocardless.com/2015-07-06/#webhooks-examples
     print(request.GET)
     print(request.POST)
-    # XXX Not checking signature at the moment.
     print(request.META['HTTP_WEBHOOK_SIGNATURE'])
+    dig = hmac.new(settings.GOCARDLESS_WEBHOOK_SECRET.encode('utf8'), msg=request.body, digestmod=hashlib.sha256).hexdigest()
+    print(dig)
+    if request.META['HTTP_WEBHOOK_SIGNATURE'] != dig:
+        return HttpResponse('Invalid Token', status=498, reason='Invalid Token')
     data = request.body.decode('utf-8')
     print(data)
     now = timezone.now()
@@ -1316,7 +1321,7 @@ def gocardless_events_webhook(request):
     payload = json.loads(webhook.event)
     for event in payload['events']:
         if event['details']['cause'] == 'payment_paid_out':
-            payment = Payment.objects.filter(gocardless_payment_id=event['links']['payment']).get() 
+            payment = Payment.objects.filter(gocardless_payment_id=event['links']['payment']).get()
             payment.completed = now
             payment.completed_in_billing_week = bw
             payment.save()
