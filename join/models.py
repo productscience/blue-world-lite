@@ -463,7 +463,7 @@ class Skip(models.Model):
         )
 
 class Reminder(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(
         Customer,
         # XXX Not sure about this yet
