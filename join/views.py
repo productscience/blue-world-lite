@@ -597,7 +597,7 @@ def _get_cost_for_billing_week(customer, bw):
 
 @login_required
 @not_staff
-#@gocardless_is_not_set_up
+@gocardless_is_not_set_up
 def gocardless_callback(request):
     if settings.GOCARDLESS_ENVIRONMENT == 'sandbox' and \
        request.GET.get('skip', '').lower() == 'true':
@@ -642,31 +642,38 @@ def gocardless_callback(request):
     assert int(amount*100) == (amount*100)
 
     mandate_id = request.user.customer.gocardless_current_mandate.gocardless_mandate_id
-    mr = gocardless_client.mandates.get(mandate_id)
-    next_possible_charge_date = mr.next_possible_charge_date
-    params = {
-        "amount": int(amount) * 100, # This is in pence
-        "currency": "GBP",
-        # If not specified means ASAP.
-        "charge_date": next_possible_charge_date, #now.date().isoformat(), #datetime.date.now().strftime('%Y-%m-%d'),
-        # "reference": "GROCOM",
-        "metadata": {
-          # Shows on the payments page for GoCardless
-          # "reconcile_end_month": "2016-01",
-        },
-        "links": {
-          "mandate": mandate_id,
-        },
-    }
-    payment_response = gocardless_client.payments.create(params=params)
-    print(payment_response.attributes)
-#     # .attrubtes: {'reference': None, 'links': {'mandate': 'MD0000VWFBW3HR', 'creditor': 'CR000049T7G1D4'}, 'metadata': {'reconcile_end_month': '2016-01'}, 'amount_refunded': 0, 'status': 'pending_submission', 'amount': 100, 'id': 'PM0001J8NVC4R4', 'currency': 'GBP', 'charge_date': '2016-07-26', 'created_at': '2016-07-20T11:55:07.407Z', 'description': None}
+    if settings.SKIP_GOCARDLESS:
+        payment_response_id = str(uuid.uuid4())
+        payment_response_status = 'skipped'
+    else:
+        mr = gocardless_client.mandates.get(mandate_id)
+        next_possible_charge_date = mr.next_possible_charge_date
+        params = {
+            "amount": int(amount) * 100, # This is in pence
+            "currency": "GBP",
+            # If not specified means ASAP.
+            "charge_date": next_possible_charge_date, #now.date().isoformat(), #datetime.date.now().strftime('%Y-%m-%d'),
+            # "reference": "GROCOM",
+            "metadata": {
+              # Shows on the payments page for GoCardless
+              # "reconcile_end_month": "2016-01",
+            },
+            "links": {
+              "mandate": mandate_id,
+            },
+        }
+        payment_response = gocardless_client.payments.create(params=params)
+        print(payment_response.attributes)
+#         # .attrubtes: {'reference': None, 'links': {'mandate': 'MD0000VWFBW3HR', 'creditor': 'CR000049T7G1D4'}, 'metadata': {'reconcile_end_month': '2016-01'}, 'amount_refunded': 0, 'status': 'pending_submission', 'amount': 100, 'id': 'PM0001J8NVC4R4', 'currency': 'GBP', 'charge_date': '2016-07-26', 'created_at': '2016-07-20T11:55:07.407Z', 'description': None}
+        payment_response_id = payment_response.id
+        payment_response_status = payment_response.status
+
     payment = OutOfCyclePayment(
         customer=request.user.customer,
         gocardless_mandate_id=mandate_id,
         amount=amount,
         reason='JOIN_WITH_COLLECTIONS_AVAILABLE',
-        gocardless_payment_id=payment_response.id,
+        gocardless_payment_id=payment_response_id,
         created=now,
         created_in_billing_week=str(bw),
     )
@@ -674,7 +681,7 @@ def gocardless_callback(request):
     payment_status_change = PaymentStatusChange(
         changed=now,
         changed_in_billing_week=str(bw),
-        status=payment_response.status,
+        status=payment_response_status,
         payment=payment,
     )
     payment_status_change.save()

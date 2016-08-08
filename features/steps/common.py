@@ -1,30 +1,7 @@
-import time
-
 from browserstep.common import *
 from browserstep.debug import *
 from browserstep.popup import *
 from browserstep.sentmail import *
-
-from selenium.webdriver.common.action_chains import ActionChains
-
-
-@step('I hover over "{container_selector}"')
-def step_impl(context, container_selector):
-    element_to_hover_over = context.browser.find_element_by_css_selector(container_selector)
-    hover = ActionChains(context.browser).move_to_element(element_to_hover_over)
-    hover.perform()
-    time.sleep(0.7)
-
-
-# Added here, but this is best off being extracted into browserstep itself
-@step('I follow the "{text}" link in "{container_selector}"')
-def step_impl(context, text, container_selector):
-    container = context.browser.find_element_by_css_selector(container_selector)
-    elements = container.find_elements_by_link_text(text)
-    if not elements:
-        elements = container.find_elements_by_xpath("//img[contains(@alt,'{}')]".format(text))
-    assert len(elements) == 1, "Expected 1 matching link, not {}".format(len(elements))
-    elements[0].click()
 
 
 @step('I login as a superuser')
