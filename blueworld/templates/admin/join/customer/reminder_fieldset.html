@@ -1,3 +1,4 @@
+
 <fieldset class="module aligned {{ fieldset.classes }}">
     {% if fieldset.name %}<h2>{{ fieldset.name }}</h2>{% endif %}
     {% if fieldset.description %}
@@ -5,45 +6,10 @@
     {% endif %}
     {% for line in fieldset %}
         <div class="{% if line.fields|length_is:'1' and line.errors %} errors{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% endfor %}">
-          {% comment %}
-            <div class="form-row
-              {% if line.fields|length_is:'1' and line.errors %}
-                errors
-              {% endif %}
-              {% if not line.has_visible_field %}
-                hidden
-              {% endif %}
-              {% for field in line %}
-                {% if field.field.name %}
-                  field-{{ field.field.name }}
-                {% endif %}
-              {% endfor %}
-              ">
-          {% endcomment %}
 
             {% if line.fields|length_is:'1' %}{{ line.errors }}{% endif %}
             {% for field in line %}
                 <div{% if not line.fields|length_is:'1' %} class="field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}"{% elif field.is_checkbox %} class="checkbox-row"{% endif %}>
-
-                {% comment %}
-
-                  <div
-                  {% if not line.fields|length_is:'1' %}
-                    class="field-box
-                      {% if field.field.name %}
-                        field-{{ field.field.name }}
-                      {% endif %}
-                      {% if not field.is_readonly and field.errors %}
-                         errors
-                      {% endif %}
-                      {% if field.field.is_hidden %}
-                        hidden
-                      {% endif %}"
-                  {% elif field.is_checkbox %}
-                      class="checkbox-row"
-                  {% endif %}>
-
-                {% endcomment %}
 
                     {% if not line.fields|length_is:'1' and not field.is_readonly %}{{ field.errors }}{% endif %}
                     {% if field.is_checkbox %}
@@ -59,6 +25,11 @@
                               {{ field.field }}
                           {% endif %}
                         {% else %}
+
+                          {% comment %}
+                            This is pretty messy, but I can't see a nicer way to do this using django's templating language, or digging further into Django Admin. Sorry
+                          {% endcomment %}
+
                           {% if field.field.name == "date"  %}
                             <input type="hidden" id="{{ field.field.id_for_label }}" name="{{ field.field.html_name }}"  value="{{ field.field.value|date:"Y-n-d"  }}">
                           {% endif %}
@@ -76,19 +47,6 @@
                           {% endif %}
 
                         {% endif %}
-
-
-
-
-                        {% comment %}
-
-                        {{ field.label_tag }}
-                        {% if field.is_readonly %}
-                            <p>{{ field.contents }}</p>
-                        {% else %}
-                            {{ field.field }}
-                        {% endif %}
-                        {% endcomment %}
 
                     {% endif %}
                     {% if field.field.help_text %}

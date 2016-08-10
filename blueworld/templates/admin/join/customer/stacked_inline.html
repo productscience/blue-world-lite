@@ -6,7 +6,7 @@
    }
    #reminder_set-group .done h3{
      text-decoration: line-through;
-     color: #AAA;
+     color: #aaa;
    }
    #reminder_set-group .done .field-details,
    #reminder_set-group .done .field-done {
@@ -53,20 +53,12 @@
     addText: "{% filter escapejs %}{% blocktrans with verbose_name=inline_admin_formset.opts.verbose_name|capfirst %}Add another {{ verbose_name }}{% endblocktrans %}{% endfilter %}"
   });
 
+  // find any reminders that are 'done' have a done classed applied, so the styles above affect it
   $('#reminder_set-group .dynamic-reminder_set').map(function() {
-      console.log(this);
-      if (django.jQuery(this).find('.field-done :checked').length == 1) {
-        return this
+      if ($(this).find('.field-done :checked').length == 1) {
+        return this;
       }
   }).addClass('done');
-
-  // django.jQuery('#reminder_set-group .dynamic-reminder_set').map(function() {
-  //   if (django.jQuery(this).find('.field-done :checked').length == 1) {
-  //       return django.jQuery(this)
-  //   }
-  // })
-  //
-  // if (django.jQuery(this).find('.field-done :checked').length == 1) { return django.jQuery(this)}
 
 })(django.jQuery);
 </script>
