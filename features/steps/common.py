@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 
 from browserstep.common import *
 from browserstep.debug import *
@@ -6,6 +7,8 @@ from browserstep.popup import *
 from browserstep.sentmail import *
 
 from selenium.webdriver.common.action_chains import ActionChains
+
+from django.utils import timezone
 
 
 @step('I hover over "{container_selector}"')
@@ -173,6 +176,35 @@ def step_impl(context, login, password):
      Then the browser moves to /dashboard/gocardless
         '''.format(login=login, password=password)
     )
+
+@step('I view the customer profile for "{customer}"')
+def step_impl(context, customer):
+
+
+    ''''
+    # context.execute_steps(
+    #     '''
+    # Given I switch to the admin browser
+    #     And I navigate to /admin/join/customer/?q={customer}
+    #     And I follow the "{customer}" link in "#result_list .field-full_name"
+    #     '''.format(customer=customer)
+    # )
+
+
+@step('I have created an incomplete reminder for the next week')
+def step_impl(context):
+
+    next_week = timezone.now() + timedelta(weeks=1)
+    context.browser.find_elements_by_link_text('Add another Reminder')[0].click()
+
+    context.execute_steps(
+        '''
+        Given I follow the "Add another Reminder" link
+        And I type "Reminder Title" into "#id_reminder_set-0-title"
+        And I type {} into "#id_reminder_set-0-date"
+        And I type "Important Reminder text" into "#id_reminder_set-0-details"
+        And I click the "Save" button
+        ''').format(next_week.strftime('%Y-%m-%d'))
 
 
 import requests
