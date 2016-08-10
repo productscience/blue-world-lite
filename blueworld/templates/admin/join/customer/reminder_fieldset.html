@@ -1,0 +1,101 @@
+<fieldset class="module aligned {{ fieldset.classes }}">
+    {% if fieldset.name %}<h2>{{ fieldset.name }}</h2>{% endif %}
+    {% if fieldset.description %}
+        <div class="description">{{ fieldset.description|safe }}</div>
+    {% endif %}
+    {% for line in fieldset %}
+        <div class="{% if line.fields|length_is:'1' and line.errors %} errors{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% endfor %}">
+          {% comment %}
+            <div class="form-row
+              {% if line.fields|length_is:'1' and line.errors %}
+                errors
+              {% endif %}
+              {% if not line.has_visible_field %}
+                hidden
+              {% endif %}
+              {% for field in line %}
+                {% if field.field.name %}
+                  field-{{ field.field.name }}
+                {% endif %}
+              {% endfor %}
+              ">
+          {% endcomment %}
+
+            {% if line.fields|length_is:'1' %}{{ line.errors }}{% endif %}
+            {% for field in line %}
+                <div{% if not line.fields|length_is:'1' %} class="field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}"{% elif field.is_checkbox %} class="checkbox-row"{% endif %}>
+
+                {% comment %}
+
+                  <div
+                  {% if not line.fields|length_is:'1' %}
+                    class="field-box
+                      {% if field.field.name %}
+                        field-{{ field.field.name }}
+                      {% endif %}
+                      {% if not field.is_readonly and field.errors %}
+                         errors
+                      {% endif %}
+                      {% if field.field.is_hidden %}
+                        hidden
+                      {% endif %}"
+                  {% elif field.is_checkbox %}
+                      class="checkbox-row"
+                  {% endif %}>
+
+                {% endcomment %}
+
+                    {% if not line.fields|length_is:'1' and not field.is_readonly %}{{ field.errors }}{% endif %}
+                    {% if field.is_checkbox %}
+                        {{ field.field }}{{ field.label_tag }}
+                    {% else %}
+
+                        {% if field.errors %}
+                          {{ field.errors }}
+                          {{ field.label_tag }}
+                          {% if field.is_readonly %}
+                              <p>{{ field.contents }}</p>
+                          {% else %}
+                              {{ field.field }}
+                          {% endif %}
+                        {% else %}
+                          {% if field.field.name == "date"  %}
+                            <input type="hidden" id="{{ field.field.id_for_label }}" name="{{ field.field.html_name }}"  value="{{ field.field.value|date:"Y-n-d"  }}">
+                          {% endif %}
+
+                          {% if field.field.name == "details"  %}
+
+                            <div class="description">
+                              <input type="hidden" id="{{ field.field.id_for_label }}" name="{{ field.field.html_name }}"  value="{{ field.field.value }}">
+                              {{ field.field.value }}
+                            </div>
+                          {% endif %}
+
+                          {% if field.field.name != "date" and field.field.name != "details" %}
+                                <input type="hidden" id="{{ field.field.id_for_label }}" name="{{ field.field.html_name }}"  value="{{ field.field.value }}">
+                          {% endif %}
+
+                        {% endif %}
+
+
+
+
+                        {% comment %}
+
+                        {{ field.label_tag }}
+                        {% if field.is_readonly %}
+                            <p>{{ field.contents }}</p>
+                        {% else %}
+                            {{ field.field }}
+                        {% endif %}
+                        {% endcomment %}
+
+                    {% endif %}
+                    {% if field.field.help_text %}
+                        <p class="help">{{ field.field.help_text|safe }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</fieldset>
