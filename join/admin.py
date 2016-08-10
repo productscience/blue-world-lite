@@ -284,6 +284,7 @@ class ReminderDueListFilter(admin.SimpleListFilter):
 class ReminderInline(admin.StackedInline):
     model = Reminder
     extra = 0
+    template = "admin/join/customer/stacked_inline.html"
 
 
 class CustomerAdmin(BlueWorldModelAdmin):

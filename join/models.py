@@ -477,6 +477,9 @@ class Reminder(models.Model):
     def __unicode__(self):
         return self.title
 
+    def __str__(self):
+        return "{} - {}".format(self.date, self.title)
+
     class Meta:
         ordering = ['-date']
 
