@@ -36,6 +36,6 @@ class Command(BaseCommand):
             for bq in customer.bag_quantities:
                 quantities[bq.bag_type] = bq.quantity
             for bag_type in BagType.objects.all():
-                row.append(quantities.get(bag_type))
+                row.append(quantities.get(bag_type) and 1 or 0)
             writer.writerow(row)
         self.stderr.write(self.style.SUCCESS('Successfully generated report'))

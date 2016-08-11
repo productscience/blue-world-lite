@@ -45,6 +45,8 @@ table#order-history td {
             Holiday request made
             {% elif event.type == 'OUT_OF_CYCLE_PAYMENT' %}
             Payment
+            {% elif event.type == 'PENDING_LINE_ITEM' %}
+            Line Item for next month's payment
             {% endif %}
           </td>
           <td>
@@ -60,12 +62,40 @@ table#order-history td {
             {% elif event.type == 'ACCOUNT_STATUS_CHANGE' %}
             Account status changed to <strong>{{ event.new_account_status }}</strong>.
             {% elif event.type == 'OUT_OF_CYCLE_PAYMENT' %}
-            Payment requested for <strong>£{{ event.amount }}</strong> (current status: <tt>{{ event.status }}</tt>).
+            Payment requested for <strong>£{{ event.amount }}</strong> (current status: <tt>{{ event.status }}</tt>).<br>
+            {% if event.description %}
+            {{ event.description }} <br>
+            {% endif %}
               <ul>
               {% for line_item in event.line_items.all %}
-                <li>{{ line_item.amount }}</li>
+                <li>
+                    {% if line_item.amount > -1 %}
+                    £{{ line_item.amount }}
+                    {% else %}
+                    -£{{ line_item.amount|abs }}
+                    {% endif %}
+                {{ line_item.get_reason_display }} {{ line_item.description }}</li>
               {% endfor %}
               </ul>
+            {% elif event.type == 'PENDING_LINE_ITEM' %}
+              Amount <strong>
+              {% if event.amount > -1 %}
+              £{{ event.amount }}
+              {% else %}
+              -£{{ event.amount|abs }}
+              {% endif %}
+              </strong>
+              {% if event.description %}
+              <br>{{ event.description }}
+              {% endif %}
+            {% elif event.type == 'SKIP_WEEK' %}
+            No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
+            You'll be refunded in {{ event.bw.next_month|date:"F"}} for skipping this week
+            (you already pre-paid for it in {{ event.bw.prev_month|date:"F"}} as part of your regular order).
+
+
+
+
             {% elif event.type == 'SKIP_WEEK' %}
             No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
             You'll be refunded in {{ event.bw.next_month|date:"F"}} for skipping this week

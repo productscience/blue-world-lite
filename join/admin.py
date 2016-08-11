@@ -366,8 +366,11 @@ class PaymentAdmin(BlueWorldModelAdmin):
 
     def save_model(self, request, payment, form, change):
         mandate_id = payment.customer.gocardless_current_mandate.gocardless_mandate_id
-        amount_pence = int(payment.amount * 100)
-        payment_response_id, payment_response_status = payment.send_to_gocardless(mandate_id, amount_pence)
+        if not settings.SKIP_GOCARDLESS:
+            payment_response_id, payment_response_status = payment.send_to_gocardless(mandate_id, payment.amount)
+        else:
+            payment_response_id = 'none'
+            payment_response_status = 'skipped'
         now = timezone.now()
         bw = get_billing_week(now)
         payment.created = now

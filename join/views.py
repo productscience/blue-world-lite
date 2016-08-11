@@ -591,8 +591,8 @@ def _get_cost_for_billing_week(customer, bw):
     amount_per_week = 0
     if number > 1:
         amount_per_week = calculate_weekly_fee(customer.bag_quantities)
-    amount = amount_per_week * number
-    return number, amount, amount_per_week, first_bw_of_next_month
+    amount_pounds = amount_per_week * number
+    return number, amount_pounds, amount_per_week, first_bw_of_next_month
 
 
 @login_required
@@ -630,24 +630,23 @@ def gocardless_callback(request):
 
     # Now, take the first payment if it is needed
     # Get the amount and date from the session.
-    number, amount, amount_per_week, first_bw_of_next_month = _get_cost_for_billing_week(request.user.customer, bw)
-
-    assert amount <= mandate.amount_notified
+    number, amount_pounds, amount_per_week, first_bw_of_next_month = _get_cost_for_billing_week(request.user.customer, bw)
     # If this isn't true, it is because it took over a week to complete GoCardless and this has to be dealt with manually.
-    assert int(amount*100) == (amount*100)
+    assert amount_pounds <= mandate.amount_notified
+    assert int(amount_pounds*100) == (amount_pounds*100)
 
-    if amount:
+    if amount_pounds:
         # We don't want to make a payment unless there is something to pay.
         mandate_id = request.user.customer.gocardless_current_mandate.gocardless_mandate_id
         if settings.SKIP_GOCARDLESS:
             payment_response_id = str(uuid.uuid4())
             payment_response_status = 'skipped'
         else:
-            payment_response_id, payment_response_status = Payment.send_to_gocardless(mandate_id, amount)
+            payment_response_id, payment_response_status = Payment.send_to_gocardless(mandate_id, amount_pounds)
         payment = Payment(
             customer=request.user.customer,
             gocardless_mandate_id=mandate_id,
-            amount=amount,
+            amount=amount_pounds,
             reason=Payment.JOIN_WITH_COLLECTIONS_AVAILABLE,
             gocardless_payment_id=payment_response_id,
             created=now,
@@ -1235,6 +1234,22 @@ def get_order_history_events(customer):
                 'amount': payment.amount,
                 'status': payment.status,
                 'line_items': payment.line_items,
+                'description': payment.description,
+            }
+        )
+    for pending_line_item in LineItem.objects.filter(
+        customer=customer,
+        payment=None,
+    ).order_by(
+        '-created'
+    ):
+        changes.append(
+            {
+                'date': pending_line_item.created,
+                'type': 'PENDING_LINE_ITEM',
+                'amount': pending_line_item.amount,
+                'reason': pending_line_item.reason,
+                'description': pending_line_item.description,
             }
         )
     # Get pickup dates since the account was created
@@ -1333,7 +1348,7 @@ def gocardless_events_webhook(request):
         webhook = GoCardlessEvent(event=event, event_id=event['id'])
         webhook.save()
         # 3. Fetch the updated resource, using the ID supplied, and check that
-        #    it has not changed further since the webhook was sent (since 
+        #    it has not changed further since the webhook was sent (since
         #    webhooks may arrive out of order)
         if event["resource_type"] == "payments":
             payment_id = event['links']['payment']

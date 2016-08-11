@@ -499,3 +499,14 @@ Likewise, there are no leave credits. A refund must be made manually (say via
 BACS). This might leave the billing system thinking the user is in credit which
 is why the initial re-joining adjustment can't be done automatically by the
 system.
+
+## Next Steps
+
+Recommendation: Need to get this system in front of real users to check it
+works for them. If users like the way it works, and edge cases are catered for,
+increase test coverage, start rolling out to new users, then when any teething
+problems from real-life use are ironed out, migrate customers across.
+
+In particular, tests for creating line items, creating payments, making
+line item runs, making payment runs, handling GoCardless events and generating
+order history and billing history all need firming up.

@@ -43,9 +43,18 @@
       <tr>
         <td>
             {{ payment.created }} (current status: <tt>{{ payment.status }}</tt>)<br>
+            {% if payment.description %}
+            {{ payment.description }} <br>
+            {% endif %}
               <ul>
               {% for line_item in payment.line_items.all %}
-                <li>{{ line_item.amount }}</li>
+                <li>
+                 {% if line_item.amount > -1 %}
+                 £{{ line_item.amount }}
+                 {% else %}
+                 -£{{ line_item.amount }}
+                 {% endif %}
+                 {{ line_item.get_reason_display }} {{ line_item.description }}</li>
               {% endfor %}
               </ul>
         </td>
