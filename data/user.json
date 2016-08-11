@@ -72,6 +72,21 @@
                 "change_customertag",
                 "join",
                 "customertag"
+            ],
+            [
+                "add_reminder",
+                "join",
+                "reminder"
+            ],
+            [
+                "change_reminder",
+                "join",
+                "reminder"
+            ],
+            [
+                "delete_reminder",
+                "join",
+                "reminder"
             ]
         ]
     }

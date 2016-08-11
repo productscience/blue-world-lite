@@ -28,6 +28,7 @@ from join.models import (
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
     CustomerTag,
+    Reminder,
     Skip,
 )
 from django.contrib.admin import widgets as admin_widgets
@@ -248,6 +249,43 @@ class CollectionPointFilter(admin.SimpleListFilter):
         ]
         return queryset.filter(pk__in=customer_ids)
 
+class ReminderDueListFilter(admin.SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter optiion
+    title = "Reminders"
+
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'reminders'
+
+    def lookups(self, request, model_admin):
+        """
+        Returns a list of tuples. The first element in each
+        tuple is the coded value for the option that will
+        appear in the URL query. The second element is the
+        human-readable name for the option that will appear
+        in the right sidebar.
+        """
+        return [
+            ('due', _('Only with reminders'))
+        ]
+
+    def queryset(self, request, queryset):
+        """
+        Returns the filtered queryset based on the value
+        provided in the query string and retrievable via
+        `self.value()`.
+        """
+        # Compare the requested value (either '80s' or '90s')
+        # to decide how to filter the queryset.
+
+        if self.value() == 'due':
+            return queryset.filter(reminder__done=False)
+
+class ReminderInline(admin.StackedInline):
+    model = Reminder
+    extra = 0
+    template = "admin/join/customer/stacked_inline.html"
+
 
 class CustomerAdmin(BlueWorldModelAdmin):
     search_fields = ('full_name', 'nickname', )
@@ -263,7 +301,10 @@ class CustomerAdmin(BlueWorldModelAdmin):
         AccountStatusListFilter,
         'tags__tag',
         CollectionPointFilter,
+        ReminderDueListFilter,
     )
+
+    inlines = [ReminderInline]
 
     def hijack_field(self, obj):
         hijack_attributes = hijack_settings.HIJACK_URL_ALLOWED_ATTRIBUTES
@@ -370,7 +411,6 @@ class CustomerTagAdmin(BlueWorldModelAdmin):
 
 class SkipAdmin(BlueWorldModelAdmin):
     pass
-
 
 admin.site.register(AccountStatusChange, AccountStatusChangeAdmin)
 admin.site.register(CollectionPoint, CollectionPointAdmin)
