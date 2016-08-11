@@ -4,8 +4,9 @@
 {% block head_title %}Billing History{% endblock %}
 {% block extra_head %}
 <style>
-#billing-history tr th {
+#billing-history tr th, #billing-history tr td {
     text-align: left;
+    vertical-align: top;
 }
 .total {
     text-align: right;
@@ -17,22 +18,41 @@
     <div class="row">
       <h1>Billing History</h1>
 
-      <p>Your payments</p>
+      <p>Your payments.</p>
 
       <table id="billing-history">
       <tr>
         <th>Date</th><th>Requested</th><th>Received</th>
       </tr>
 
+      {% if balance_carried_over %}
+      <tr>
+        <td>Starting balance</td><td>
+        {% if balance_carried_over >= 0 %}
+        £{{ balance_carried_over }}
+        {% endif %}
+        </td><td>
+        {% if balance_carried_over < 0 %}
+        £{{ balance_carried_over|abs }}
+        {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+
       {% for payment in payments %}
       <tr>
-        <td>{{ payment.created }}</td>
+        <td>
+            {{ payment.created }} (current status: <tt>{{ payment.status }}</tt>)<br>
+              <ul>
+              {% for line_item in payment.line_items.all %}
+                <li>{{ line_item.amount }}</li>
+              {% endfor %}
+              </ul>
+        </td>
         <td>£{{ payment.amount }}</td>
         <td>
           {% if payment.completed %}
           £{{ payment.amount }}
-          {% else %}
-          <tt>{{ payment.status }}</tt>
           {% endif %}
         </td>
       </tr>
@@ -40,9 +60,9 @@
       </table> 
       <h3 class="total"><strong>Balance: 
       {% if balance > 0 %}
-      -£{{ balance }}
+      £{{ balance|abs }} owed
       {% else %}
-      £{{ balance }}
+      £{{ balance|abs }} credit
       {% endif %}
       </strong></h3>
     </div>

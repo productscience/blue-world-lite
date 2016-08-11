@@ -28,7 +28,6 @@ from django.template.defaulttags import register
 from django.utils import formats, timezone
 from django.utils.html import format_html, escape
 from django.views.decorators.csrf import csrf_exempt
-import gocardless_pro
 import pytz
 
 from billing_week import first_wed_of_month as start_of_the_month
@@ -44,7 +43,7 @@ from .models import (
     CustomerOrderChangeBagQuantity,
     CustomerTag,
     GoCardlessEvent,
-    OutOfCyclePayment,
+    LineItem,
     Payment,
     PaymentStatusChange,
     Skip,
@@ -71,12 +70,13 @@ def key(d, key_name):
     return d[key_name]
 
 
+@register.filter(name='abs')
+def abs_filter(value):
+    return abs(value)
 
-# XXX Should this be global?
-gocardless_client = gocardless_pro.Client(
-    access_token=settings.GOCARDLESS_ACCESS_TOKEN,
-    environment=settings.GOCARDLESS_ENVIRONMENT,
-)
+
+
+
 
 ERROR_TEMPLATE = '''
 <html>
@@ -545,7 +545,7 @@ def dashboard_gocardless(request):
             reverse('gocardless_callback'),
         )
         if not settings.SKIP_GOCARDLESS:
-            redirect_flow = gocardless_client.redirect_flows.create(params={
+            redirect_flow = settings.GOCARDLESS_CLIENT.redirect_flows.create(params={
                 'description': 'Your Growing Communities Veg Box Order',
                 'session_token': session_token,
                 'success_redirect_url': success_redirect_url,
@@ -568,7 +568,7 @@ def dashboard_gocardless(request):
         else:
             return redirect(redirect_flow.redirect_url)
     else:
-        number, amount, first_bw = _get_cost_for_billing_week(request.user.customer, bw)
+        number, amount, amount_per_week, first_bw = _get_cost_for_billing_week(request.user.customer, bw)
         return render(
             request,
             'dashboard/set-up-go-cardless.html',
@@ -582,17 +582,17 @@ def dashboard_gocardless(request):
 
 def _get_cost_for_billing_week(customer, bw):
     number = 0
-    first_bw = bw.next()
-    while first_bw.month == bw.month:
+    first_bw_of_next_month = bw.next()
+    while first_bw_of_next_month.month == bw.month:
         number += 1
         if number > 5:
             raise Exception('Problem finding the number of willing weeks left this month')
-        first_bw = first_bw.next()
+        first_bw_of_next_month = first_bw_of_next_month.next()
     amount_per_week = 0
     if number > 1:
         amount_per_week = calculate_weekly_fee(customer.bag_quantities)
     amount = amount_per_week * number
-    return number, amount, first_bw
+    return number, amount, amount_per_week, first_bw_of_next_month
 
 
 @login_required
@@ -611,7 +611,7 @@ def gocardless_callback(request):
             customer=request.user.customer,
             gocardless_redirect_flow_id=request.GET['redirect_flow_id'],
         ).get()
-        complete_redirect_flow = gocardless_client.redirect_flows.complete(
+        complete_redirect_flow = settings.GOCARDLESS_CLIENT.redirect_flows.complete(
             mandate.gocardless_redirect_flow_id,
             {'session_token': mandate.session_token}
         )
@@ -626,65 +626,54 @@ def gocardless_callback(request):
     tags = CustomerTag.objects.filter(tag='Starter').all()
     if tags:
         request.user.customer.tags.add(tags[0])
-    messages.add_message(
-        request,
-        messages.INFO,
-        'Successfully set up Go Cardless.'
-    )
     request.user.customer.save()
 
-    # # Now, take the first payment if it is needed
-    # # Get the amount and date from the session.
-    number, amount, fist_bw = _get_cost_for_billing_week(request.user.customer, bw)
+    # Now, take the first payment if it is needed
+    # Get the amount and date from the session.
+    number, amount, amount_per_week, first_bw_of_next_month = _get_cost_for_billing_week(request.user.customer, bw)
 
     assert amount <= mandate.amount_notified
     # If this isn't true, it is because it took over a week to complete GoCardless and this has to be dealt with manually.
     assert int(amount*100) == (amount*100)
 
-    mandate_id = request.user.customer.gocardless_current_mandate.gocardless_mandate_id
-    if settings.SKIP_GOCARDLESS:
-        payment_response_id = str(uuid.uuid4())
-        payment_response_status = 'skipped'
-    else:
-        mr = gocardless_client.mandates.get(mandate_id)
-        next_possible_charge_date = mr.next_possible_charge_date
-        params = {
-            "amount": int(amount) * 100, # This is in pence
-            "currency": "GBP",
-            # If not specified means ASAP.
-            "charge_date": next_possible_charge_date, #now.date().isoformat(), #datetime.date.now().strftime('%Y-%m-%d'),
-            # "reference": "GROCOM",
-            "metadata": {
-              # Shows on the payments page for GoCardless
-              # "reconcile_end_month": "2016-01",
-            },
-            "links": {
-              "mandate": mandate_id,
-            },
-        }
-        payment_response = gocardless_client.payments.create(params=params)
-        print(payment_response.attributes)
-#         # .attrubtes: {'reference': None, 'links': {'mandate': 'MD0000VWFBW3HR', 'creditor': 'CR000049T7G1D4'}, 'metadata': {'reconcile_end_month': '2016-01'}, 'amount_refunded': 0, 'status': 'pending_submission', 'amount': 100, 'id': 'PM0001J8NVC4R4', 'currency': 'GBP', 'charge_date': '2016-07-26', 'created_at': '2016-07-20T11:55:07.407Z', 'description': None}
-        payment_response_id = payment_response.id
-        payment_response_status = payment_response.status
-
-    payment = OutOfCyclePayment(
-        customer=request.user.customer,
-        gocardless_mandate_id=mandate_id,
-        amount=amount,
-        reason='JOIN_WITH_COLLECTIONS_AVAILABLE',
-        gocardless_payment_id=payment_response_id,
-        created=now,
-        created_in_billing_week=str(bw),
-    )
-    payment.save()
-    payment_status_change = PaymentStatusChange(
-        changed=now,
-        changed_in_billing_week=str(bw),
-        status=payment_response_status,
-        payment=payment,
-    )
-    payment_status_change.save()
+    if amount:
+        # We don't want to make a payment unless there is something to pay.
+        mandate_id = request.user.customer.gocardless_current_mandate.gocardless_mandate_id
+        if settings.SKIP_GOCARDLESS:
+            payment_response_id = str(uuid.uuid4())
+            payment_response_status = 'skipped'
+        else:
+            payment_response_id, payment_response_status = Payment.send_to_gocardless(mandate_id, amount)
+        payment = Payment(
+            customer=request.user.customer,
+            gocardless_mandate_id=mandate_id,
+            amount=amount,
+            reason=Payment.JOIN_WITH_COLLECTIONS_AVAILABLE,
+            gocardless_payment_id=payment_response_id,
+            created=now,
+            created_in_billing_week=str(bw),
+        )
+        payment.save()
+        payment_status_change = PaymentStatusChange(
+            changed=now,
+            changed_in_billing_week=str(bw),
+            status=payment_response_status,
+            payment=payment,
+        )
+        payment_status_change.save()
+        bill_against = bw.next()
+        for x in range(number):
+            li = LineItem(
+                payment=payment,
+                created=now,
+                created_in_billing_week=bw,
+                bill_against=str(bill_against),
+                customer=request.user.customer,
+                amount=amount_per_week,
+                reason=LineItem.NEW_JOINER
+            )
+            li.save()
+            bill_against = bw.next()
     account_status_change = AccountStatusChange(
         changed=now,
         changed_in_billing_week=str(bw),
@@ -692,6 +681,11 @@ def gocardless_callback(request):
         status=AccountStatusChange.ACTIVE,
     )
     account_status_change.save()
+    messages.add_message(
+        request,
+        messages.INFO,
+        'Successfully set up Go Cardless.'
+    )
     return redirect(reverse("dashboard"))
 
 
@@ -1175,6 +1169,7 @@ def get_order_history_events(customer):
                 'bw': parse_billing_week(
                     order_change.changed_in_billing_week
                 ),
+                'reason': order_change.reason,
                 'type': 'ORDER_CHANGE',
                 'new_bag_quantities': render_bag_quantities(
                     order_change.bag_quantities.all()
@@ -1227,7 +1222,7 @@ def get_order_history_events(customer):
                 'billing_week': parse_billing_week(skip.billing_week),
             }
         )
-    for payment in OutOfCyclePayment.objects.filter(
+    for payment in Payment.objects.filter(
         customer=customer,
         created__lt=timezone.now()
     ).order_by(
@@ -1239,6 +1234,7 @@ def get_order_history_events(customer):
                 'type': 'OUT_OF_CYCLE_PAYMENT',
                 'amount': payment.amount,
                 'status': payment.status,
+                'line_items': payment.line_items,
             }
         )
     # Get pickup dates since the account was created
@@ -1269,7 +1265,7 @@ def dashboard_order_history(request):
 @gocardless_is_set_up
 def dashboard_billing_history(request):
     payments = Payment.objects.filter(customer=request.user.customer).order_by('-created')
-    balance = 0
+    balance = int(request.user.customer.balance_carried_over)
     for payment in payments:
         if not payment.completed:
             balance += payment.amount
@@ -1277,6 +1273,7 @@ def dashboard_billing_history(request):
         request,
         'dashboard/billing-history.html',
         {
+            'balance_carried_over': request.user.customer.balance_carried_over,
             'payments': payments,
             'balance': balance,
         }
@@ -1311,32 +1308,53 @@ def dashboard_rejoin_scheme(request):
 
 @csrf_exempt
 def gocardless_events_webhook(request):
-    # https://developer.gocardless.com/2015-07-06/#webhooks-examples
-    print(request.GET)
-    print(request.POST)
-    print(request.META['HTTP_WEBHOOK_SIGNATURE'])
+    """
+    POST and GET are empty: <QueryDict: {}>
+    Body is a list of events: e.g. {"events":[{"id":"EVTESTWZXEMZMJ","created_at":"2016-08-08T13:33:07.528Z","resource_type":"payments","action":"created","links":{"payment":"index_ID_123"},"details":{"origin":"api","cause":"payment_created","description":"Payment created via the API."},"metadata":{}}]}
+    """
+    print('Here!')
+    # Documentation is: https://developer.gocardless.com/2015-07-06/#webhooks-examples
+    # 1.  Check the signature
     dig = hmac.new(settings.GOCARDLESS_WEBHOOK_SECRET.encode('utf8'), msg=request.body, digestmod=hashlib.sha256).hexdigest()
-    print(dig)
     if request.META['HTTP_WEBHOOK_SIGNATURE'] != dig:
+        print(request.META['HTTP_WEBHOOK_SIGNATURE'], '!=', dig)
         return HttpResponse('Invalid Token', status=498, reason='Invalid Token')
     data = request.body.decode('utf-8')
     print(data)
     now = timezone.now()
     bw = get_billing_week(now)
-    webhook = GoCardlessEvent(event=request.body.decode('utf-8'))
-    webhook.save()
-    payload = json.loads(webhook.event)
+    payload = json.loads(data)
     for event in payload['events']:
-        if event['details']['cause'] == 'payment_paid_out':
-            payment = Payment.objects.filter(gocardless_payment_id=event['links']['payment']).get()
-            payment.completed = now
-            payment.completed_in_billing_week = bw
-            payment.save()
-# <QueryDict: {}>
-# <QueryDict: {}>
-# {"events":[{"id":"EVTESTWZXEMZMJ","created_at":"2016-08-08T13:33:07.528Z","resource_type":"payments","action":"created","links":{"payment":"index_ID_123"},"details":{"origin":"api","cause":"payment_created","description":"Payment created via the API."},"metadata":{}}]}
-# [08/Aug/2016 13:37:26] "POST /go
-    return HttpResponse('ok')
+        # 2. Check that you have not already processed this event when
+        #    receiving the same webhook for a different webhook endpoint
+        if len(list(GoCardlessEvent.objects.filter(event_id=event['id']))) != 0:
+            print('Already got this event: {}'.format(event))
+            continue
+        webhook = GoCardlessEvent(event=event, event_id=event['id'])
+        webhook.save()
+        # 3. Fetch the updated resource, using the ID supplied, and check that
+        #    it has not changed further since the webhook was sent (since 
+        #    webhooks may arrive out of order)
+        if event["resource_type"] == "payments":
+            payment_id = event['links']['payment']
+            payment_response = settings.GOCARDLESS_CLIENT.payments.get(payment_id)
+            # 4. Act on the event, e.g. shipping goods, extending subscription
+            payment = Payment.objects.filter(gocardless_payment_id=payment_id).get()
+            payment_status_change = PaymentStatusChange(
+                changed=now,
+                changed_in_billing_week=str(bw),
+                status=payment_response.status,
+                payment=payment,
+            )
+            payment_status_change.save()
+            # Let's treat 'confirmed' as paid, 'paid_out' is when we receive the payment
+            if payment_response.status == 'confirmed':  # XXX Is this what we want?
+                payment.completed = now
+                payment.completed_in_billing_week = bw
+                payment.save()
+        # XXX Can send email alerts for other conditions?
+    return HttpResponse('ok', status=200, reason='OK')
+
 
 
 def billing_dates(request):

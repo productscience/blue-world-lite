@@ -50,8 +50,10 @@ table#order-history td {
           <td>
             {% if event.type == 'ORDER_CHANGE' %}
             Order changed to <strong>{{ event.new_bag_quantities }}</strong>.<br>
+            {% if event.reason == 'CHANGED' %}
             Your new order will be available from {{ event.bw.next_month|date:"DATE_FORMAT"}}.<br>
             Your new order will be invoiced in {{ event.bw.next_month|date:"F"}}, including any adjustments needed.
+            {% endif %}
             {% elif event.type == 'COLLECTION_POINT_CHANGE' %}
             Collection point changed to <strong>{{ event.new_collection_point }}</strong>.<br>
             Please start collecting here from {{ event.bw.next_month|date:"DATE_FORMAT"}}.
@@ -59,6 +61,11 @@ table#order-history td {
             Account status changed to <strong>{{ event.new_account_status }}</strong>.
             {% elif event.type == 'OUT_OF_CYCLE_PAYMENT' %}
             Payment requested for <strong>£{{ event.amount }}</strong> (current status: <tt>{{ event.status }}</tt>).
+              <ul>
+              {% for line_item in event.line_items.all %}
+                <li>{{ line_item.amount }}</li>
+              {% endfor %}
+              </ul>
             {% elif event.type == 'SKIP_WEEK' %}
             No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
             You'll be refunded in {{ event.bw.next_month|date:"F"}} for skipping this week

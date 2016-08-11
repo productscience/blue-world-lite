@@ -1,8 +1,12 @@
 import csv
+import pytz
 
 from django.core.management.base import BaseCommand, CommandError
 from join.models import Customer
 from join.helper import render_bag_quantities, calculate_weekly_fee
+
+
+london = pytz.timezone("Europe/London")
 
 
 class Command(BaseCommand):
@@ -43,7 +47,7 @@ class Command(BaseCommand):
                 # so_details,so_day_of_month,
                 None,None,
                 # start_date,
-                customer.created,
+                customer.created.astimezone(london).strftime('%Y-%m-%d %H:%M'),
                 # stop_date,source,
                 None,None,
                 # on_holiday

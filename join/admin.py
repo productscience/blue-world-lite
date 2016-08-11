@@ -28,6 +28,9 @@ from join.models import (
     CustomerOrderChange,
     CustomerOrderChangeBagQuantity,
     CustomerTag,
+    LineItem,
+    Payment,
+    PaymentStatusChange,
     Skip,
 )
 from django.contrib.admin import widgets as admin_widgets
@@ -358,7 +361,45 @@ class SkipAdmin(BlueWorldModelAdmin):
     pass
 
 
+class PaymentAdmin(BlueWorldModelAdmin):
+    fields = ('customer', 'amount', 'description')
+
+    def save_model(self, request, payment, form, change):
+        mandate_id = payment.customer.gocardless_current_mandate.gocardless_mandate_id
+        amount_pence = int(payment.amount * 100)
+        payment_response_id, payment_response_status = payment.send_to_gocardless(mandate_id, amount_pence)
+        now = timezone.now()
+        bw = get_billing_week(now)
+        payment.created = now
+        payment.created_in_billing_week = str(bw)
+        payment.gocardless_mandate_id = mandate_id
+        payment.gocardless_payment_id = payment_response_id
+        payment.reason = Payment.MANUAL
+        payment.save()
+        payment_status_change = PaymentStatusChange(
+            changed=now,
+            changed_in_billing_week=str(bw),
+            status=payment_response_status,
+            payment=payment,
+        )
+        payment_status_change.save()
+
+
+class LineItemAdmin(BlueWorldModelAdmin):
+    fields = ('customer', 'amount', 'description')
+
+    def save_model(self, request, line_item, form, change):
+        now = timezone.now()
+        bw = get_billing_week(now)
+        line_item.reason = LineItem.MANUAL
+        line_item.created = now
+        line_item.created_in_billing_week = str(bw)
+        line_item.save()
+
+
 admin.site.register(AccountStatusChange, AccountStatusChangeAdmin)
+admin.site.register(Payment, PaymentAdmin)
+admin.site.register(LineItem, LineItemAdmin)
 admin.site.register(CollectionPoint, CollectionPointAdmin)
 admin.site.register(BagType, BagTypeAdmin)
 admin.site.register(Customer, CustomerAdmin)
@@ -424,20 +465,8 @@ def packing_list(collection_points, billing_week):
         .only('id')
         .values_list('id', flat=True)
     )
-    _latest_bag_quantities = (
-        CustomerOrderChangeBagQuantity.objects
-        .filter(
-            customer_order_change__in=(
-                CustomerOrderChange.objects
-                .filter(changed_in_billing_week__lt=str(billing_week))
-                .order_by('customer', '-changed')
-                .distinct('customer')
-                .only('id')
-            ),
-        )
-        .order_by('customer_order_change__customer__full_name')
-        .only('customer_order_change__customer_id', 'bag_type_id', 'quantity')
-    )
+    # XXX Need to filter LEAVERs, not done yet.
+    _latest_bag_quantities = CustomerOrderChange.as_of(billing_week)
     _bags_by_customer = OrderedDict()
     # Must be an OrderedDict to keep everything in the right order
     _no_bags = OrderedDict([(bag_type, 0) for bag_type in bag_types])

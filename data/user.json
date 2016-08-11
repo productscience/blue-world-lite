@@ -32,6 +32,16 @@
         "groups": [],
         "user_permissions": [
             [
+                "add_payment",
+                "join",
+                "payment"
+            ],
+            [
+                "add_lineitem",
+                "join",
+                "lineitem"
+            ],
+            [
                 "add_bagtype",
                 "join",
                 "bagtype"

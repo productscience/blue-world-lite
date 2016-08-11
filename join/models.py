@@ -8,19 +8,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 
-# class CurrentCustomersQuerySet(models.QuerySet):
-#     def at(self, at):
-#         ccpcs = CustomerCollectionPointChange.objects \
-#         .order_by('customer', '-changed')\
-#         .filter(changed__lte=at)\
-#         .distinct('customer')
-#         return CollectionPoint.objects\
-#         .filter(collectionpoint_change__id__in=ccpcs)\
-#         .select_related('customer')
-
-
 class CollectionPoint(models.Model):
-    # currect_customers = CurrentCustomersQuerySet.as_manager()
     name = models.CharField(
         max_length=40,
         help_text="e.g. 'The Old Fire Station'",
@@ -245,7 +233,11 @@ class Customer(models.Model):
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
     mobile = models.CharField(max_length=30, default='', blank=True)
-    balance_carried_over = models.IntegerField(default=0)
+    balance_carried_over = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal(0.00),
+    )
     holiday_due = models.IntegerField(default=0)
     tags = models.ManyToManyField(CustomerTag, blank=True)
     gocardless_current_mandate = models.OneToOneField(
@@ -256,13 +248,22 @@ class Customer(models.Model):
         null=True,
     )
 
+    def account_status_before(self, d=None):
+        if d:
+            status = AccountStatusChange.objects.order_by(
+                '-changed'
+            ).filter(customer=self, changed__lt=d)[:1][0]
+        else:
+            status = AccountStatusChange.objects.order_by(
+                '-changed'
+            )[:1][0]
+        return status.status
+
     def _get_latest_account_status(self):
-        latest_account_status = AccountStatusChange.objects.order_by(
-            '-changed'
-        ).filter(customer=self)[:1][0]
-        # Human readable?
-        return latest_account_status.status
+        return self.account_status_before()
     account_status = property(_get_latest_account_status)
+
+
 
     def _has_left(self):
         return self.account_status == AccountStatusChange.LEFT
@@ -275,8 +276,10 @@ class Customer(models.Model):
     def _get_latest_collection_point(self):
         latest_cp = CustomerCollectionPointChange.objects.order_by(
             '-changed'
-        ).filter(customer=self)[:1][0]
-        return latest_cp.collection_point
+        ).filter(customer=self)[:1]
+        if not latest_cp:
+            raise ValueError('No collection point for customer: {}'.format(self))
+        return latest_cp[0].collection_point
 
     def _set_collection_point(self, collection_point_id):
         if not isinstance(collection_point_id, int):
@@ -301,13 +304,14 @@ class Customer(models.Model):
         ).filter(customer=self)[:1][0]
         return latest_order.bag_quantities.all()
 
-    def _set_bag_quantities(self, bag_quantities):
+    def _set_bag_quantities(self, bag_quantities, reason='CHANGE'):
         now = timezone.now()
         bw = get_billing_week(now)
         customer_order_change = CustomerOrderChange(
             changed=now,
             changed_in_billing_week=str(bw),
             customer=self,
+            reason=reason,
         )
         customer_order_change.save()
         for bag_type, quantity in bag_quantities.items():
@@ -352,7 +356,7 @@ class AccountStatusChange(models.Model):
         (ACTIVE, 'Active'),
         (LEFT, 'Left'),
     )
-    leaving_date = models.DateTimeField(null=True)
+    # leaving_date = models.DateTimeField(null=True)
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
@@ -393,6 +397,24 @@ class CustomerCollectionPointChange(models.Model):
 
 
 class CustomerOrderChange(models.Model):
+    @classmethod
+    def as_of(cls, billing_week, customer=None):
+        order_changes = (
+            CustomerOrderChange.objects
+            .filter(changed_in_billing_week__lt=str(billing_week))
+            .order_by('customer', '-changed')
+            .distinct('customer')
+            .only('id')
+        )
+        if customer is not None:
+            order_changes = order_changes.filter(customer=customer)
+        return (
+            CustomerOrderChangeBagQuantity.objects
+            .filter(customer_order_change__in=order_changes)
+            .order_by('customer_order_change__customer__full_name')
+            .only('customer_order_change__customer_id', 'bag_type_id', 'quantity')
+        )
+
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
@@ -400,6 +422,13 @@ class CustomerOrderChange(models.Model):
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
     )
+    JOIN = 'JOIN'
+    CHANGE = 'CHANGE'
+    REASON_CHOICES = (
+        (JOIN, 'Join'),
+        (CHANGE, 'Change'),
+    )
+    reason = models.CharField(max_length=255, choices=REASON_CHOICES, default=CHANGE)
 
     def __str__(self):
         return 'Customer Order Change for {} on {}'.format(
@@ -464,29 +493,57 @@ class Skip(models.Model):
     def __str__(self):
         return '{} skiped week {} on {}'.format(
             self.customer.full_name,
-            self.collection_date.isoformat(),
+            self.billing_week,
             self.created.isoformat(),
         )
 
+
 class Payment(models.Model):
+
+    @classmethod
+    def send_to_gocardless(cls, mandate_id, amount_pence):
+        mr = settings.GOCARDLESS_CLIENT.mandates.get(mandate_id)
+        next_possible_charge_date = mr.next_possible_charge_date
+        params = {
+            "amount": int(amount_pence) * 100, # This is in pence
+            "currency": "GBP",
+            # If not specified means ASAP.
+            "charge_date": next_possible_charge_date, #now.date().isoformat(), #datetime.date.now().strftime('%Y-%m-%d'),
+            # "reference": "GROCOM",
+            "metadata": {
+              # Shows on the payments page for GoCardless
+              # "reconcile_end_month": "2016-01",
+            },
+            "links": {
+              "mandate": mandate_id,
+            },
+        }
+        payment_response = settings.GOCARDLESS_CLIENT.payments.create(params=params)
+        print(payment_response.attributes)
+#         # .attrubtes: {'reference': None, 'links': {'mandate': 'MD0000VWFBW3HR', 'creditor': 'CR000049T7G1D4'}, 'metadata': {'reconcile_end_month': '2016-01'}, 'amount_refunded': 0, 'status': 'pending_submission', 'amount': 100, 'id': 'PM0001J8NVC4R4', 'currency': 'GBP', 'charge_date': '2016-07-26', 'created_at': '2016-07-20T11:55:07.407Z', 'description': None}
+        payment_response_id = payment_response.id
+        payment_response_status = payment_response.status
+        return payment_response_id, payment_response_status
+
     customer = models.ForeignKey(
         Customer,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
         related_name='payments',
     )
+    description = models.CharField(max_length=1000)
     created = models.DateTimeField()
     created_in_billing_week = models.CharField(max_length=9)
     completed = models.DateTimeField(null=True, blank=True)
     completed_in_billing_week = models.CharField(max_length=9, null=True, blank=True)
     gocardless_mandate_id = models.CharField(max_length=255)
-    amount=models.DecimalField(
-        max_digits=12,
+    amount = models.DecimalField(
+        max_digits=12,  # XXX Could use something smaller
         decimal_places=2,
         null=False,
         blank=False,
     )
-    gocardless_payment_id= models.CharField(max_length=255)
+    gocardless_payment_id = models.CharField(max_length=255)
 
 
     def _get_latest_status(self):
@@ -494,35 +551,106 @@ class Payment(models.Model):
     status = property(_get_latest_status)
 
 
-class OutOfCyclePayment(Payment):
     JOIN_WITH_COLLECTIONS_AVAILABLE = 'JOIN_WITH_COLLECTIONS_AVAILABLE'
+    MONTHLY_INVOICE = 'MONTHLY_INVOICE'
+    MANUAL = 'MANUAL'
     REASON_CHOICES = (
         (JOIN_WITH_COLLECTIONS_AVAILABLE, 'Joined with collections available in the current month'),
+        (MONTHLY_INVOICE, "Regular monthly invoice for next month's bags"),
+        (MANUAL, 'Adjustment applied by Growing Communities staff'),
     )
     reason = models.CharField(max_length=255, choices=REASON_CHOICES)
 
-class RegularPayment(Payment):
-    pass
+    def __str__(self):
+        return 'Payment of {} for {} on {}, billing week {}'.format(
+            self.amount,
+            self.customer.full_name,
+            self.created.strftime('%Y-%m-%d %H:%M'),
+            self.created_in_billing_week,
+        )
 
 
-class Invoice(models.Model):
-    billing_week = models.CharField(max_length=9)
-    payment = models.ForeignKey(
-        RegularPayment,
+class LineItemRun(models.Model):
+    job_id = models.CharField(max_length=255)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    started = models.DateTimeField()
+    finished = models.DateTimeField(blank=True, null=True)
+    start_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
         # XXX Not sure about this yet
+        related_name='line_item_run_starts',
         on_delete=models.CASCADE,
-        related_name='invoice',
+        null=True,
     )
+    # In case we crash and need to restart
+    currently_processing_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        related_name='line_item_run_currents',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+
+class PaymentRun(models.Model):
+    job_id = models.CharField(max_length=255)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    started = models.DateTimeField()
+    finished = models.DateTimeField(blank=True, null=True)
+    start_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        related_name='payment_run_starts',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    currently_processing_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        related_name='payment_run_currents',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+#class RegularPayment(Payment):
+#    pass
+
+
+# class Invoice(models.Model):
+#     billing_week = models.CharField(max_length=9)
+#     payment = models.ForeignKey(
+#         RegularPayment,
+#         # XXX Not sure about this yet
+#         on_delete=models.CASCADE,
+#         related_name='invoice',
+#     )
 
 
 class LineItem(models.Model):
     created = models.DateTimeField()
     created_in_billing_week = models.CharField(max_length=9)
-    invoice = models.ForeignKey(
-        Invoice,
+    description = models.CharField(max_length=1000)
+    bill_against = models.CharField(max_length=9)
+    payment = models.ForeignKey(
+        Payment,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
-        related_name='payment_status_changes',
+        related_name='line_items',
+        null=True,
+    )
+    customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='line_items',
+        null=True,
     )
     amount=models.DecimalField(
         max_digits=12,
@@ -530,45 +658,27 @@ class LineItem(models.Model):
         null=False,
         blank=False,
     )
-
-
-class ManualAdjustment(LineItem):
-    description = models.CharField(max_length=255)
-
-
-class PredictedWeeklyOrder(LineItem):
-    predicted_weekly_order = models.ForeignKey(
-        CustomerOrderChange,
-        # XXX Not sure about this yet
-        on_delete=models.CASCADE,
-        related_name='order_change',
+    NEW_JOINER = 'NEW_JOINER'
+    MANUAL = 'MANUAL'
+    REGULAR = 'REGULAR_ORDER_FOR_WEEK'
+    SKIP_REFUND = 'SKIP_REFUND'
+    ORDER_CHANGE_ADJUSTMENT = 'ORDER_CHANGE_ADJUSTMENT'
+    REASON_CHOICES = (
+        (MANUAL, 'Adjustment applied by Growing Communities Staff'),
+        (NEW_JOINER, 'New Joiner'),
+        (REGULAR, 'Regular weekly order charge'),
+        (SKIP_REFUND, 'Refund from skipped week'),
+        (ORDER_CHANGE_ADJUSTMENT, 'Adjustment from a changed order'),
     )
+    reason = models.CharField(max_length=255, choices=REASON_CHOICES)
 
-
-class SkippedWeekCredit(LineItem):
-    refund_from = models.ForeignKey(
-        PredictedWeeklyOrder,
-        # XXX Not sure about this yet
-        on_delete=models.CASCADE,
-        related_name='skip_credit',
-    )
-    skip = models.ForeignKey(
-        Skip,
-        # XXX Not sure about this yet
-        on_delete=models.CASCADE,
-        related_name='credit',
-    )
-
-
-class OrderChangeCredit(LineItem):
-    actually_received = models.ForeignKey(
-        PredictedWeeklyOrder,
-        # XXX Not sure about this yet
-        on_delete=models.CASCADE,
-        related_name='skipped_by',
-    )
-
-
+    def __str__(self):
+        return 'LineItem {} {} for {} in {}'.format(
+            self.reason,
+            self.customer.full_name,
+            self.amount,
+            self.bill_against,
+        )
 
 
 class PaymentStatusChange(models.Model):
@@ -591,4 +701,5 @@ class PaymentStatusChange(models.Model):
 
 
 class GoCardlessEvent(models.Model):
+    event_id =  models.CharField(max_length=100)
     event = JSONField()

@@ -277,6 +277,7 @@ if 'RAVEN_DSN' in os.environ:
 
 
 # Go Cardless
+import gocardless_pro
 # https://github.com/gocardless/gocardless-pro-python
 # https://developer.gocardless.com/2015-07-06/#overview
 # https://gocardless.com/blog/an-introduction-to-our-api/
@@ -288,7 +289,11 @@ GOCARDLESS_ENVIRONMENT = os.environ.get(
 GOCARDLESS_WEBHOOK_SECRET=os.environ['GOCARDLESS_WEBHOOK_SECRET']
 GOCARDLESS_ACCESS_TOKEN = os.environ['GOCARDLESS_ACCESS_TOKEN']
 SKIP_GOCARDLESS = str(os.environ.get('SKIP_GOCARDLESS', 'true')).lower() == 'true'
-
+GOCARDLESS_CLIENT = gocardless_pro.Client(
+    access_token=GOCARDLESS_ACCESS_TOKEN,
+    environment=GOCARDLESS_ENVIRONMENT,
+)
+# Also make sure the endpoint is set up like: https://.../gocardless-events-webhook
 
 SMALL_FRUIT_BAG_NAME='Small fruit'
 
