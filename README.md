@@ -81,6 +81,7 @@ SERVER_EMAIL='error@blueworld.example.com'
 ADMINS='send-errors-here@example.com'
 LEAVER_EMAIL_TO='leaver-email@example.com; billing@example.com'
 GOCARDLESS_ACCESS_TOKEN='xxx'
+GOCARDLESS_WEBHOOK_SECRET='xxx'
 GOCARDLESS_ENVIRONMENT='sandbox|live'
 TIME_TRAVEL='false'
 SKIP_GOCARDLESS='false'
@@ -279,80 +280,21 @@ You can also get attachments, and delete messages. See https://github.com/reclos
 
 ### Running the tests
 
-In the third terminal, activate the environment and check the settings are set:
-
-```
-. .ve3/bin/activate
-.env.sh
-```
-
 Make sure you have PhantomJS installed and the `phantomjs` command on your `PATH`.
 
-Then run this command to run the tests:
-
-```
-behave
-```
-
-You'll need to reset the DB and lathermail on each test run.
+Then, in the third terminal, activate the environment and check the settings are set, then
+reset the DB and lathermail on each test run before running `behave`.
 
 If you prefer not to do this manually in the three terminals, on Mac OS a
 script like this can help, as long as you aren't running other similar
 processes that might be accidentally killed.
 
-This script also loads the `load.sh` script described above to reset the database:
-
 ```
-#!/bin/bash
-
-echo "Setting up Python environment and config ..."
-. .ve3/bin/activate
-. .env.sh
-echo "done."
-
-echo "Stopping lathermail ..."
-pkill -f ython lathermail.db
-echo "done."
-
-echo "Stopping Django ..."
-pkill -f ython manage.py runserver
-echo "done"
-
-echo "Stopping lathermail ..."
-rm lathermail.db
-echo "done."
-
-echo "Resetting Django database ..."
-. load.sh
-echo "done ..."
-
-echo "Starting the servers in the background ..."
-python manage.py runserver > log_lathermail.txt 2>&1 &
-lathermail --db-uri sqlite:////$PWD/lathermail.db > log_runserver.txt 2>&1 &
-sleep 1
-echo "done."
-
-echo "Running tests ..."
-behave "$@" || echo "++++++++++++++++++++++++++++++ FAILED ++++++++++++++++++++++++++++++++"
-echo "done"
-
-echo "Stopping lathermail ..."
-pkill -f ython lathermail.db
-echo "done."
-
-echo "Stopping Django ..."
-pkill -f ython manage.py runserver
-echo "done"
-
-echo "Suceess"
-```
-
-You can run all the tests with Phantom JS like this:
-
-```
-chmod +x run-tests.sh
 ./run-tests.sh
 ```
+
+This script also loads the `load.sh` script described above to reset the
+database:
 
 If you just pass this script specific feature file paths, it will just run
 them. It will also pass any extra flags onto the `behave` command.
@@ -543,3 +485,28 @@ pep8 blueworld join | grep -v "join/migrations/"
 ```
 
 We don't bother styling the automatically-generated migrations.
+
+
+### Re-joining
+
+Unlike initial sign up, no automatic payments are made when a user re-joins
+until the start of the first billing cycle. They will be added to the packing
+list though. It is up to staff to calculate what is due depending on how they
+refunded the user when they left. They must then enter a manual out of cycle
+payment.
+
+Likewise, there are no leave credits. A refund must be made manually (say via
+BACS). This might leave the billing system thinking the user is in credit which
+is why the initial re-joining adjustment can't be done automatically by the
+system.
+
+## Next Steps
+
+Recommendation: Need to get this system in front of real users to check it
+works for them. If users like the way it works, and edge cases are catered for,
+increase test coverage, start rolling out to new users, then when any teething
+problems from real-life use are ironed out, migrate customers across.
+
+In particular, tests for creating line items, creating payments, making
+line item runs, making payment runs, handling GoCardless events and generating
+order history and billing history all need firming up.

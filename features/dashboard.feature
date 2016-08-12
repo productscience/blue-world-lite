@@ -23,7 +23,7 @@ Feature: Dashboard
      | Bank Details            | #navigation .your_account | /dashboard/bank-details            | change your bank direct debit details     |
      | Leave                   | #navigation .your_order   | /dashboard/leave                   | We're sorry to see you go                 |
      | Order History           | #navigation .your_order   | /dashboard/order-history           | Your account was created on               |
-     | Billing History         | #navigation .your_order   | /dashboard/billing-history         | Your account was created on               |
+     | Billing History         | #navigation .your_order   | /dashboard/billing-history         | Your payments                             |
 
   Scenario: Can't get the callback if you have completed GoCardless
     Given I'm using the user browser

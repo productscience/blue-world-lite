@@ -2,24 +2,16 @@ from billing_week import get_billing_week
 from collections import OrderedDict
 from decimal import Decimal
 from django.conf import settings
+from django.contrib.postgres.fields import JSONField
 from django.db import models
-from django.utils import timezone
 from django.core.exceptions import ValidationError
-
-
-# class CurrentCustomersQuerySet(models.QuerySet):
-#     def at(self, at):
-#         ccpcs = CustomerCollectionPointChange.objects \
-#         .order_by('customer', '-changed')\
-#         .filter(changed__lte=at)\
-#         .distinct('customer')
-#         return CollectionPoint.objects\
-#         .filter(collectionpoint_change__id__in=ccpcs)\
-#         .select_related('customer')
+from django.core.validators import MinValueValidator
+from billing_week import get_billing_week, parse_billing_week
+from django.utils import timezone
+from join.helper import calculate_weekly_fee
 
 
 class CollectionPoint(models.Model):
-    # currect_customers = CurrentCustomersQuerySet.as_manager()
     name = models.CharField(
         max_length=40,
         help_text="e.g. 'The Old Fire Station'",
@@ -193,6 +185,11 @@ class BillingGoCardlessMandate(models.Model):
     session_token = models.CharField(max_length=255, default='')
     gocardless_redirect_flow_id = models.CharField(max_length=255, default='')
     gocardless_mandate_id = models.CharField(max_length=255, default='')
+    created = models.DateTimeField()
+    created_in_billing_week = models.CharField(max_length=9)
+    completed = models.DateTimeField(null=True, blank=True)
+    completed_in_billing_week = models.CharField(max_length=9, null=True, blank=True)
+    amount_notified = models.DecimalField(max_digits=6, decimal_places=2)
     customer = models.ForeignKey(
         # Has to be a string because Customer is not defined yet.
         'Customer',
@@ -239,7 +236,11 @@ class Customer(models.Model):
     full_name = models.CharField(max_length=255)
     nickname = models.CharField(max_length=30)
     mobile = models.CharField(max_length=30, default='', blank=True)
-    balance_carried_over = models.IntegerField(default=0)
+    balance_carried_over = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal(0.00),
+    )
     holiday_due = models.IntegerField(default=0)
     tags = models.ManyToManyField(CustomerTag, blank=True)
     gocardless_current_mandate = models.OneToOneField(
@@ -250,13 +251,22 @@ class Customer(models.Model):
         null=True,
     )
 
+    def account_status_before(self, d=None):
+        if d:
+            status = AccountStatusChange.objects.order_by(
+                '-changed'
+            ).filter(customer=self, changed__lt=d)[:1][0]
+        else:
+            status = AccountStatusChange.objects.order_by(
+                '-changed'
+            )[:1][0]
+        return status.status
+
     def _get_latest_account_status(self):
-        latest_account_status = AccountStatusChange.objects.order_by(
-            '-changed'
-        ).filter(customer=self)[:1][0]
-        # Human readable?
-        return latest_account_status.status
+        return self.account_status_before()
     account_status = property(_get_latest_account_status)
+
+
 
     def _has_left(self):
         return self.account_status == AccountStatusChange.LEFT
@@ -269,8 +279,10 @@ class Customer(models.Model):
     def _get_latest_collection_point(self):
         latest_cp = CustomerCollectionPointChange.objects.order_by(
             '-changed'
-        ).filter(customer=self)[:1][0]
-        return latest_cp.collection_point
+        ).filter(customer=self)[:1]
+        if not latest_cp:
+            raise ValueError('No collection point for customer: {}'.format(self))
+        return latest_cp[0].collection_point
 
     def _set_collection_point(self, collection_point_id):
         if not isinstance(collection_point_id, int):
@@ -295,13 +307,14 @@ class Customer(models.Model):
         ).filter(customer=self)[:1][0]
         return latest_order.bag_quantities.all()
 
-    def _set_bag_quantities(self, bag_quantities):
+    def _set_bag_quantities(self, bag_quantities, reason='CHANGE'):
         now = timezone.now()
         bw = get_billing_week(now)
         customer_order_change = CustomerOrderChange(
             changed=now,
             changed_in_billing_week=str(bw),
             customer=self,
+            reason=reason,
         )
         customer_order_change.save()
         for bag_type, quantity in bag_quantities.items():
@@ -346,14 +359,14 @@ class AccountStatusChange(models.Model):
         (ACTIVE, 'Active'),
         (LEFT, 'Left'),
     )
-    leaving_date = models.DateTimeField(null=True)
+    # leaving_date = models.DateTimeField(null=True)
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
         Customer,
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
-        related_name='account_status_change',
+        related_name='account_status_changes',
     )
     status = models.CharField(max_length=255, choices=STATUS_CHOICES)
 
@@ -387,6 +400,24 @@ class CustomerCollectionPointChange(models.Model):
 
 
 class CustomerOrderChange(models.Model):
+    @classmethod
+    def as_of(cls, billing_week, customer=None):
+        order_changes = (
+            CustomerOrderChange.objects
+            .filter(changed_in_billing_week__lt=str(billing_week))
+            .order_by('customer', '-changed')
+            .distinct('customer')
+            .only('id')
+        )
+        if customer is not None:
+            order_changes = order_changes.filter(customer=customer)
+        return (
+            CustomerOrderChangeBagQuantity.objects
+            .filter(customer_order_change__in=order_changes)
+            .order_by('customer_order_change__customer__full_name')
+            .only('customer_order_change__customer_id', 'bag_type_id', 'quantity')
+        )
+
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
     customer = models.ForeignKey(
@@ -394,6 +425,13 @@ class CustomerOrderChange(models.Model):
         # XXX Not sure about this yet
         on_delete=models.CASCADE,
     )
+    JOIN = 'JOIN'
+    CHANGE = 'CHANGE'
+    REASON_CHOICES = (
+        (JOIN, 'Join'),
+        (CHANGE, 'Change'),
+    )
+    reason = models.CharField(max_length=255, choices=REASON_CHOICES, default=CHANGE)
 
     def __str__(self):
         return 'Customer Order Change for {} on {}'.format(
@@ -430,20 +468,6 @@ class CustomerOrderChangeBagQuantity(models.Model):
         )
 
 
-class BillingCredit(models.Model):
-    customer = models.ForeignKey(
-        Customer,
-        # XXX Not sure about this yet
-        on_delete=models.CASCADE,
-        related_name='billing_credit',
-    )
-    created = models.DateTimeField(auto_now_add=True)
-    # XXX What about when prices change and we've already got some skip
-    # credits in place -> Prbably just add a manual credit to those accounts
-    # where it is an issue.
-    amount_pence = models.IntegerField()
-
-
 class Skip(models.Model):
     billing_week = models.CharField(max_length=9)
     created = models.DateTimeField(auto_now_add=True)
@@ -458,16 +482,12 @@ class Skip(models.Model):
     def __str__(self):
         return '{} skiped week {} on {}'.format(
             self.customer.full_name,
-            self.collection_date.isoformat(),
+            self.billing_week,
             self.created.isoformat(),
         )
 
 class Reminder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-    customer = models.ForeignKey(
-        Customer,
-        # XXX Not sure about this yet
-        on_delete=models.CASCADE,
     )
     title = models.CharField(max_length=30)
     date = models.DateField(null=True, blank=True)
@@ -486,3 +506,407 @@ class Reminder(models.Model):
     def is_due(self):
         return self.date <= timezone.now()
         # return self.date <= datetime.date.today()
+
+
+class Payment(models.Model):
+    @classmethod
+    def create_payments(cls, year, month, start_customer=0):
+        now = timezone.now()
+
+        # If the account is in credit after taking the line items into account, it will be ignored this month.
+        # Upcoming line items can show on the billing history page.
+        now_bw = get_billing_week(now)
+        # Find the last deadline of the month
+        billing_week = parse_billing_week('{0}-{1:02d} {2}'.format(year, month, 1))
+        assert now_bw >= billing_week, 'Cannot create payments in the future'
+
+        last_run = PaymentRun.objects.order_by('-started')[:1]
+        if last_run:
+            assert last_run[0].started < now, 'The last run was in the future'
+
+        payment_run = PaymentRun.objects.create(
+            job_id = 'xxx',
+            year = year,
+            month = month,
+            started = now,
+            finished =None,
+            start_customer = start_customer or None,
+            currently_processing_customer = None,
+        )
+        payment_run.save()
+        payment_by_customer = {}
+        # For each customer
+        for customer in Customer.objects.order_by('pk'):
+            if customer.pk < start_customer:
+                print('Skip')
+                continue
+            if not payment_run.start_customer:
+                payment_run.start_customer = customer
+            payment_run.currently_processing_customer = customer
+            payment_run.save()
+            print(customer)
+            # Look at *all* line items that don't have a payment and create the payment object for them
+            line_items = LineItem.objects.filter(payment=None, customer=customer)
+            total = Decimal(0)
+            for line_item in line_items:
+                total += line_item.amount
+            print(total)
+            # If the account is in credit after taking the line items into account, it will be ignored this month.
+            if total > 0:
+                if not settings.SKIP_GOCARDLESS:
+                    mandate_id = payment.customer.gocardless_current_mandate.gocardless_mandate_id
+                    payment_response_id, payment_response_status = payment.send_to_gocardless(mandate_id, payment.amount)
+                else:
+                    mandate_id = 'none'
+                    payment_response_id = 'none'
+                    payment_response_status = 'skipped'
+                payment = Payment(
+                    customer=customer,
+                    gocardless_mandate_id=mandate_id,
+                    amount=total,
+                    reason=Payment.MONTHLY_INVOICE,
+                    gocardless_payment_id=payment_response_id,
+                    created=now,
+                    created_in_billing_week=str(now_bw),
+                )
+                payment.save()
+                payment_status_change = PaymentStatusChange(
+                    changed=now,
+                    changed_in_billing_week=str(now_bw),
+                    status=payment_response_status,
+                    payment=payment,
+                )
+                payment_status_change.save()
+                for line_item in line_items:
+                    line_item.payment = payment
+                    line_item.save()
+                payment_by_customer[customer] = payment
+        return payment_by_customer
+
+
+    @classmethod
+    def send_to_gocardless(cls, mandate_id, amount_pounds):
+        assert amount_pounds < 1000, 'Unusual to have a £1000 bill'
+        mr = settings.GOCARDLESS_CLIENT.mandates.get(mandate_id)
+        next_possible_charge_date = mr.next_possible_charge_date
+        params = {
+            "amount": int(amount_pounds * 100), # This is in pence
+            "currency": "GBP",
+            # If not specified means ASAP.
+            "charge_date": next_possible_charge_date, #now.date().isoformat(), #datetime.date.now().strftime('%Y-%m-%d'),
+            # "reference": "GROCOM",
+            "metadata": {
+              # Shows on the payments page for GoCardless
+              # "reconcile_end_month": "2016-01",
+            },
+            "links": {
+              "mandate": mandate_id,
+            },
+        }
+        payment_response = settings.GOCARDLESS_CLIENT.payments.create(params=params)
+        print(payment_response.attributes)
+#         # .attrubtes: {'reference': None, 'links': {'mandate': 'MD0000VWFBW3HR', 'creditor': 'CR000049T7G1D4'}, 'metadata': {'reconcile_end_month': '2016-01'}, 'amount_refunded': 0, 'status': 'pending_submission', 'amount': 100, 'id': 'PM0001J8NVC4R4', 'currency': 'GBP', 'charge_date': '2016-07-26', 'created_at': '2016-07-20T11:55:07.407Z', 'description': None}
+        payment_response_id = payment_response.id
+        payment_response_status = payment_response.status
+        return payment_response_id, payment_response_status
+
+
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='payments',
+    )
+    description = models.CharField(max_length=1000)
+    created = models.DateTimeField()
+    created_in_billing_week = models.CharField(max_length=9)
+    completed = models.DateTimeField(null=True, blank=True)
+    completed_in_billing_week = models.CharField(max_length=9, null=True, blank=True)
+    gocardless_mandate_id = models.CharField(max_length=255)
+    amount = models.DecimalField(
+        max_digits=12,  # XXX Could use something smaller
+        decimal_places=2,
+        null=False,
+        blank=False,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    gocardless_payment_id = models.CharField(max_length=255)
+
+
+    def _get_latest_status(self):
+        return self.status_changes.order_by('-changed')[0].status
+    status = property(_get_latest_status)
+
+
+    JOIN_WITH_COLLECTIONS_AVAILABLE = 'JOIN_WITH_COLLECTIONS_AVAILABLE'
+    MONTHLY_INVOICE = 'MONTHLY_INVOICE'
+    MANUAL = 'MANUAL'
+    REASON_CHOICES = (
+        (JOIN_WITH_COLLECTIONS_AVAILABLE, 'Joined with collections available in the current month'),
+        (MONTHLY_INVOICE, "Regular monthly invoice for next month's bags"),
+        (MANUAL, 'Adjustment applied by Growing Communities staff'),
+    )
+    reason = models.CharField(max_length=255, choices=REASON_CHOICES)
+
+    def __str__(self):
+        return 'Payment of {} for {} on {}, billing week {}'.format(
+            self.amount,
+            self.customer.full_name,
+            self.created.strftime('%Y-%m-%d %H:%M'),
+            self.created_in_billing_week,
+        )
+
+
+class LineItemRun(models.Model):
+    job_id = models.CharField(max_length=255)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    started = models.DateTimeField()
+    finished = models.DateTimeField(blank=True, null=True)
+    start_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        related_name='line_item_run_starts',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    # In case we crash and need to restart
+    currently_processing_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        related_name='line_item_run_currents',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+
+class PaymentRun(models.Model):
+    job_id = models.CharField(max_length=255)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    started = models.DateTimeField()
+    finished = models.DateTimeField(blank=True, null=True)
+    start_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        related_name='payment_run_starts',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    currently_processing_customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        related_name='payment_run_currents',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+
+class LineItem(models.Model):
+
+    @classmethod
+    def create_line_items(cls, year, month, start_customer=0):
+        '''
+        We run this immediately after the billing date affecting the first billing
+        week of the month.  So, if given 2016, 8 to run a bill in advance for
+        August, the code should be run on Sunday 31 July 2016 just after 3pm GMT.
+
+        We will create line items for August, and adjustments due during July.
+
+
+        XXX What happens if someone leaves - should we automatically set skip weeks
+            until the end of the month -> Then Leave status only applies on the month
+            following and skip weeks is what causes the refund
+
+        XXX Also need to make sure that collection points don't show up for LEAVEs
+        '''
+        # e.g. 31st July 2016
+        now = timezone.now()
+
+        last_run = LineItemRun.objects.order_by('-started')[:1]
+        if last_run:
+            assert last_run[0].started < now, 'The last run was in the future'
+
+        line_item_run = LineItemRun.objects.create(
+            job_id = 'xxx',
+            year = year,
+            month = month,
+            started = now,
+            finished =None,
+            start_customer = start_customer or None,
+            currently_processing_customer = None,
+        )
+        line_item_run.save()
+        line_items_by_customer = {}
+        now_bw = get_billing_week(now)
+        # Find the last first billing week of the previous month
+        billing_week = future_billing_week = parse_billing_week('{0}-{1:02d} {2}'.format(year, month, 1))
+        assert now_bw >= billing_week, 'Cannot run line items for future weeks'
+        billing_weeks_next_month = []
+        while future_billing_week.month == month:
+            billing_weeks_next_month.append(future_billing_week)
+            future_billing_week = future_billing_week.next()
+
+        old_billing_week = start = billing_week.prev()
+        billing_weeks_last_month = []
+        while old_billing_week.month == start.month:
+            billing_weeks_last_month.append(old_billing_week)
+            old_billing_week = old_billing_week.prev()
+        billing_weeks_last_month.reverse()
+
+        print(billing_weeks_last_month)
+        print(billing_weeks_next_month)
+
+        # For each customer
+        customers = Customer.objects.order_by('pk').filter(created__lt=billing_weeks_next_month[0].start)
+        print(customers.all())
+        for customer in customers:
+            if customer.pk < start_customer:
+                continue
+            if not line_item_run.start_customer:
+                line_item_run.start_customer = customer
+            line_item_run.currently_processing_customer = customer
+            line_item_run.save()
+            print('Processing', customer, customer.account_status_before(billing_weeks_next_month[0].start))
+
+            if customer.account_status_before(billing_weeks_next_month[0].start) not in (AccountStatusChange.AWAITING_DIRECT_DEBIT,):
+                # For each billing week in the previous month...
+                for past_billing_week in billing_weeks_last_month:
+                    # Look up what the order actually was
+                    bag_quantities = CustomerOrderChange.as_of(past_billing_week, customer=customer)
+                    should_have_billed = calculate_weekly_fee(bag_quantities)
+                    # Look up the line item for that week
+                    lis = LineItem.objects.filter(
+                        customer=customer,
+                        bill_against=str(past_billing_week),
+                        reason__in=(LineItem.REGULAR, LineItem.NEW_JOINER),
+                    ).all()
+                    assert len(lis) <= 1
+                    if len(lis) == 1:
+                        billed = lis[0].amount
+                    else:
+                        billed = 0
+                    print('Billed:', billed, 'Should have billed:', should_have_billed)
+                    correction = should_have_billed - billed
+                    if correction != 0:
+                        cli = LineItem(
+                            amount=correction,
+                            created=now,
+                            created_in_billing_week=now_bw,
+                            customer=customer,
+                            bill_against=str(past_billing_week),
+                            reason=LineItem.ORDER_CHANGE_ADJUSTMENT,
+                        )
+                        cli.save()
+                        line_items_by_customer.setdefault(customer, []).append(cli)
+                    # If there is a skip week, refund the cost of the new order
+                    skips = Skip.objects.filter(customer=customer, billing_week=past_billing_week).all()
+                    assert len(skips) <= 1
+                    if len(skips):
+                        print('Skips:', skips, past_billing_week, -should_have_billed)
+                        cli = LineItem(
+                            amount=-should_have_billed,
+                            created=now,
+                            created_in_billing_week=now_bw,
+                            customer=customer,
+                            bill_against=str(past_billing_week),
+                            reason=LineItem.SKIP_REFUND,
+                        )
+                        cli.save()
+                        line_items_by_customer.setdefault(customer, []).append(cli)
+            # If the customer has left, or not set up don't bill them:
+            if customer.account_status_before(billing_weeks_next_month[0].start) not in (AccountStatusChange.AWAITING_DIRECT_DEBIT, AccountStatusChange.LEFT):
+                # For each billing week in the next month, add a line item to the order
+                print('Adding in line items for next months order')
+                next_month_bag_quantities = CustomerOrderChange.as_of(
+                    billing_weeks_next_month[0],
+                    customer=customer,
+                )
+                weekly_cost = calculate_weekly_fee(next_month_bag_quantities)
+                for future_billing_week in billing_weeks_next_month:
+                    li = LineItem(
+                        amount=weekly_cost,
+                        created=now,
+                        created_in_billing_week=now_bw,
+                        customer=customer,
+                        bill_against=str(future_billing_week),
+                        reason=LineItem.REGULAR,
+                    )
+                    li.save()
+                    line_items_by_customer.setdefault(customer, []).append(li)
+        return line_items_by_customer
+
+    created = models.DateTimeField()
+    created_in_billing_week = models.CharField(max_length=9)
+    description = models.CharField(max_length=1000)
+    bill_against = models.CharField(max_length=9)
+    payment = models.ForeignKey(
+        Payment,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='line_items',
+        null=True,
+    )
+    customer = models.ForeignKey(
+        # Has to be a string because Customer is not defined yet.
+        'Customer',
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='line_items',
+        null=True,
+    )
+    amount=models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=False,
+        blank=False,
+    )
+    NEW_JOINER = 'NEW_JOINER'
+    MANUAL = 'MANUAL'
+    REGULAR = 'REGULAR_ORDER_FOR_WEEK'
+    SKIP_REFUND = 'SKIP_REFUND'
+    ORDER_CHANGE_ADJUSTMENT = 'ORDER_CHANGE_ADJUSTMENT'
+    REASON_CHOICES = (
+        (MANUAL, 'Adjustment applied by Growing Communities Staff'),
+        (NEW_JOINER, 'New Joiner'),
+        (REGULAR, 'Regular weekly order charge'),
+        (SKIP_REFUND, 'Refund from skipped week'),
+        (ORDER_CHANGE_ADJUSTMENT, 'Adjustment from a changed order'),
+    )
+    reason = models.CharField(max_length=255, choices=REASON_CHOICES)
+
+    def __str__(self):
+        return 'LineItem {} {} for {} in {}'.format(
+            self.reason,
+            self.customer.full_name,
+            self.amount,
+            self.bill_against,
+        )
+
+
+class PaymentStatusChange(models.Model):
+    changed = models.DateTimeField()
+    changed_in_billing_week = models.CharField(max_length=9)
+    payment = models.ForeignKey(
+        Payment,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='status_changes',
+    )
+    status = models.CharField(max_length=255)
+
+    def __str__(self):
+        return 'Payment Status Change to {} for {} on {}'.format(
+            self.status,
+            self.payment.customer.full_name,
+            self.changed.strftime('%Y-%m-%d'),
+        )
+
+
+class GoCardlessEvent(models.Model):
+    event_id =  models.CharField(max_length=100)
+    event = JSONField()

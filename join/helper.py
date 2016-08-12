@@ -58,11 +58,18 @@ def get_pickup_dates(start, stop, month_start=False):
     )
 
 
-def render_bag_quantities(obj):
+def render_bag_quantities(bag_quantities):
     result = ''
-    for bag_quantity in obj:
+    for bag_quantity in bag_quantities:
         result += '{} x {}\n'.format(
             bag_quantity.quantity,
             bag_quantity.bag_type.name,
         )
     return result
+
+
+def calculate_weekly_fee(bag_quantities):
+    amount = 0
+    for bag_quantity in bag_quantities:
+        amount += bag_quantity.quantity * bag_quantity.bag_type.weekly_cost
+    return amount

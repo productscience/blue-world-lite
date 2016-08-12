@@ -29,6 +29,9 @@ from join.models import (
     CustomerOrderChangeBagQuantity,
     CustomerTag,
     Reminder,
+    LineItem,
+    Payment,
+    PaymentStatusChange,
     Skip,
 )
 from django.contrib.admin import widgets as admin_widgets
@@ -412,7 +415,48 @@ class CustomerTagAdmin(BlueWorldModelAdmin):
 class SkipAdmin(BlueWorldModelAdmin):
     pass
 
+class PaymentAdmin(BlueWorldModelAdmin):
+    fields = ('customer', 'amount', 'description')
+
+    def save_model(self, request, payment, form, change):
+        mandate_id = payment.customer.gocardless_current_mandate.gocardless_mandate_id
+        if not settings.SKIP_GOCARDLESS:
+            payment_response_id, payment_response_status = payment.send_to_gocardless(mandate_id, payment.amount)
+        else:
+            payment_response_id = 'none'
+            payment_response_status = 'skipped'
+        now = timezone.now()
+        bw = get_billing_week(now)
+        payment.created = now
+        payment.created_in_billing_week = str(bw)
+        payment.gocardless_mandate_id = mandate_id
+        payment.gocardless_payment_id = payment_response_id
+        payment.reason = Payment.MANUAL
+        payment.save()
+        payment_status_change = PaymentStatusChange(
+            changed=now,
+            changed_in_billing_week=str(bw),
+            status=payment_response_status,
+            payment=payment,
+        )
+        payment_status_change.save()
+
+
+class LineItemAdmin(BlueWorldModelAdmin):
+    fields = ('customer', 'amount', 'description')
+
+    def save_model(self, request, line_item, form, change):
+        now = timezone.now()
+        bw = get_billing_week(now)
+        line_item.reason = LineItem.MANUAL
+        line_item.created = now
+        line_item.created_in_billing_week = str(bw)
+        line_item.save()
+
+
 admin.site.register(AccountStatusChange, AccountStatusChangeAdmin)
+admin.site.register(Payment, PaymentAdmin)
+admin.site.register(LineItem, LineItemAdmin)
 admin.site.register(CollectionPoint, CollectionPointAdmin)
 admin.site.register(BagType, BagTypeAdmin)
 admin.site.register(Customer, CustomerAdmin)
@@ -434,15 +478,6 @@ admin.site.disable_action('delete_selected')
 
 def packing_list(collection_points, billing_week):
     '''
-    We'll need the following data strucutures:
-
-    `bag_name`:                         A lookup of bag ID to bag name
-    `collection_point_name`:            A lookup of bag ID to bag name
-    `customer_name`:                    A lookup of customer ID to customer
-                                        name
-    `customer_latest_bag_quantities`
-    `customer_latest_collection_point`
-
     Although it would be faster to do all this in the database, in terms of
     scalability, assembling everything in Django from separate data means
     the database does less work, and that the database could be partitioned
@@ -460,35 +495,13 @@ def packing_list(collection_points, billing_week):
     but where each stage of the hierarchy is keyed by an ID, and which
     only has the properties we've already fetched from the database.
 
-    Then we'll put it all together into a big packing_list that looks like
-    this:
-
-        collection_point = packing_list[collection_point_id]
-        collection_point.name
-        collection_point.collection_day
-
-        collection_point.total.bags.all
-        collection_point.total.bags.by_id[bag_id]
-        collection_point.total.customers.all
-        collection_point.total.customers.on_holiday
-        collection_point.total.customers.collecting
-
-        customer = collection_point.current_customer[customer_id]
-        customer.bags[bag_id] = bag_quantity
-        customer.new          = True/False
-        customer.holiday      = True/False
+    Then we'll put it all together into a big packing_list
 
     Note that although we can go backwards in time on holiday status,
     collection points and orders, the names, collection_day and Starter status
     are only valid until the last deadline.
     '''
     bag_types = BagType.objects.all().only('id', 'name', 'tag_color')
-    collection_point_name = dict(
-        CollectionPoint.objects.all()
-        .filter(pk__in=collection_points)
-        .only('id', 'name')
-        .values_list('id', 'name')
-    )
     customer_name = dict(
         Customer.objects.all()
         .only('id', 'full_name')
@@ -509,20 +522,8 @@ def packing_list(collection_points, billing_week):
         .only('id')
         .values_list('id', flat=True)
     )
-    _latest_bag_quantities = (
-        CustomerOrderChangeBagQuantity.objects
-        .filter(
-            customer_order_change__in=(
-                CustomerOrderChange.objects
-                .filter(changed_in_billing_week__lt=str(billing_week))
-                .order_by('customer', '-changed')
-                .distinct('customer')
-                .only('id')
-            ),
-        )
-        .order_by('customer_order_change__customer__full_name')
-        .only('customer_order_change__customer_id', 'bag_type_id', 'quantity')
-    )
+    # XXX Need to filter LEAVERs, not done yet.
+    _latest_bag_quantities = CustomerOrderChange.as_of(billing_week)
     _bags_by_customer = OrderedDict()
     # Must be an OrderedDict to keep everything in the right order
     _no_bags = OrderedDict([(bag_type, 0) for bag_type in bag_types])
@@ -538,7 +539,10 @@ def packing_list(collection_points, billing_week):
             bag_quantity.quantity
     _latest_collection_points = (
         CustomerCollectionPointChange.objects
-        .filter(changed_in_billing_week__lt=str(billing_week))
+        .filter(
+            changed_in_billing_week__lt=str(billing_week),
+            collection_point__in=collection_points,
+        )
         .order_by('customer', '-changed')
         .distinct('customer')
         .only(

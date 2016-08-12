@@ -5,20 +5,22 @@
 {% block content %}
     <div class="row">
       <h1>Set up Go Cardless</h1>
-      <p>Before we can continue we need to set up a direct debit to take payments. We do this using a service called Go Cardless.</p>
+      <p>Before we can continue we need to set up a direct debit to take payments. We do this using a service called <em>GoCardless</em>. When you click the button below you'll be taken to the GoCardless secure site and asked to enter your direct debit details.</p>
+      {% if number %}
+      <p>Once you have completed this step we'll also immeditely bill you £{{ amount }} for the next {{ number }} collections this month.</p>
 
-      <p>Please click the button below to set up your bank details on the GoCardless site.</p>
+      <p>After that we'll bill you near the begining of every month for the collections coming up in that month.</p>
 
-      <!-- commented out for now, until we have the correct template code for this
-      <p><tt>IF ANY COLLECTIONS LEFT THIS MONTH:</tt></p>
-      <p>Once you have completed this step we'll also immeditely bill you £<tt>AMOUNT</tt> for the next <tt>NUMBER</tt> collections this month. After that we'll bill you near the begining of every month for the collections coming up in that month.</p>
-      <p><tt>ELSE</tt></p>
-      <p>We'll start taking payments on <tt>DATE</tt> for the <tt>NUMBER</tt> collections in <tt>MONTH</tt>.</p>
-      <p><tt>END IF</tt></p>
-    -->
+      {% else %}
+      <p>We'll start taking payments on {{ first_bw.start|date:"DATE_FORMAT" }} for the collections in {{ first_bw.start|date:"F" }}.</p>
+      {% endif %}
+
+      <p>You can see the upcoming billing dates in each month at any time by <a href="{% url 'billing_dates' %}">visiting the billing dates page</a>.</p>
+
       <form action="{% url 'dashboard_gocardless' %}" method="post">
         {% csrf_token %}
         <input type="submit" class="button font-display primary large" value="Set up Go Cardless">
+        <input type="hidden" name="amount_notified" value="{{ amount }}">
       </form>
     </div>
 {% endblock %}

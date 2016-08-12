@@ -4,11 +4,12 @@
 {% block head_title %}Billing History{% endblock %}
 {% block extra_head %}
 <style>
-table#order-history tr:nth-of-type(even) {
-    background-color: transparent !important;
+#billing-history tr th, #billing-history tr td {
+    text-align: left;
+    vertical-align: top;
 }
-table#order-history tr.line {
-    border-top: 1px solid #666;
+.total {
+    text-align: right;
 }
 </style>
 {% endblock %}
@@ -17,37 +18,62 @@ table#order-history tr.line {
     <div class="row">
       <h1>Billing History</h1>
 
-      <p>Your account was created on {{ created }}.</p>
+      <p>Your payments.</p>
 
-      {% for month in billing_history %}
-      <h2>{{ month|date:"F Y" }}</h2>
+      <table id="billing-history">
+      <tr>
+        <th>Date</th><th>Requested</th><th>Received</th>
+      </tr>
 
-      <table id="order-history">
-        {% for minute in billing_history|get_item:month %}
-        {% for changed, event_type, detail in billing_history|get_item:month|get_item:minute %}
-        {% if forloop.first %}
-        <tr class="line">
-          <td style="vertical-align: top;" rowspan={{ billing_history|get_item:month|get_item:minute|length }}>{{ minute }}</td>
-        {% else %}
-        <tr>
-          {% endif %}
-          <td>
-            {% if event_type == 'ORDER_CHANGE' %}
-            Order changed to:
-            {% elif event_type == 'COLLECTION_POINT_CHANGE' %}
-            Collection point changed to:
-            {% elif event_type == 'ACCOUNT_STATUS_CHANGE' %}
-            Account status changed to:
-            {% elif event_type == 'SKIP_WEEK' %}
-            Requested to skip the following collection:
+      {% if balance_carried_over %}
+      <tr>
+        <td>Starting balance</td><td>
+        {% if balance_carried_over >= 0 %}
+        £{{ balance_carried_over }}
+        {% endif %}
+        </td><td>
+        {% if balance_carried_over < 0 %}
+        £{{ balance_carried_over|abs }}
+        {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+
+      {% for payment in payments %}
+      <tr>
+        <td>
+            {{ payment.created }} (current status: <tt>{{ payment.status }}</tt>)<br>
+            {% if payment.description %}
+            {{ payment.description }} <br>
             {% endif %}
-          </td>
-          <td>{{ detail }}</td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </table>
-    {% endfor %}
+              <ul>
+              {% for line_item in payment.line_items.all %}
+                <li>
+                 {% if line_item.amount > -1 %}
+                 £{{ line_item.amount }}
+                 {% else %}
+                 -£{{ line_item.amount }}
+                 {% endif %}
+                 {{ line_item.get_reason_display }} {{ line_item.description }}</li>
+              {% endfor %}
+              </ul>
+        </td>
+        <td>£{{ payment.amount }}</td>
+        <td>
+          {% if payment.completed %}
+          £{{ payment.amount }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </table> 
+      <h3 class="total"><strong>Balance: 
+      {% if balance > 0 %}
+      £{{ balance|abs }} owed
+      {% else %}
+      £{{ balance|abs }} credit
+      {% endif %}
+      </strong></h3>
     </div>
     {% endtimezone %}
 {% endblock %}

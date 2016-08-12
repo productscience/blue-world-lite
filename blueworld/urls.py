@@ -84,6 +84,11 @@ urlpatterns = [
         name='gocardless_callback',
     ),
     url(
+        r'^gocardless-events-webhook$',
+        join.views.gocardless_events_webhook,
+        name='gocardless_events_webhook',
+    ),
+    url(
         r'^billing-dates$',
         join.views.billing_dates,
         name='billing_dates',

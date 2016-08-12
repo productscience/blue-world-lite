@@ -35,4 +35,4 @@ class SignupForm(forms.Form):
         )
         account_status_change.save()
         customer.collection_point = request.session['collection_point']
-        customer.bag_quantities = request.session['bag_type']
+        customer._set_bag_quantities(request.session['bag_type'], reason='JOIN')

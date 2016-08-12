@@ -255,7 +255,7 @@ if os.environ.get('ALLOWED_HOSTS'):
                       for host in os.environ['ALLOWED_HOSTS'].split(',')]
 ADMINS = []
 if os.environ.get('ADMINS'):
-    ADMINS += [email.strip() for email in os.environ['ADMINS'].split(',')]
+    ADMINS += [('admin', email.strip()) for email in os.environ['ADMINS'].split(',')]
 LEAVER_EMAIL_TO = []
 if os.environ.get('LEAVER_EMAIL_TO'):
     LEAVER_EMAIL_TO += [email.strip() for email in os.environ['LEAVER_EMAIL_TO'].split(',')]
@@ -280,6 +280,7 @@ if 'RAVEN_DSN' in os.environ:
 
 
 # Go Cardless
+import gocardless_pro
 # https://github.com/gocardless/gocardless-pro-python
 # https://developer.gocardless.com/2015-07-06/#overview
 # https://gocardless.com/blog/an-introduction-to-our-api/
@@ -288,10 +289,14 @@ GOCARDLESS_ENVIRONMENT = os.environ.get(
     'GOCARDLESS_ENVIRONMENT',
     'none'
 )
-
+GOCARDLESS_WEBHOOK_SECRET=os.environ['GOCARDLESS_WEBHOOK_SECRET']
 GOCARDLESS_ACCESS_TOKEN = os.environ['GOCARDLESS_ACCESS_TOKEN']
 SKIP_GOCARDLESS = str(os.environ.get('SKIP_GOCARDLESS', 'true')).lower() == 'true'
-
+GOCARDLESS_CLIENT = gocardless_pro.Client(
+    access_token=GOCARDLESS_ACCESS_TOKEN,
+    environment=GOCARDLESS_ENVIRONMENT,
+)
+# Also make sure the endpoint is set up like: https://.../gocardless-events-webhook
 
 SMALL_FRUIT_BAG_NAME='Small fruit'
 
