@@ -488,6 +488,11 @@ class Skip(models.Model):
 
 class Reminder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(
+        Customer,
+        # XXX Not sure about this yet
+        on_delete=models.CASCADE,
+        related_name='reminder',
     )
     title = models.CharField(max_length=30)
     date = models.DateField(null=True, blank=True)
@@ -505,8 +510,6 @@ class Reminder(models.Model):
 
     def is_due(self):
         return self.date <= timezone.now()
-        # return self.date <= datetime.date.today()
-
 
 class Payment(models.Model):
     @classmethod
@@ -525,13 +528,13 @@ class Payment(models.Model):
             assert last_run[0].started < now, 'The last run was in the future'
 
         payment_run = PaymentRun.objects.create(
-            job_id = 'xxx',
-            year = year,
-            month = month,
-            started = now,
-            finished =None,
-            start_customer = start_customer or None,
-            currently_processing_customer = None,
+            job_id='xxx',
+            year=year,
+            month=month,
+            started=now,
+            finished=None,
+            start_customer=start_customer or None,
+            currently_processing_customer=None,
         )
         payment_run.save()
         payment_by_customer = {}
