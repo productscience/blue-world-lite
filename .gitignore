@@ -15,5 +15,10 @@ phantomjs-1.9.7-macosx
 dump.rdb
 initial.json
 
+# No pg dumps in source control
+*.pg_dump
+
+data/real
+
 
 docs/_build
