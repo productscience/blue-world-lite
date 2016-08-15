@@ -1,2 +1,2 @@
-web: python manage.py runserver
-mail: rm -f `pwd`lathermail.db; lathermail --db-uri sqlite:////`pwd`lathermail.db
+web: gunicorn blueworld.wsgi:application --preload --log-file - &
+mail: pkill -f lathermail ; rm -f `pwd`lathermail.db && lathermail --db-uri sqlite:////`pwd`lathermail.db --debug
