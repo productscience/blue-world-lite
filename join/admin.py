@@ -1,3 +1,7 @@
+import pprint
+import logging
+
+
 from collections import OrderedDict
 from datetime import timedelta
 from decimal import Decimal
@@ -10,6 +14,11 @@ from django.core import urlresolvers
 from django.core.urlresolvers import reverse
 from django.db import connection
 from django.db import reset_queries
+
+from django.forms import inlineformset_factory
+from django.forms import BaseInlineFormSet
+
+from django.forms import ModelForm
 from django.shortcuts import render
 from django.template import RequestContext
 from django.template.loader import get_template
@@ -30,6 +39,7 @@ from join.models import (
     CustomerTag,
     Reminder,
     LineItem,
+    Note,
     Payment,
     PaymentStatusChange,
     Skip,
@@ -37,6 +47,8 @@ from join.models import (
 from django.contrib.admin import widgets as admin_widgets
 from django.core.exceptions import ValidationError
 from billing_week import get_billing_week, parse_billing_week
+
+logger = logging.getLogger(__name__)
 
 
 class BlueWorldModelAdmin(admin.ModelAdmin):
@@ -284,11 +296,187 @@ class ReminderDueListFilter(admin.SimpleListFilter):
         if self.value() == 'due':
             return queryset.filter(reminder__done=False)
 
+def _make_new_note(obj):
+    n = Note(customer=Customer.objects.get(pk=obj.customer_id),
+        details=obj.details,
+        created_by=obj.user,
+        title=obj.title,
+        date=obj.date).save()
+    return n
+
+class ReminderInlineFormset(forms.models.BaseInlineFormSet):
+
+    #  this only fires for newly created inlines in the form.
+    def save_new(self, form, commit=True):
+        obj = super(ReminderInlineFormset, self).save_new(form, commit=False)
+
+        obj.user = self.request.user
+
+        logger.info("obj in save new")
+        logger.info(obj.__dict__)
+
+        if commit:
+            obj.save()
+
+        return obj
+
+    def save_existing(self, form, instance, commit=True):
+        obj = super(ReminderInlineFormset, self).save_existing(form, instance, commit=False)
+        obj.user = self.request.user
+
+        logger.info("obj in save existing")
+        logger.info(obj.__dict__)
+
+        if obj.done:
+            result = _make_new_note(obj)
+
+        logger.info(result)
+        obj.save()
+
 class ReminderInline(admin.StackedInline):
     model = Reminder
     extra = 0
-    template = "admin/join/customer/stacked_inline.html"
 
+    def get_queryset(self, request):
+        return Reminder.objects.filter(done=False)
+
+    def get_formset(self, request, obj, **kwargs):
+
+        reminder_formset = inlineformset_factory(Customer, Reminder,
+            form=ReminderInlineForm,
+            extra=0,
+            formset=ReminderInlineFormset)
+
+        # ifs = inlineformset_factory(Customer, Note, extra=0, form=PartialNoteForm)
+        # raise Exception("getting somewhere?")
+        reminder_formset.request = request
+        reminder_formset.obj = obj
+        return reminder_formset
+
+class ReminderInlineForm(ModelForm):
+
+    class Meta:
+        model = Reminder
+        fields = ('title', 'details', 'done', 'customer', 'date')
+
+class PartialNoteForm(ModelForm):
+
+    # how do we have access to the request object here tho?
+    # do we need it? We have the all the information about the customer
+    # from the reminder associated with it.
+    # but we don't have the user creating it.
+    # Maybe if we can log the output, we can see what is generated
+
+
+    # alternatively, we might just need to change the change_view
+    # for the customer
+
+    # the other option is to create a custom formset, and hook into
+    # the save_model option there
+    # get the pre save instance
+
+
+
+    def save(self, force_insert=False, force_update=False, commit=True):
+        # the save method is only triggered when on modeladmin, not a inline form.
+        # for that we need to hook into the parent model
+        import pprint
+
+        # raise Exception('this will do for now')
+
+        m = super(PartialNoteForm, self).save(commit=False)
+        pprint.pprint(m.__dict__)
+        # then save it for reals
+
+
+        return m.save()
+
+
+    class Meta:
+        model = Note
+
+        fields = ('title', 'details', 'customer')
+
+class NoteAdmin(BlueWorldModelAdmin):
+    form = PartialNoteForm
+
+
+class NoteInlineFormSet(BaseInlineFormSet):
+
+    # def save(self, commit=True):
+    #     """Saves model instances for every form, adding and changing instances
+    #     as necessary, and returns the list of instances.
+    #     """
+    #     result = super(NoteInlineFormSet, self).save(commit=False)
+    #
+    #
+    #
+    #
+    #     import pprint
+    #     pprint.pprint(self.__class__)
+    #     pprint.pprint(self.request)
+    #     pprint.pprint(self.obj)
+    #     pprint.pprint(self.__dict__)
+    #     pprint.pprint([r.__dict__ for r in result])
+    #
+    #
+    #     # for note in result:
+    #
+    #
+    #     # if not commit:
+    #     #     self.saved_forms = []
+    #     #
+    #     #     def save_m2m():
+    #     #         for form in self.saved_forms:
+    #     #             form.save_m2m()
+    #     #     self.save_m2m = save_m2m
+    #     # return self.save_existing_objects(commit) + self.save_new_objects(commit)
+    pass
+
+
+
+class NoteInline(admin.StackedInline):
+    model = Note
+    form = PartialNoteForm
+    extra = 0
+
+    # def get_formset
+    def get_formset(self, request, obj, **kwargs):
+
+        # ifs = inlineformset_factory(Customer, Note, fields=('title','details',), extra=0, formset=NoteInlineFormSet)
+        ifs = inlineformset_factory(Customer, Note, extra=0, form=PartialNoteForm)
+        # raise Exception("getting somewhere?")
+        ifs.request = request
+        ifs.obj = obj
+        return ifs
+
+    # nope, this doesn't work either
+    # def save_formset(self, request, form, formset, change):
+    #     Exception("I'd be saving here")
+
+
+    # def save_model(self,request,obj,form,change):
+    #     raise Exception
+    #
+    # def save_formset(self, request, form, formset, change):
+    #     raise Exception
+
+        # instances = formset.save(commit=False)
+        # for instance in instances:
+            # instance.user = request.user
+            # instance.save()
+        # formset.save_m2m()
+
+
+
+    # def clean(self, request, obj, form, change):
+    #     raise Exception('can I change a note here?')
+    #
+    #     pass
+    # template = "admin/join/customer/stacked_inline.html"
+
+
+# class CustomerFormSet()
 
 class CustomerAdmin(BlueWorldModelAdmin):
     search_fields = ('full_name', 'nickname', )
@@ -307,7 +495,9 @@ class CustomerAdmin(BlueWorldModelAdmin):
         ReminderDueListFilter,
     )
 
-    inlines = [ReminderInline]
+
+
+    inlines = [ReminderInline, NoteInline]
 
     def hijack_field(self, obj):
         hijack_attributes = hijack_settings.HIJACK_URL_ALLOWED_ATTRIBUTES
@@ -381,12 +571,33 @@ class CustomerAdmin(BlueWorldModelAdmin):
         'tags',
     ]
 
+
+    #
+
+
     def change_view(self, request, object_id, extra_context=None):
         """
         Overrides the normal change form view to lets us add vars, for linking
         to external services, like Helpscout.
         """
         obj = Customer.objects.get(pk=object_id)
+
+        # doing it here is problematic as we need to handle all the
+        # form changes ourselves.
+        # if request.method == 'POST':
+            # import pprint
+            # nope, this didn't work either, as I need to futz around with
+            # included of excluded formsets
+            # from django.forms.models import modelformset_factory
+            # CustomerFormSet = modelformset_factory(Customer)
+
+            # formset = CustomerFormSet(request.POST, request.FILES)
+            # pprint.pprint(formset)
+
+
+            #
+
+            # raise Exception('is this where we change it then? the parent?')
 
         my_context = {
             'name_for_helpscout': obj.full_name,
@@ -469,6 +680,7 @@ admin.site.register(
     CustomerOrderChangeBagQuantity,
     CustomerOrderChangeBagQuantityAdmin,
 )
+admin.site.register(Note, NoteAdmin)
 admin.site.register(CustomerTag, CustomerTagAdmin)
 admin.site.register(Skip, SkipAdmin)
 # admin.site.unregister(User)

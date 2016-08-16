@@ -1,3 +1,5 @@
+import uuid
+
 from billing_week import get_billing_week
 from collections import OrderedDict
 from decimal import Decimal
@@ -6,6 +8,8 @@ from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.db.models.signals import post_save
+
 from billing_week import get_billing_week, parse_billing_week
 from django.utils import timezone
 from join.helper import calculate_weekly_fee
@@ -510,6 +514,45 @@ class Reminder(models.Model):
 
     def is_due(self):
         return self.date <= timezone.now()
+
+
+class Note(models.Model):
+    """
+    When a reminder is complete, it's added to a history of notes for a customer.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True
+    )
+    customer = models.ForeignKey(
+        Customer
+    )
+    reminder = models.ForeignKey(
+        Reminder,
+        null=True, blank=True
+    )
+    title = models.CharField(max_length=30)
+    date = models.DateField(null=True, blank=True)
+    details = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return self.title
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+def note_from_reminder(sender, **kwargs):
+    # import bpdb; bpdb.set_trace()
+    import pprint as pp
+
+    pp.pprint(kwargs)
+
+# post_save.connect(note_from_reminder, sender=Reminder, dispatch_uid=str(uuid.uuid1()))
 
 class Payment(models.Model):
     @classmethod
