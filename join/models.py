@@ -549,15 +549,6 @@ class Note(StaffUpdatedModel):
     class Meta:
         ordering = ['-created_at']
 
-
-def note_from_reminder(sender, **kwargs):
-    # import bpdb; bpdb.set_trace()
-    import pprint as pp
-
-    pp.pprint(kwargs)
-
-# post_save.connect(note_from_reminder, sender=Reminder, dispatch_uid=str(uuid.uuid1()))
-
 class Payment(models.Model):
     @classmethod
     def create_payments(cls, year, month, start_customer=0):
