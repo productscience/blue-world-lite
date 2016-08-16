@@ -490,23 +490,39 @@ class Skip(models.Model):
             self.created.isoformat(),
         )
 
-class Reminder(models.Model):
+class StaffUpdatedModel(models.Model):
+    """
+    Simple abstract class to try up the models that are largely edited, and created
+    by members of staff.
+    """
     created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True
+    )
+    title = models.CharField(max_length=255)
+    details = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return "{} - {} - created by: {}".format(self.created_at.strftime("%Y-%m-%d"),
+        self.title, self.created_by)
+
+    class Meta:
+        abstract = True
+
+
+class Reminder(StaffUpdatedModel):
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
         related_name='reminder',
     )
-    title = models.CharField(max_length=30)
+
     date = models.DateField(null=True, blank=True)
-    details = models.TextField(null=True, blank=True)
     done = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.title
-
-    def __str__(self):
-        return "{} - {}".format(self.date, self.title)
 
     class Meta:
         ordering = ['-date']
@@ -515,15 +531,10 @@ class Reminder(models.Model):
         return self.date <= timezone.now()
 
 
-class Note(models.Model):
+class Note(StaffUpdatedModel):
     """
     When a reminder is complete, it's added to a history of notes for a customer.
     """
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True
-    )
     customer = models.ForeignKey(
         Customer
     )
@@ -531,16 +542,9 @@ class Note(models.Model):
         Reminder,
         null=True, blank=True
     )
-    title = models.CharField(max_length=30)
-    details = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return self.title
-
-    def __str__(self):
-        return "{} - {} - {}".format(self.title,
-            self.created_at.strftime("%Y-%m-%d"),
-            self.created_by)
 
     class Meta:
         ordering = ['-created_at']

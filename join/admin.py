@@ -356,15 +356,17 @@ class ReminderInlineFormset(forms.models.BaseInlineFormSet):
             details=obj.details,
             created_by=obj.user,
             title=obj.title,
-            date=obj.date).save()
+            reminder=obj).save()
         return n
 
 class NoteInlineFormSet(BaseInlineFormSet):
 
-    def save_new(self, form, instance, commit=True):
-        obj = super(ReminderInlineFormset, self).save_existing(form, instance, commit=False)
+    def save_new(self, form, commit=True):
+        obj = super(NoteInlineFormSet, self).save_new(form, commit=False)
         obj.created_by = self.request.user
         obj.save()
+
+        return obj
 
 class NoteInline(admin.StackedInline):
     model = Note
@@ -379,7 +381,6 @@ class NoteInline(admin.StackedInline):
         fields=('title', 'details',))
 
         customer_notes.request = request
-        customer_notes.obj = obj
         return customer_notes
 
 class CustomerAdmin(BlueWorldModelAdmin):
