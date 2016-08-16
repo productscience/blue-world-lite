@@ -299,7 +299,8 @@ class ReminderDueListFilter(admin.SimpleListFilter):
 
 class ReminderInline(admin.StackedInline):
     model = Reminder
-    extra = 1
+    template = "admin/join/customer/stacked_inline.html"
+
 
     def get_queryset(self, request):
         return Reminder.objects.filter(done=False)
@@ -308,7 +309,7 @@ class ReminderInline(admin.StackedInline):
 
         reminder_formset = inlineformset_factory(Customer, Reminder,
             formset=ReminderInlineFormset,
-            extra=1,
+            extra=0,
             form=ReminderInlineForm)
 
         reminder_formset.request = request
@@ -368,6 +369,8 @@ class NoteInlineFormSet(BaseInlineFormSet):
 class NoteInline(admin.StackedInline):
     model = Note
     extra = 1
+    template = "admin/join/customer/stacked_inline.html"
+
 
     def get_formset(self, request, obj, **kwargs):
 

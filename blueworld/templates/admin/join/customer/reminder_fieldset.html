@@ -38,7 +38,7 @@
 
                             <div class="description">
                               <input type="hidden" id="{{ field.field.id_for_label }}" name="{{ field.field.html_name }}"  value="{{ field.field.value }}">
-                              {{ field.field.value }}
+                              {{ field.field.value|linebreaks }}
                             </div>
                           {% endif %}
 
