@@ -494,7 +494,6 @@ class Reminder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     customer = models.ForeignKey(
         Customer,
-        # XXX Not sure about this yet
         on_delete=models.CASCADE,
         related_name='reminder',
     )
@@ -533,14 +532,15 @@ class Note(models.Model):
         null=True, blank=True
     )
     title = models.CharField(max_length=30)
-    date = models.DateField(null=True, blank=True)
     details = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return self.title
 
     def __str__(self):
-        return self.title
+        return "{} - {} - {}".format(self.title,
+            self.created_at.strftime("%Y-%m-%d"),
+            self.created_by)
 
     class Meta:
         ordering = ['-created_at']

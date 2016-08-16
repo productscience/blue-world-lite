@@ -1,4 +1,3 @@
-import pprint
 import logging
 
 
@@ -6,8 +5,10 @@ from collections import OrderedDict
 from datetime import timedelta
 from decimal import Decimal
 from django import forms
+
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.core import urlresolvers
@@ -296,29 +297,41 @@ class ReminderDueListFilter(admin.SimpleListFilter):
         if self.value() == 'due':
             return queryset.filter(reminder__done=False)
 
-def _make_new_note(obj):
-    n = Note(customer=Customer.objects.get(pk=obj.customer_id),
-        details=obj.details,
-        created_by=obj.user,
-        title=obj.title,
-        date=obj.date).save()
-    return n
+class ReminderInline(admin.StackedInline):
+    model = Reminder
+    extra = 1
+
+    def get_queryset(self, request):
+        return Reminder.objects.filter(done=False)
+
+    def get_formset(self, request, obj, **kwargs):
+
+        reminder_formset = inlineformset_factory(Customer, Reminder,
+            formset=ReminderInlineFormset,
+            extra=1,
+            form=ReminderInlineForm)
+
+        reminder_formset.request = request
+        reminder_formset.obj = obj
+
+        return reminder_formset
+
+class ReminderInlineForm(ModelForm):
+    """
+    Declaring the model form here, so we can pass it into the Reminder inline,
+    But also use this on its own.
+    """
+    class Meta:
+        model = Reminder
+        fields = ('title', 'date', 'details', 'done')
+        widgets = {'date': AdminDateWidget}
 
 class ReminderInlineFormset(forms.models.BaseInlineFormSet):
-
-    #  this only fires for newly created inlines in the form.
-    def save_new(self, form, commit=True):
-        obj = super(ReminderInlineFormset, self).save_new(form, commit=False)
-
-        obj.user = self.request.user
-
-        logger.info("obj in save new")
-        logger.info(obj.__dict__)
-
-        if commit:
-            obj.save()
-
-        return obj
+    """
+    The formset here lets us override the `save_existing` method, so we can
+    set the 'created_by' attribute to the member of staff using the admin
+    at the time
+    """
 
     def save_existing(self, form, instance, commit=True):
         obj = super(ReminderInlineFormset, self).save_existing(form, instance, commit=False)
@@ -328,155 +341,43 @@ class ReminderInlineFormset(forms.models.BaseInlineFormSet):
         logger.info(obj.__dict__)
 
         if obj.done:
-            result = _make_new_note(obj)
+            result = self._make_new_note_from_reminder(obj)
 
         logger.info(result)
         obj.save()
 
-class ReminderInline(admin.StackedInline):
-    model = Reminder
-    extra = 0
-
-    def get_queryset(self, request):
-        return Reminder.objects.filter(done=False)
-
-    def get_formset(self, request, obj, **kwargs):
-
-        reminder_formset = inlineformset_factory(Customer, Reminder,
-            form=ReminderInlineForm,
-            extra=0,
-            formset=ReminderInlineFormset)
-
-        # ifs = inlineformset_factory(Customer, Note, extra=0, form=PartialNoteForm)
-        # raise Exception("getting somewhere?")
-        reminder_formset.request = request
-        reminder_formset.obj = obj
-        return reminder_formset
-
-class ReminderInlineForm(ModelForm):
-
-    class Meta:
-        model = Reminder
-        fields = ('title', 'details', 'done', 'customer', 'date')
-
-class PartialNoteForm(ModelForm):
-
-    # how do we have access to the request object here tho?
-    # do we need it? We have the all the information about the customer
-    # from the reminder associated with it.
-    # but we don't have the user creating it.
-    # Maybe if we can log the output, we can see what is generated
-
-
-    # alternatively, we might just need to change the change_view
-    # for the customer
-
-    # the other option is to create a custom formset, and hook into
-    # the save_model option there
-    # get the pre save instance
-
-
-
-    def save(self, force_insert=False, force_update=False, commit=True):
-        # the save method is only triggered when on modeladmin, not a inline form.
-        # for that we need to hook into the parent model
-        import pprint
-
-        # raise Exception('this will do for now')
-
-        m = super(PartialNoteForm, self).save(commit=False)
-        pprint.pprint(m.__dict__)
-        # then save it for reals
-
-
-        return m.save()
-
-
-    class Meta:
-        model = Note
-
-        fields = ('title', 'details', 'customer')
-
-class NoteAdmin(BlueWorldModelAdmin):
-    form = PartialNoteForm
-
+    def _make_new_note_from_reminder(self, obj):
+        """
+        Accepts a reminder object instance, and creates a new note, based on the
+        reminder's information
+        """
+        n = Note(customer=Customer.objects.get(pk=obj.customer_id),
+            details=obj.details,
+            created_by=obj.user,
+            title=obj.title,
+            date=obj.date).save()
+        return n
 
 class NoteInlineFormSet(BaseInlineFormSet):
 
-    # def save(self, commit=True):
-    #     """Saves model instances for every form, adding and changing instances
-    #     as necessary, and returns the list of instances.
-    #     """
-    #     result = super(NoteInlineFormSet, self).save(commit=False)
-    #
-    #
-    #
-    #
-    #     import pprint
-    #     pprint.pprint(self.__class__)
-    #     pprint.pprint(self.request)
-    #     pprint.pprint(self.obj)
-    #     pprint.pprint(self.__dict__)
-    #     pprint.pprint([r.__dict__ for r in result])
-    #
-    #
-    #     # for note in result:
-    #
-    #
-    #     # if not commit:
-    #     #     self.saved_forms = []
-    #     #
-    #     #     def save_m2m():
-    #     #         for form in self.saved_forms:
-    #     #             form.save_m2m()
-    #     #     self.save_m2m = save_m2m
-    #     # return self.save_existing_objects(commit) + self.save_new_objects(commit)
-    pass
-
-
+    def save_new(self, form, instance, commit=True):
+        obj = super(ReminderInlineFormset, self).save_existing(form, instance, commit=False)
+        obj.created_by = self.request.user
+        obj.save()
 
 class NoteInline(admin.StackedInline):
     model = Note
-    form = PartialNoteForm
-    extra = 0
+    extra = 1
 
-    # def get_formset
     def get_formset(self, request, obj, **kwargs):
 
-        # ifs = inlineformset_factory(Customer, Note, fields=('title','details',), extra=0, formset=NoteInlineFormSet)
-        ifs = inlineformset_factory(Customer, Note, extra=0, form=PartialNoteForm)
-        # raise Exception("getting somewhere?")
-        ifs.request = request
-        ifs.obj = obj
-        return ifs
+        customer_notes = inlineformset_factory(Customer, Note, extra=0,
+        formset=NoteInlineFormSet,
+        fields=('title', 'details',))
 
-    # nope, this doesn't work either
-    # def save_formset(self, request, form, formset, change):
-    #     Exception("I'd be saving here")
-
-
-    # def save_model(self,request,obj,form,change):
-    #     raise Exception
-    #
-    # def save_formset(self, request, form, formset, change):
-    #     raise Exception
-
-        # instances = formset.save(commit=False)
-        # for instance in instances:
-            # instance.user = request.user
-            # instance.save()
-        # formset.save_m2m()
-
-
-
-    # def clean(self, request, obj, form, change):
-    #     raise Exception('can I change a note here?')
-    #
-    #     pass
-    # template = "admin/join/customer/stacked_inline.html"
-
-
-# class CustomerFormSet()
+        customer_notes.request = request
+        customer_notes.obj = obj
+        return customer_notes
 
 class CustomerAdmin(BlueWorldModelAdmin):
     search_fields = ('full_name', 'nickname', )
@@ -571,33 +472,12 @@ class CustomerAdmin(BlueWorldModelAdmin):
         'tags',
     ]
 
-
-    #
-
-
     def change_view(self, request, object_id, extra_context=None):
         """
         Overrides the normal change form view to lets us add vars, for linking
         to external services, like Helpscout.
         """
         obj = Customer.objects.get(pk=object_id)
-
-        # doing it here is problematic as we need to handle all the
-        # form changes ourselves.
-        # if request.method == 'POST':
-            # import pprint
-            # nope, this didn't work either, as I need to futz around with
-            # included of excluded formsets
-            # from django.forms.models import modelformset_factory
-            # CustomerFormSet = modelformset_factory(Customer)
-
-            # formset = CustomerFormSet(request.POST, request.FILES)
-            # pprint.pprint(formset)
-
-
-            #
-
-            # raise Exception('is this where we change it then? the parent?')
 
         my_context = {
             'name_for_helpscout': obj.full_name,
@@ -680,7 +560,6 @@ admin.site.register(
     CustomerOrderChangeBagQuantity,
     CustomerOrderChangeBagQuantityAdmin,
 )
-admin.site.register(Note, NoteAdmin)
 admin.site.register(CustomerTag, CustomerTagAdmin)
 admin.site.register(Skip, SkipAdmin)
 # admin.site.unregister(User)
