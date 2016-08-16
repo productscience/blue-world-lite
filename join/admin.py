@@ -334,6 +334,13 @@ class ReminderInlineFormset(forms.models.BaseInlineFormSet):
     at the time
     """
 
+    def save_new(self, form, commit=True):
+        obj = super(ReminderInlineFormset, self).save_new(form, commit=False)
+        obj.created_by = self.request.user
+        obj.save()
+
+        return obj
+
     def save_existing(self, form, instance, commit=True):
         obj = super(ReminderInlineFormset, self).save_existing(form, instance, commit=False)
         obj.user = self.request.user
@@ -346,6 +353,8 @@ class ReminderInlineFormset(forms.models.BaseInlineFormSet):
 
         logger.info(result)
         obj.save()
+
+        return obj
 
     def _make_new_note_from_reminder(self, obj):
         """

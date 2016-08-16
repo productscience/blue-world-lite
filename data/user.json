@@ -97,6 +97,21 @@
                 "delete_reminder",
                 "join",
                 "reminder"
+            ],
+            [
+              "add_note",
+              "join",
+              "note"
+            ],
+            [
+              "change_note",
+              "join",
+              "note"
+            ],
+            [
+              "delete_note",
+              "join",
+              "note"
             ]
         ]
     }
