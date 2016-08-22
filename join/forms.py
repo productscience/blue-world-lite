@@ -11,9 +11,14 @@ from .models import (
 
 
 class SignupForm(forms.Form):
-    full_name = forms.CharField(max_length=255, label='Full name')
-    nickname = forms.CharField(max_length=30, label='What should we call you?')
-    mobile = forms.CharField(max_length=30, label='Mobile', required=False)
+
+    full_name = forms.CharField(max_length=255, label='Full name',
+        help_text="We'll use this to label your bag when you pick it up")
+    nickname = forms.CharField(max_length=30, label='What should we call you?',
+        help_text="We'll use this when emailing you about the scheme")
+    mobile = forms.CharField(max_length=30, label='Mobile', required=False,
+        help_text=("Optional, but we use this to notify you when your "
+            "bag is ready to pick up"))
 
     def signup(self, request, user):
         now = timezone.now()
