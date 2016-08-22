@@ -282,7 +282,8 @@ class ReminderDueListFilter(admin.SimpleListFilter):
         in the right sidebar.
         """
         return [
-            ('due', _('Only with reminders'))
+            ('reminders', _('With reminders')),
+            ('due_reminders', _('With due reminders'))
         ]
 
     def queryset(self, request, queryset):
@@ -294,8 +295,11 @@ class ReminderDueListFilter(admin.SimpleListFilter):
         # Compare the requested value (either '80s' or '90s')
         # to decide how to filter the queryset.
 
-        if self.value() == 'due':
+        if self.value() == 'reminders':
             return queryset.filter(reminder__done=False)
+        if self.value() == 'due_reminders':
+            return queryset.filter(reminder__done=False,
+                reminder__date__lte=timezone.now())
 
 class ReminderInline(admin.StackedInline):
     model = Reminder
@@ -403,10 +407,10 @@ class CustomerAdmin(BlueWorldModelAdmin):
         'hijack_field',  # Hijack button
     )
     list_filter = (
+        ReminderDueListFilter,
         AccountStatusListFilter,
         'tags__tag',
         CollectionPointFilter,
-        ReminderDueListFilter,
     )
 
 
