@@ -90,16 +90,8 @@ table#order-history td {
               {% endif %}
             {% elif event.type == 'SKIP_WEEK' %}
             No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
-            You'll be refunded in {{ event.bw.next_month|date:"F"}} for skipping this week
-            (you already pre-paid for it in {{ event.bw.prev_month|date:"F"}} as part of your regular order).
-
-
-
-
-            {% elif event.type == 'SKIP_WEEK' %}
-            No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
-            You'll be refunded in {{ event.bw.next_month|date:"F"}} for skipping this week
-            (you already pre-paid for it in {{ event.bw.prev_month|date:"F"}} as part of your regular order).
+            You'll be refunded in {{ event.billing_week.next_month|date:"F"}} for skipping this week
+            (you already pre-paid for it in {{ event.billing_week.prev_month|date:"F"}} as part of your regular order).
             {% endif %}
           </td>
           {% endfor %}
