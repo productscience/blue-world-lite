@@ -14,28 +14,6 @@ class Command(BaseCommand):
             header_row.append(bag_type.name)
         writer = csv.writer(self.stdout)
         writer.writerow(header_row)
-        for customer in Customer.objects.order_by('full_name'):
-            bq = customer.bag_quantities
-            row = [
-                # first_name
-                customer.full_name,
-                # surname
-                None,
-                # email
-                customer.user.email,
-                # status
-                customer.account_status,
-                # pickup
-                customer.collection_point,
-                # bags
-                render_bag_quantities(bq),
-                # on_holiday
-                customer.skipped,
-            ]
-            quantities = {}
-            for bq in customer.bag_quantities:
-                quantities[bq.bag_type] = bq.quantity
-            for bag_type in BagType.objects.all():
-                row.append(quantities.get(bag_type) and 1 or 0)
+        for row in Customer.report_mailchimp():
             writer.writerow(row)
         self.stderr.write(self.style.SUCCESS('Successfully generated report'))

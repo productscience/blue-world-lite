@@ -13,6 +13,11 @@ from django.db.models.signals import post_save
 from billing_week import get_billing_week, parse_billing_week
 from django.utils import timezone
 from join.helper import calculate_weekly_fee
+from join.helper import render_bag_quantities
+import pytz
+
+london = pytz.timezone("Europe/London")
+
 
 
 class CollectionPoint(models.Model):
@@ -220,6 +225,84 @@ class CustomerManager(models.Manager):
 
 class Customer(models.Model):
 
+    @classmethod
+    def report_db(cls):
+        """
+        generates a set of rows to be encoded for a CSV report
+        """
+        for customer in Customer.objects.order_by('full_name'):
+            bq = customer.bag_quantities
+            yield [
+                # first_name
+                customer.full_name,
+                # surname
+                None,
+                # email
+                customer.user.email,
+                # is_additional
+                None,
+                # status
+                customer.account_status,
+                # address_1,address_2,address_3,postcode,email,telephone_1,telephone_2,
+                None,None,None,None,None,None,None,
+                # mobile
+                customer.mobile,
+                # additional_contact_info,
+                None,
+                # pickup
+                customer.collection_point,
+                # discount
+                None,
+                # bags
+                render_bag_quantities(bq),
+                # fee (weekly now)
+                calculate_weekly_fee(bq),
+                # payment_method
+                None,
+                # so_details,so_day_of_month,
+                None,None,
+                # start_date,
+                customer.created.astimezone(london).strftime('%Y-%m-%d %H:%M'),
+                # stop_date,source,
+                None,None,
+                # on_holiday
+                customer.skipped
+            ]
+
+
+    @classmethod
+    def report_mailchimp(cls):
+        """
+        generates a set of rows for mailchimp export
+        """
+        for customer in Customer.objects.order_by('full_name'):
+            bq = customer.bag_quantities
+            row = [
+                # first_name
+                customer.full_name,
+                # surname
+                None,
+                # email
+                customer.user.email,
+                # status
+                customer.account_status,
+                # pickup
+                customer.collection_point,
+                # bags
+                render_bag_quantities(bq),
+                # on_holiday
+                customer.skipped,
+            ]
+            quantities = {}
+            for bq in customer.bag_quantities:
+                quantities[bq.bag_type] = bq.quantity
+            for bag_type in BagType.objects.all():
+                row.append(quantities.get(bag_type) and 1 or 0)
+
+            yield row
+
+
+
     def save(self, *args, **kwargs):
         if not self.full_name:
             raise ValidationError('The full_name field is required')
@@ -363,6 +446,26 @@ class AccountStatusChange(models.Model):
         (ACTIVE, 'Active'),
         (LEFT, 'Left'),
     )
+
+    @classmethod
+    def report_churn_header_row(cls):
+        """
+        Generates the header for a CSV export
+        """
+        return ['customer', 'changed', 'status']
+
+    @classmethod
+    def report_churn(cls):
+        """
+        generates a set of rows for CSV export
+        """
+        for account_status_change in AccountStatusChange.objects.all():
+            yield [
+                account_status_change.customer.full_name,
+                account_status_change.changed.astimezone(london).strftime('%Y-%m-%d %H:%M'),
+                account_status_change.status,
+            ]
+
     # leaving_date = models.DateTimeField(null=True)
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
@@ -930,6 +1033,39 @@ class LineItem(models.Model):
 
 
 class PaymentStatusChange(models.Model):
+
+    @classmethod
+    def report_payments_header_row(cls):
+        return [
+            'customer',
+            'payment_id',
+            'created',
+            'completed',
+            'amount',
+            'status'
+        ]
+
+    @classmethod
+    def report_payments(cls):
+        """
+        Generate rows for payments report CSV
+        """
+        payment_status_changes = (
+            PaymentStatusChange.objects
+            .order_by('payment', '-changed')
+            .distinct('payment')
+        )
+        for psc in payment_status_changes:
+            yield [
+                psc.payment.customer,
+                psc.payment.gocardless_payment_id,
+                psc.payment.created and psc.payment.created.astimezone(london).strftime('%Y-%m-%d %H:%M'),
+                psc.payment.completed and psc.payment.completed.astimezone(london).strftime('%Y-%m-%d %H:%M'),
+                psc.payment.amount,
+                psc.status
+            ]
+
+
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
     payment = models.ForeignKey(
