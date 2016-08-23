@@ -2,6 +2,8 @@ from collections import OrderedDict
 from datetime import timedelta
 from decimal import Decimal
 from operator import itemgetter
+
+import csv
 import datetime
 import hmac
 import hashlib
@@ -14,6 +16,7 @@ from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
 from django.forms import BaseFormSet
@@ -1319,6 +1322,56 @@ def dashboard_rejoin_scheme(request):
     else:
         return HttpResponseBadRequest()
 
+
+@staff_member_required
+def churn_report(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="churn.csv"'
+
+    writer = csv.writer(response)
+    for row in AccountStatusChange.report_churn():
+        writer.writerow(row)
+
+    return response
+
+@staff_member_required
+def mailchimp_report(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="mailchimp.csv"'
+    writer = csv.writer(response)
+
+    header_row = Customer.report_mailchimp_header_row()
+    writer.writerow(header_row)
+    for row in Customer.report_mailchimp():
+        writer.writerow(row)
+
+    return response
+
+@staff_member_required
+def db_report(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="db.csv"'
+    writer = csv.writer(response)
+    header_row = Customer.report_db_header_row()
+    writer.writerow(header_row)
+    for row in Customer.report_db():
+        writer.writerow(row)
+
+    return response
+
+@staff_member_required
+def payments_report(request):
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="payments.csv"'
+    writer = csv.writer(response)
+    header_row = PaymentStatusChange.report_payments_header_row()
+    writer.writerow(header_row)
+
+    for row in PaymentStatusChange.report_payments():
+        writer.writerow(row)
+
+    return response
 
 
 @csrf_exempt

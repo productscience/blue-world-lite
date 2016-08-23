@@ -226,6 +226,36 @@ class CustomerManager(models.Manager):
 class Customer(models.Model):
 
     @classmethod
+    def report_db_header_row(cls):
+        return [
+            'first_name',
+            'surname',
+            'email',
+            'is_additional',
+            'status',
+            'address_1',
+            'address_2',
+            'address_3',
+            'postcode',
+            'email',
+            'telephone_1',
+            'telephone_2',
+            'mobile',
+            'additional_contact_info',
+            'pickup',
+            'discount',
+            'bags',
+            'fee',
+            'payment_method',
+            'so_details',
+            'so_day_of_month',
+            'start_date',
+            'stop_date',
+            'source',
+            'on_holiday'
+        ]
+
+    @classmethod
     def report_db(cls):
         """
         generates a set of rows to be encoded for a CSV report
@@ -269,6 +299,25 @@ class Customer(models.Model):
                 customer.skipped
             ]
 
+
+    @classmethod
+    def report_mailchimp_header_row(cls):
+        """
+        Returns header for for mailchimp export
+        """
+        header_row = [
+            'first_name',
+            'surname',
+            'email',
+            'status',
+            'pickup',
+            'bags',
+            'on_holiday'
+        ]
+        for bag_type in BagType.objects.all():
+            header_row.append(bag_type.name)
+
+        return header_row
 
     @classmethod
     def report_mailchimp(cls):

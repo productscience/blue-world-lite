@@ -9,10 +9,8 @@ class Command(BaseCommand):
     help = 'Generated the Database Backup Example Report'
 
     def handle(self, *args, **options):
-        header_row = ['first_name','surname','email','status','pickup','bags','on_holiday']
-        for bag_type in BagType.objects.all():
-            header_row.append(bag_type.name)
         writer = csv.writer(self.stdout)
+        header_row = Customer.report_mailchimp_header_row()
         writer.writerow(header_row)
         for row in Customer.report_mailchimp():
             writer.writerow(row)
