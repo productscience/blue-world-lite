@@ -484,7 +484,7 @@ class Skip(models.Model):
     )
 
     def __str__(self):
-        return '{} skiped week {} on {}'.format(
+        return '{} skipped week {} on {}'.format(
             self.customer.full_name,
             self.billing_week,
             self.created.isoformat(),

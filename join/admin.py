@@ -225,19 +225,41 @@ class AccountStatusListFilter(admin.SimpleListFilter):
     parameter_name = 'latest_account_status'
 
     def lookups(self, request, model_admin):
-        return AccountStatusChange.STATUS_CHOICES
+        """
 
-    def queryset(self, request, queryset):
-        # Compare the requested value (either '80s' or '90s')
-        # to decide how to filter the queryset.
-        if self.value() is None:
-            return queryset
+        """
+        # We add the holiday option to filter active people customers
+        # who are skipping this week, and so don't need a bag
+        choices = list(AccountStatusChange.STATUS_CHOICES)
+        choices.append(('HOLIDAY', 'On holiday',))
+        return choices
+
+    def _by_status(self, query_value):
         ascs = AccountStatusChange.objects.order_by(
             'customer', '-changed'
         ).distinct('customer').only('id')
+
         customer_ids = [
-            c.customer_id for c in ascs if c.status == self.value()
+            c.customer_id for c in ascs if c.status == query_value
         ]
+
+        return customer_ids
+
+    def queryset(self, request, queryset):
+        if self.value() is None:
+            return queryset
+
+        # Check for people on holiday
+        if self.value() == "HOLIDAY":
+            ascs = AccountStatusChange.objects.order_by(
+                'customer', '-changed').distinct('customer')
+
+            # TODO see why this is such a slow query
+            customer_ids = [c.customer.id for c in ascs if c.customer.skipped]
+        else:
+            # otherwise
+            customer_ids = self._by_status(self.value())
+
         return queryset.filter(pk__in=customer_ids)
 
 
