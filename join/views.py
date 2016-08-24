@@ -1389,6 +1389,7 @@ def billing_dates(request):
         {
             'pickup_dates': pickup_dates,
             'billing_dates': billing_dates,
-            'billing_weeks_left': len(billing_weeks_left_in_the_month(str(bw_today)))
+            'billing_weeks_left': billing_weeks_left_in_the_month(str(bw_today)),
+            'current_billing_week': bw_today
         }
     )
