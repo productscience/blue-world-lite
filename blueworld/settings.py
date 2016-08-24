@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'django_rq',
     #  Our apps
     'join',
+    'exports'
 ]
 
 
