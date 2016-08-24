@@ -583,17 +583,21 @@ def dashboard_gocardless(request):
 
 
 def _get_cost_for_billing_week(customer, bw):
-    number = 0
-    first_bw_of_next_month = bw.next()
-    while first_bw_of_next_month.month == bw.month:
-        number += 1
-        if number > 5:
-            raise Exception('Problem finding the number of willing weeks left this month')
-        first_bw_of_next_month = first_bw_of_next_month.next()
-    amount_per_week = 0
-    if number > 1:
-        amount_per_week = calculate_weekly_fee(customer.bag_quantities)
+
+    bw_left = billing_weeks_left_in_the_month(str(bw))
+
+    # if it's the last week, we exit early,
+    if not bw_left:
+        number = 0
+        first_bw_of_next_month = bw.next()
+    # otherwise we take the first billing week after the final week in the month
+    else:
+        number = len(bw_left)
+        first_bw_of_next_month = bw_left[-1].next()
+
+    amount_per_week = calculate_weekly_fee(customer.bag_quantities)
     amount_pounds = amount_per_week * number
+
     return number, amount_pounds, amount_per_week, first_bw_of_next_month
 
 
