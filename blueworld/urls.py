@@ -217,7 +217,7 @@ if settings.TIME_TRAVEL:
     ]
 
 urlpatterns += [
-    url(r'^admin/exports/', include('join.admin_urls')),
+    url(r'^admin/exports/', include('exports.urls')),
 ]
 
 
