@@ -3,7 +3,7 @@ import pytz
 from django.db import models
 
 from join.helper import calculate_weekly_fee
-from join.models import CollectionPoint, CustomerCollectionPointChange, CustomerOrderChange
+from join.models import BagType
 from join.models import Customer, PaymentStatusChange
 from join.models import AccountStatusChange
 from join.helper import render_bag_quantities
