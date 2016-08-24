@@ -9,7 +9,17 @@
     <div class="row">
       <h1>Billing Dates</h1>
 
-      <p>Billing dates are based on the number of Wednesday collections in each month.</p>
+      <h4>Billing dates are based on the number of Wednesday collections in each month.</h4>
+      {% if billing_weeks_left == 0 %}
+        <h4>There are no more collections this month.</h4>
+      {% elif billing_weeks_left == 1 %}
+        <h4>There is 1 more collection this month.</h4>
+      {% else %}
+        <h4>There are {{ billing_weeks_left }} more collections{{ billing_weeks_left|pluralize }} left this month.</h4>
+      {% endif %}
+
+
+
 
       <div id="billing-dates">
           {% for month in pickup_dates %}
