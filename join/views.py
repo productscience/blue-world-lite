@@ -182,8 +182,8 @@ class BaseOrderFormSet(BaseFormSet):
             )
         if total_bags == 1 and last_bag == settings.SMALL_FRUIT_BAG_NAME:
             raise forms.ValidationError(
-                "You must choose another bag too if you order "
-                "small fruit"
+                "Small fruit is a supplement; please order a veg bag with it,"
+                "or choose a standard fruit bag instead."
             )
 
 

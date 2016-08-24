@@ -4,9 +4,9 @@
 {% block menu %}{% endblock %}
 {% block content %}
     <div class="row">
-      <h3 class="font-text">Which bags do you want to pick up each week?</h3>
+      <h3 class="font-text">Which bags do you want to collect each week?</h3>
       <p>Please note that you can only order a small fruit bag if you are also ordering another bag.</p>
-      <div id="errors">
+      <div id="errors" class="callout alert">
       {{ formset.non_form_errors }}
       </div>
       <form action="{% url 'join_choose_bags' %}" method="post">
