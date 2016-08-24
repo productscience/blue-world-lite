@@ -1,19 +1,28 @@
-from django import models
-
 import pytz
+
+from django.db import models
 
 from join.helper import calculate_weekly_fee
 from join.models import CollectionPoint, CustomerCollectionPointChange, CustomerOrderChange
 from join.models import Customer, PaymentStatusChange
 from join.models import AccountStatusChange
 from join.helper import render_bag_quantities
+from django.utils.html import format_html
+
 
 london = pytz.timezone("Europe/London")
 
-class DataExport(models.model):
-    title = models.CharField
-    description = models.TextField
-    export_url = models.CharField
+class DataExport(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField(max_length=255)
+    export_url = models.CharField(max_length=255)
+
+    def export_link(self):
+        return format_html("<a href='{}'>Download csv file</a>", self.export_url)
+
+    def __str__(self):
+        return self.title
+
 
     @classmethod
     def report_db_header_row(cls):

@@ -1,7 +1,6 @@
 from django.contrib import admin
 from join.admin import BlueWorldModelAdmin
 from exports.models import DataExport
-from django.utils.html import format_html, mark_safe
 
 
 class DataExportAdmin(BlueWorldModelAdmin):
