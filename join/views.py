@@ -11,7 +11,7 @@ import json
 import uuid
 
 from allauth.account.views import signup as allauth_signup
-from billing_week import get_billing_week, parse_billing_week
+from billing_week import get_billing_week, parse_billing_week, billing_weeks_left_in_the_month
 from django import forms
 from django.conf import settings
 from django.contrib import messages
@@ -1380,6 +1380,7 @@ def billing_dates(request):
         month_start=True
     )
     billing_dates = OrderedDict()
+    bw_today = get_billing_week(timezone.now())
     for month in pickup_dates:
         billing_dates[month] = pickup_dates[month][0].start
     return render(
@@ -1388,5 +1389,6 @@ def billing_dates(request):
         {
             'pickup_dates': pickup_dates,
             'billing_dates': billing_dates,
+            'billing_weeks_left': len(billing_weeks_left_in_the_month(str(bw_today)))
         }
     )
