@@ -13,6 +13,11 @@ from django.db.models.signals import post_save
 from billing_week import get_billing_week, parse_billing_week
 from django.utils import timezone
 from join.helper import calculate_weekly_fee
+from join.helper import render_bag_quantities
+import pytz
+
+london = pytz.timezone("Europe/London")
+
 
 
 class CollectionPoint(models.Model):
@@ -220,6 +225,8 @@ class CustomerManager(models.Manager):
 
 class Customer(models.Model):
 
+
+
     def save(self, *args, **kwargs):
         if not self.full_name:
             raise ValidationError('The full_name field is required')
@@ -363,6 +370,8 @@ class AccountStatusChange(models.Model):
         (ACTIVE, 'Active'),
         (LEFT, 'Left'),
     )
+
+
     # leaving_date = models.DateTimeField(null=True)
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
@@ -930,6 +939,8 @@ class LineItem(models.Model):
 
 
 class PaymentStatusChange(models.Model):
+
+
     changed = models.DateTimeField()
     changed_in_billing_week = models.CharField(max_length=9)
     payment = models.ForeignKey(

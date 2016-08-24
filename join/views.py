@@ -2,6 +2,8 @@ from collections import OrderedDict
 from datetime import timedelta
 from decimal import Decimal
 from operator import itemgetter
+
+import csv
 import datetime
 import hmac
 import hashlib
@@ -1318,7 +1320,6 @@ def dashboard_rejoin_scheme(request):
         return redirect(reverse("dashboard"))
     else:
         return HttpResponseBadRequest()
-
 
 
 @csrf_exempt

@@ -216,6 +216,10 @@ if settings.TIME_TRAVEL:
         ),
     ]
 
+urlpatterns += [
+    url(r'^admin/exports/', include('exports.urls')),
+]
+
 
 urlpatterns += [
     url(r'^admin/django-rq/', include('django_rq.urls')),
