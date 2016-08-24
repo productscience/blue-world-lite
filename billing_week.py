@@ -254,6 +254,27 @@ class BillingWeek(object):
         return int('{0}{1:02d}{2}'.format(self.year, self.month, self.week))
 
 
+def billing_weeks_left_in_the_month(billing_week_string):
+    """
+    Takes a list, billing week
+    """
+    weeks_left = []
+    starting_week = parse_billing_week(billing_week_string)
+
+    def billing_weeks_left(weeks, start_bw, bw):
+                # skip the same week
+                if start_bw == bw:
+                    return billing_weeks_left(weeks, start_bw, bw.next())
+                elif start_bw.month == bw.month:
+                    weeks.append(bw)
+                    return billing_weeks_left(weeks, start_bw, bw.next())
+                else:
+                    return weeks
+
+    return billing_weeks_left(weeks_left, starting_week, starting_week)
+
+
+
 def parse_billing_week(billing_week_string):
     """Takes a billing week string and returns a BillingWeek object."""
     year = int(billing_week_string[:4])
@@ -471,7 +492,7 @@ if __name__ == '__main__':
 
         def test_brute(self):
             utc = pytz.timezone("UTC")
-            # Let's just check we can get a billing date for every 30 mins in 
+            # Let's just check we can get a billing date for every 30 mins in
             # the next 10 years, and that they are all in order
 
             s = utc.localize(datetime.datetime(2012, 5, 1, 0))
@@ -491,7 +512,7 @@ if __name__ == '__main__':
                 start = first - timedelta(minutes=mins)
                 last_bw = get_billing_week(start)
                 last_pw = parse_billing_week(str(last_bw))
-                while start <= end: 
+                while start <= end:
                     orig = start
                     start = start + timedelta(minutes=mins)
                     bw = get_billing_week(start)
@@ -508,5 +529,14 @@ if __name__ == '__main__':
                 for i, bwkey in enumerate(billing_weeks):
                     self.assertEqual(billing_weeks[bwkey], 14)
                 self.assertEqual(len(billing_weeks), (((end-first).days)+1)/7.0)
+
+        def test_billing_weeks_left_in_month(self):
+            # we know there were 4 billing weeks after the first one in May 2016
+            self.assertEqual(len(
+                billing_weeks_left_in_the_month("2016-05 1")), 3)
+            # we also know there were 3 billing weeks after the first on in
+            # June
+            self.assertEqual(len(
+                billing_weeks_left_in_the_month("2016-06 1")), 4)
 
     unittest.main()
