@@ -716,6 +716,7 @@ def dashboard(request):
                 billing_week=str(bw),
             ).all()
         ) > 0
+
         if weekday == 6:  # Sunday
             if collection_point.collection_day == 'WED':
                 collection_date = 'Wednesday'
@@ -777,6 +778,21 @@ def dashboard(request):
             else:  # Saturday
                 deadline = '3pm tomorrow'
             changes_affect = "next week's collection"
+
+        # fall back for the case when we have a user just starting this week
+        if request.user.customer.created_in_billing_week == bw:
+            if collection_point.collection_day == 'WED':
+                collection_date = 'Wednesday next week'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'Thursday next week'
+            else:
+                collection_date = 'Wednesday and Thursday next week'
+            if weekday == 4:  # Friday
+                deadline = '3pm this Sunday'
+            else:  # Saturday
+                deadline = '3pm tomorrow'
+            changes_affect = "next week's collection"
+
         bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
             customer_order_change=latest_customer_order_change
         ).all()
@@ -786,7 +802,7 @@ def dashboard(request):
                 collection_date.startswith('today') or
                 collection_date.startswith('tomorrow')
             ):
-                collection_date = 'on '+collection_date
+                collection_date = 'on '+ collection_date
         return render(
             request,
             'dashboard/index.html',
