@@ -5,17 +5,21 @@
 {% block content %}
     <div class="row">
       <h1>Set up Go Cardless</h1>
-      <p>Before we can continue we need to set up a direct debit to take payments. We do this using a service called <em>GoCardless</em>. When you click the button below you'll be taken to the GoCardless secure site and asked to enter your direct debit details.</p>
-      {% if number %}
-      <p>Once you have completed this step we'll also immeditely bill you £{{ amount }} for the next {{ number }} collections this month.</p>
+      <p>Now we need to set up a debit to take payments. Follow you hit the button below you'll be taken to the GoCardless secure site and asked to enter your payment details.</p>
 
-      <p>After that we'll bill you near the begining of every month for the collections coming up in that month.</p>
+      {% if number %}
+      <p>Once you have completed this step we'll take a payment of £{{ amount }} for the next {{ number }} collection{{ number|pluralize}} this month.</p>
+
+      <p>After that we'll take payments near the beginning of every month for the collections coming up in that month.</p>
 
       {% else %}
       <p>We'll start taking payments on {{ first_bw.start|date:"DATE_FORMAT" }} for the collections in {{ first_bw.start|date:"F" }}.</p>
       {% endif %}
 
-      <p>You can see the upcoming billing dates in each month at any time by <a href="{% url 'billing_dates' %}">visiting the billing dates page</a>.</p>
+      {% comment %}
+          <p>You can see the upcoming billing dates in each month at any time by <a href="{% url 'billing_dates' %}">visiting the billing dates page</a>.</p>
+      {% endcomment %}
+
 
       <form action="{% url 'dashboard_gocardless' %}" method="post">
         {% csrf_token %}
