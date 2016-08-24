@@ -15,7 +15,7 @@
       {% elif billing_weeks_left == 1 %}
         <h4>There is 1 more collection this month.</h4>
       {% else %}
-        <h4>There are {{ billing_weeks_left }} more collections{{ billing_weeks_left|pluralize }} left this month.</h4>
+        <h4>There are {{ billing_weeks_left|length }} more collections{{ billing_weeks_left|pluralize }} left this month.</h4>
       {% endif %}
 
 
@@ -27,7 +27,15 @@
             <p><strong>Invoicing date:</strong> <span class="invoicing-date">{{ billing_dates|get_item:month|date:"DATE_FORMAT" }}</span></p>
             <ol>
               {% for bw in pickup_dates|get_item:month %}
-              <li>
+
+
+              {% if bw.month == current_billing_week.month %}
+                {% if bw < current_billing_week.next %}
+                  <li class="past">
+                {% endif %}
+              {% else %}
+                <li>
+              {% endif %}
                   <p>
                       <strong>
                     {{ bw.mon|date:"DATE_FORMAT" }} - {{ bw.sun|date:"DATE_FORMAT" }}

@@ -3605,3 +3605,8 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
   width: 90%;
   margin-left: auto;
   margin-right: auto; }
+
+
+#billing-dates li.past p{
+  color:grey;
+}

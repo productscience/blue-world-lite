@@ -583,17 +583,21 @@ def dashboard_gocardless(request):
 
 
 def _get_cost_for_billing_week(customer, bw):
-    number = 0
-    first_bw_of_next_month = bw.next()
-    while first_bw_of_next_month.month == bw.month:
-        number += 1
-        if number > 5:
-            raise Exception('Problem finding the number of willing weeks left this month')
-        first_bw_of_next_month = first_bw_of_next_month.next()
-    amount_per_week = 0
-    if number > 1:
-        amount_per_week = calculate_weekly_fee(customer.bag_quantities)
+
+    bw_left = billing_weeks_left_in_the_month(str(bw))
+
+    # if it's the last week, we exit early,
+    if not bw_left:
+        number = 0
+        first_bw_of_next_month = bw.next()
+    # otherwise we take the first billing week after the final week in the month
+    else:
+        number = len(bw_left)
+        first_bw_of_next_month = bw_left[-1].next()
+
+    amount_per_week = calculate_weekly_fee(customer.bag_quantities)
     amount_pounds = amount_per_week * number
+
     return number, amount_pounds, amount_per_week, first_bw_of_next_month
 
 
@@ -712,6 +716,7 @@ def dashboard(request):
                 billing_week=str(bw),
             ).all()
         ) > 0
+
         if weekday == 6:  # Sunday
             if collection_point.collection_day == 'WED':
                 collection_date = 'Wednesday'
@@ -773,6 +778,21 @@ def dashboard(request):
             else:  # Saturday
                 deadline = '3pm tomorrow'
             changes_affect = "next week's collection"
+
+        # fall back for the case when we have a user just starting this week
+        if request.user.customer.created_in_billing_week == bw:
+            if collection_point.collection_day == 'WED':
+                collection_date = 'Wednesday next week'
+            elif collection_point.collection_day == 'THURS':
+                collection_date = 'Thursday next week'
+            else:
+                collection_date = 'Wednesday and Thursday next week'
+            if weekday == 4:  # Friday
+                deadline = '3pm this Sunday'
+            else:  # Saturday
+                deadline = '3pm tomorrow'
+            changes_affect = "next week's collection"
+
         bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
             customer_order_change=latest_customer_order_change
         ).all()
@@ -782,7 +802,7 @@ def dashboard(request):
                 collection_date.startswith('today') or
                 collection_date.startswith('tomorrow')
             ):
-                collection_date = 'on '+collection_date
+                collection_date = 'on '+ collection_date
         return render(
             request,
             'dashboard/index.html',
@@ -1389,6 +1409,7 @@ def billing_dates(request):
         {
             'pickup_dates': pickup_dates,
             'billing_dates': billing_dates,
-            'billing_weeks_left': len(billing_weeks_left_in_the_month(str(bw_today)))
+            'billing_weeks_left': billing_weeks_left_in_the_month(str(bw_today)),
+            'current_billing_week': bw_today
         }
     )
