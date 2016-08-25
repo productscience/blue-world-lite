@@ -11,7 +11,7 @@ Feature: Collection Point Screen
       And I type "1" into "#id_form-1-quantity"
       And I click the "Next" button
       And the browser moves to /join/collection-point
-      And I see "Where do you want to pick up your bag from?" in "h3"
+      And I see "Where do you want to collect your bag from?" in "h3"
      When I click the "Next" button
      Then the browser is still at /join/collection-point
       And I see "This field is required" in "#errors"
@@ -20,4 +20,3 @@ Feature: Collection Point Screen
     Given the browser is still at /join/collection-point
      When I follow the "Members Home" link
      Then the browser moves to /
-

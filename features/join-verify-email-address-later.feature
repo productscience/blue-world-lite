@@ -17,7 +17,7 @@ Feature: Join - Verify Email Address Later
       And I type "01234 567890" into "#id_mobile"
      When I click the "Sign Up" button
      Then the browser moves to /confirm-email
-      And I see "Verify Your E-mail Address" in "h1"
+      And I see "Confirm Your E-mail Address" in "h1"
     Given I navigate to /logout
 
     Given 1 email has been sent
