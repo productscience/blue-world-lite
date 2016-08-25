@@ -73,7 +73,7 @@ class BillingWeekField(forms.CharField):
             )
 
 
-class PackingListForm(forms.Form):
+class pickupListForm(forms.Form):
     billing_week = BillingWeekField(
         max_length=9,
         strip=True,
@@ -88,35 +88,35 @@ class PackingListForm(forms.Form):
 
 
 class CollectionPointAdmin(BlueWorldModelAdmin):
-    actions = ['packing_list']
+    actions = ['pickup_list']
     list_display = (
         'name',
         'active',
         'display_order',
     )
 
-    def packing_list(self, request, queryset):
+    def pickup_list(self, request, queryset):
         now = timezone.now()
         bw = get_billing_week(now)
         initial = {
             'billing_week': str(bw)
         }
         if '_generate' in request.POST:
-            form = PackingListForm(request.POST, initial=initial)
+            form = pickupListForm(request.POST, initial=initial)
             if form.is_valid():
-                context = packing_list(
+                context = pickup_list(
                     queryset,
                     parse_billing_week(form.cleaned_data['billing_week'])
                 )
                 context['now_billing_week'] = bw
                 # context['now_billing_week'] = context['billing_week']
                 context['now'] = now
-                return render(request, 'packing-list.html', context)
+                return render(request, 'pickup-list.html', context)
         else:
-            form = PackingListForm(initial=initial)
+            form = pickupListForm(initial=initial)
         return render(
             request,
-            'packing-list-date.html',
+            'pickup-list-date.html',
             {
                 'form': form,
                 'post_vars': request.POST.lists(),
@@ -131,7 +131,7 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
             }
         )
 
-    packing_list.short_description = \
+    pickup_list.short_description = \
         "Generated pick up list for selected collection points"
 
 
@@ -609,7 +609,7 @@ admin.site.register(Skip, SkipAdmin)
 admin.site.disable_action('delete_selected')
 
 
-def packing_list(collection_points, billing_week):
+def pickup_list(collection_points, billing_week):
     '''
     Although it would be faster to do all this in the database, in terms of
     scalability, assembling everything in Django from separate data means
@@ -628,7 +628,7 @@ def packing_list(collection_points, billing_week):
     but where each stage of the hierarchy is keyed by an ID, and which
     only has the properties we've already fetched from the database.
 
-    Then we'll put it all together into a big packing_list
+    Then we'll put it all together into a big pickup_list
 
     Note that although we can go backwards in time on holiday status,
     collection points and orders, the names, collection_day and Starter status
@@ -689,13 +689,13 @@ def packing_list(collection_points, billing_week):
         summary_totals[bag_type] = 0
     for column in ['collecting_users', 'holidaying_users', 'collecting_bags', 'holidaying_bags']:
         summary_totals[column] = 0
-    packing_list = OrderedDict()
+    pickup_list = OrderedDict()
     bag_totals = OrderedDict()
     for change in _latest_collection_points:
         cp = change.collection_point
         customer = change.customer
-        if cp not in packing_list:
-            packing_list[cp] = {
+        if cp not in pickup_list:
+            pickup_list[cp] = {
                 'customers': OrderedDict(),
                 'collecting_bag_totals_by_type': _no_bags.copy(),
                 'user_totals_by_category': _user_totals.copy(),
@@ -707,27 +707,27 @@ def packing_list(collection_points, billing_week):
         holiday = customer.id in _is_on_holiday and True or False
         for bag_type, quantity in _bags.items():
             if not holiday:
-                packing_list[cp]['collecting_bag_totals_by_type'][bag_type] += quantity
-                packing_list[cp]['collecting_bag_total'] += quantity
+                pickup_list[cp]['collecting_bag_totals_by_type'][bag_type] += quantity
+                pickup_list[cp]['collecting_bag_total'] += quantity
                 summary_totals[bag_type] += quantity
                 summary_totals['collecting_bags'] += quantity
             else:
-                packing_list[cp]['holiday_bag_total'] += quantity
+                pickup_list[cp]['holiday_bag_total'] += quantity
                 summary_totals['holidaying_bags'] += quantity
-        packing_list[cp]['customers'][customer] = {
+        pickup_list[cp]['customers'][customer] = {
             'bags': _bags,
             'new': customer.id in _is_starter and True or False,
             'holiday': holiday,
         }
-        if packing_list[cp]['customers'][customer]['holiday']:
-             packing_list[cp]['user_totals_by_category']['holiday'] += 1
+        if pickup_list[cp]['customers'][customer]['holiday']:
+             pickup_list[cp]['user_totals_by_category']['holiday'] += 1
              summary_totals['holidaying_users'] += 1
         else:
-             packing_list[cp]['user_totals_by_category']['collecting'] += 1
+             pickup_list[cp]['user_totals_by_category']['collecting'] += 1
              summary_totals['collecting_users'] += 1
     return {
         'billing_week': billing_week,
         'bag_types': bag_types,
-        'packing_list': packing_list,
+        'pickup_list': pickup_list,
         'summary_totals': summary_totals,
     }
