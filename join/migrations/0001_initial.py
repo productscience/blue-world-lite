@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(help_text="E.g. 'Standard veg'.", max_length=50, unique=True)),
-                ('tag_color', models.CharField(blank=True, default='', help_text='String used on the packing list for the bag colour', max_length=50, null=True)),
+                ('tag_color', models.CharField(blank=True, default='', help_text='String used on the pickup list for the bag colour', max_length=50, null=True)),
                 ('display_order', models.IntegerField(blank=True, help_text='\n        Bags will be sorted by this number.\n        ', null=True)),
                 ('active', models.BooleanField(default=True, help_text='Active bags appear in the joining form.')),
             ],

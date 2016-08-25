@@ -12,7 +12,7 @@ import unittest; unittest.util._MAX_LENGTH = 1000
 from decimal import Decimal
 from pprint import pprint
 from django.test import TestCase, TransactionTestCase
-from join.admin import packing_list
+from join.admin import pickup_list
 from join.models import CollectionPoint, CustomerCollectionPointChange, CustomerOrderChange
 from join.helper import calculate_weekly_fee
 from join.models import Customer, BagType, LineItem, Skip, PaymentStatusChange
@@ -143,7 +143,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             del result[collection_point]['collecting_bag_total']
         return result
 
-    def test_packing_list(self):
+    def test_pickup_list(self):
         customers = OrderedDict([
             (
                 self.customer1,
@@ -163,7 +163,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             ),
         ])
         # Test in the week while the data was collected, should get nothing
-        result = packing_list(
+        result = pickup_list(
             CollectionPoint.objects.all(),
             parse_billing_week('2016-06 1')
         )
@@ -173,9 +173,9 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             result['billing_week'],
             parse_billing_week('2016-06 1'),
         )
-        self.assertEqual(self.strip_result(result['packing_list']), expected)
+        self.assertEqual(self.strip_result(result['pickup_list']), expected)
         # Test in the week after (both in collection point 21)
-        result = packing_list(
+        result = pickup_list(
             CollectionPoint.objects.all(),
             parse_billing_week('2016-06 2')
         )
@@ -185,9 +185,9 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             parse_billing_week('2016-06 2'),
         )
         expected = OrderedDict([(self.cp1, {'customers': customers})])
-        self.assertEqual(self.strip_result(result['packing_list']), expected)
+        self.assertEqual(self.strip_result(result['pickup_list']), expected)
         # Test in the last week (should be collection point 22)
-        result = packing_list(
+        result = pickup_list(
             CollectionPoint.objects.all(),
             parse_billing_week('2016-06 3'),
         )
@@ -197,9 +197,9 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             parse_billing_week('2016-06 3'),
         )
         expected = OrderedDict([(self.cp2, {'customers': customers})])
-        self.assertEqual(self.strip_result(result['packing_list']), expected)
+        self.assertEqual(self.strip_result(result['pickup_list']), expected)
         # Test in the last week (should be collection point 23)
-        result = packing_list(
+        result = pickup_list(
             CollectionPoint.objects.all(),
             parse_billing_week('2016-06 4'),
         )
@@ -209,7 +209,7 @@ class DistinctOnSubQueryBehaviourTestCase(TestCase):
             parse_billing_week('2016-06 4'),
         )
         expected = OrderedDict([(self.cp3, {'customers': customers})])
-        self.assertEqual(self.strip_result(result['packing_list']), expected)
+        self.assertEqual(self.strip_result(result['pickup_list']), expected)
 
     def test_distinct_on_subquery(self):
         ccpcs = (
