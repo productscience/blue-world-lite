@@ -937,6 +937,9 @@ class LineItem(models.Model):
             self.bill_against,
         )
 
+        class Meta:
+            verbose_name = "extra item"
+
 
 class PaymentStatusChange(models.Model):
 
