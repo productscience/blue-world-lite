@@ -237,7 +237,7 @@ class AccountStatusListFilter(admin.SimpleListFilter):
     def _by_status(self, query_value):
         ascs = AccountStatusChange.objects.order_by(
             'customer', '-changed'
-        ).distinct('customer').only('id')
+        ).distinct('customer')
 
         customer_ids = [
             c.customer_id for c in ascs if c.status == query_value

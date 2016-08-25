@@ -270,7 +270,7 @@ class Customer(models.Model):
         else:
             status = AccountStatusChange.objects.order_by(
                 '-changed'
-            ).filter(customer=self, changed__lt=d)[:1][0]
+            ).filter(customer=self)[:1][0]
         return status.status
 
     def _get_latest_account_status(self):
