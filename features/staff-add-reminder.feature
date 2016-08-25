@@ -1,4 +1,5 @@
 Feature: Become user
+  @wip
   Scenario: _setup
     Given I switch to the user browser
       And I navigate to /logout
@@ -7,6 +8,7 @@ Feature: Become user
       And I create a started user "NoReminders", "noreminders", "noreminder@example.com" with password "123123ab"
       And I login as a member of staff
 
+  @wip
   Scenario: See reminders
     Given I navigate to /admin/join/customer/?q=Reminder
       And I follow the "Reminder" link in "#result_list .field-full_name"
@@ -23,6 +25,6 @@ Feature: Become user
     When I navigate to /admin/join/customer/?q=Reminder
       And I follow the "Only with reminders" link in ".changelist-filter"
       Then I should only see "Reminder"
-
+  @wip
   Scenario: _teardown
     Given I navigate to /admin/logout
