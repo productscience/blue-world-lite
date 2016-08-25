@@ -141,8 +141,8 @@ class DataExport(models.Model):
                 customer.skipped,
             ]
             quantities = {}
-            for bq in customer.bag_quantities:
-                quantities[bq.bag_type] = bq.quantity
+            for bq_ in bq:
+                quantities[bq_.bag_type] = bq_.quantity
             for bag_type in BagType.objects.all():
                 row.append(quantities.get(bag_type) and 1 or 0)
 

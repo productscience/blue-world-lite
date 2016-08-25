@@ -2,38 +2,38 @@
 <html>
 <head>
 <style>
-h1, #packing-lists {
+h1, #pickup-lists {
   font-family: sans-serif;
 }
-#packing-lists td.holiday {
+#pickup-lists td.holiday {
   background: #eee;
   text-align: center;
 }
-#packing-lists table {
+#pickup-lists table {
     border-collapse: collapse;
 }
-#packing-lists table, th, td {
+#pickup-lists table, th, td {
   border: 1px solid #000;
   padding: 2px;
 }
-#packing-lists th, td.customer {
+#pickup-lists th, td.customer {
   padding-left: 4px;
   padding-right: 4px;
 }
-#packing-lists td.quantity {
+#pickup-lists td.quantity {
   text-align: center;
 }
-#packing-lists td.new {
+#pickup-lists td.new {
   font-weight: bold;
 }
-#packing-lists td.new.label {
+#pickup-lists td.new.label {
   background: #eee;
   text-transform: uppercase;
 }
-#packing-lists tr.totals {
+#pickup-lists tr.totals {
   font-weight: bold;
 }
-#packing-lists tr.totals td.total {
+#pickup-lists tr.totals td.total {
   text-align: right;
 }
 </style>
@@ -43,7 +43,7 @@ h1, #packing-lists {
     <!-- Content -->
     <div id="content" class="{% block coltype %}colM{% endblock %}">
 {% block content %}
-    <div class="row" id="packing-lists">
+    <div class="row" id="pickup-lists">
       {% if now > billing_week.start %}
       <h1>Billing Week {{ billing_week.week }}, {{ billing_week.wed|date:"F Y" }} Pick Up Lists</h1>
       <h2>Collections start {{ billing_week.wed|date:"DATE_FORMAT" }}</h2>
@@ -66,12 +66,12 @@ h1, #packing-lists {
 
       {% endif %}
 
-      <p><span id="num_collection_points">{{ packing_list|length }}</span> collection points shown.</p>
+      <p><span id="num_collection_points">{{ pickup_list|length }}</span> collection points shown.</p>
 
       <div>
       <h2>Summary</h2>
 
-      <table>
+      <table style="page-break-after:always;">
         <tr>
           <th>Pickup</th>
           {% for bag_type in bag_types %}
@@ -87,7 +87,7 @@ h1, #packing-lists {
           <th>Collecting Bags</th>
           <th>Skipping Bags</th>
         </tr>
-        {% for collection_point, collection_point_info in packing_list.items %}
+        {% for collection_point, collection_point_info in pickup_list.items %}
         <tr>
            <td>{{ collection_point.name }}</td>
           {% for bag_type, total in collection_point_info.collecting_bag_totals_by_type.items %}
@@ -106,10 +106,10 @@ h1, #packing-lists {
             <td class="quantity">{{ total }}</td>
           {% endfor %}
         </tr>
-      </table>
+      </table style="page-break-after:always;">
       </div>
       <div>
-        {% for collection_point, collection_point_info in packing_list.items %}
+        {% for collection_point, collection_point_info in pickup_list.items %}
           <h2>{{ collection_point.name }}</h2>
           {% if billing_week >= now_billing_week %}
           <p>Collection days: {{ collection_point.get_collection_day_display }}</p>

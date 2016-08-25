@@ -14,4 +14,4 @@ Feature: Pick up List
     Given I type "2016-07 4" into "#id_billing_week"
      When I click the "Generate" button
      Then the browser is still at /admin/join/collectionpoint/
-      And I see "Billing Week 4, July 2016 pick up lists" in "h1"
+      And I see "Billing Week 4, July 2016 Pick Up Lists" in "h1"

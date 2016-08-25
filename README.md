@@ -490,7 +490,7 @@ We don't bother styling the automatically-generated migrations.
 ### Re-joining
 
 Unlike initial sign up, no automatic payments are made when a user re-joins
-until the start of the first billing cycle. They will be added to the packing
+until the start of the first billing cycle. They will be added to the pickup
 list though. It is up to staff to calculate what is due depending on how they
 refunded the user when they left. They must then enter a manual out of cycle
 payment.
