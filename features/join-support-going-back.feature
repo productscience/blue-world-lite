@@ -15,7 +15,7 @@ Feature: Join - Support Going Back
 
   Scenario: Complete choose bags and follow the back link, your choice is still there
     Given I navigate to /join/choose-bags
-      And I see "Which bags do you want to pick up each week?" in "h3"
+      And I see "Which bags do you want to collect each week?" in "h3"
       # One of the inputs from the test data is active=False so is excluded
       And there are 3 "input" elements in "form"
       And the value of "#id_form-1-quantity" is "0"
@@ -46,7 +46,7 @@ Feature: Join - Support Going Back
 
   Scenario: Complete choose bags and collection point, both choices are still there when you navigate back to them
     Given I navigate to /join/choose-bags
-      And I see "Which bags do you want to pick up each week?" in "h3"
+      And I see "Which bags do you want to collect each week?" in "h3"
       # One of the inputs from the test data is active=False so is excluded
       And there are 3 "input" elements in "form"
       And the value of "#id_form-1-quantity" is "0"
@@ -67,7 +67,7 @@ Feature: Join - Support Going Back
       And there are 3 "input" elements in "form"
      When I click the "Next" button
      Then the browser moves to /join/collection-point
-      And I see "Where do you want to pick up your bag from?" in "h3"
+      And I see "Where do you want to collect your bag from?" in "h3"
       # One of the inputs from the test data is active=False so is excluded
       And there are 4 "input" elements in "form"
       And there are 0 "input[selected]" elements in "form"

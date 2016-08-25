@@ -4,6 +4,7 @@ Feature: Become user
       And I navigate to /logout
       And I navigate to /admin/logout/
       And I create a started user "Reminder", "reminder", "reminder@example.com" with password "123123ab"
+      And I create a started user "NoReminders", "noreminders", "noreminder@example.com" with password "123123ab"
       And I login as a member of staff
 
   Scenario: See reminders

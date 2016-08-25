@@ -8,14 +8,14 @@ Feature: Bag Screen
 
   Scenario: Can't continue to collection point if I don't have at least one bag
     Given I navigate to /join/choose-bags
-      And I see "Which bags do you want to pick up each week?" in "h3"
+      And I see "Which bags do you want to collect each week?" in "h3"
      When I click the "Next" button
      Then the browser is still at /join/choose-bags
       And I see "Please choose at least one bag to order" in "#errors"
 
   Scenario: Can't continue to collection point if I enter an invalid value
     Given the browser is still at /join/choose-bags
-      And I see "Which bags do you want to pick up each week?" in "h3"
+      And I see "Which bags do you want to collect each week?" in "h3"
       And I type "-1" into "#id_form-1-quantity"
      When I click the "Next" button
      Then the browser is still at /join/choose-bags
@@ -27,7 +27,7 @@ Feature: Bag Screen
       And I type "1" into "#id_form-2-quantity"
      When I click the "Next" button
      Then the browser is still at /join/choose-bags
-      And I see "You must choose another bag too if you order small fruit" in ".errorlist"
+      And I see "Small fruit is a supplement" in ".errorlist"
 
   Scenario: Logo links to home screen
     Given the browser is still at /join/choose-bags
