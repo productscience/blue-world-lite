@@ -91,7 +91,11 @@ table#order-history td {
             {% elif event.type == 'SKIP_WEEK' %}
             No collection in the week starting <strong>{{ event.billing_week.mon|date:"DATE_FORMAT" }}</strong>.<br>
             You'll be refunded in {{ event.billing_week.next_month|date:"F"}} for skipping this week
-            (you already pre-paid for it in {{ event.billing_week.prev_month|date:"F"}} as part of your regular order).
+            {% comment %}
+            leaving this out, it's confusing
+            (you already pre-paid for it in {{ event.billing_week.prev_month|date:"F"}} as part of your regular order)
+            {% endcomment %}
+            .
             {% endif %}
           </td>
           {% endfor %}
