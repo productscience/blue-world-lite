@@ -45,14 +45,14 @@ h1, #packing-lists {
 {% block content %}
     <div class="row" id="packing-lists">
       {% if now > billing_week.start %}
-      <h1>Billing Week {{ billing_week.week }}, {{ billing_week.wed|date:"F Y" }} Packing Lists</h1>
+      <h1>Billing Week {{ billing_week.week }}, {{ billing_week.wed|date:"F Y" }} Pick Up Lists</h1>
       <h2>Collections start {{ billing_week.wed|date:"DATE_FORMAT" }}</h2>
       <p>
         Generated in billing week {{ now_billing_week.week }}, {{ now_billing_week.wed|date:"F Y" }}.<br>
         Data from {{ billing_week.start|date:"DATETIME_FORMAT" }} retrieved at {{ now|date:"DATETIME_FORMAT" }}.
       </p>
       {% else %}
-      <h1>Billing Week {{ billing_week.week }}, {{ billing_week.wed|date:"F Y" }} <em>Predicted</em> Packing Lists</h1>
+      <h1>Billing Week {{ billing_week.week }}, {{ billing_week.wed|date:"F Y" }} <em>Predicted</em> pick up lists</h1>
       <h2>Collections start {{ billing_week.wed|date:"DATE_FORMAT" }}</h2>
       <p>
         Generated in billing week {{ now_billing_week.week }}, {{ now_billing_week.wed|date:"F Y" }}.<br>
@@ -70,7 +70,7 @@ h1, #packing-lists {
 
       <div>
       <h2>Summary</h2>
-    
+
       <table>
         <tr>
           <th>Pickup</th>

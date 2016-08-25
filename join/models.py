@@ -104,7 +104,7 @@ class BagType(models.Model):
     )
     tag_color = models.CharField(
         max_length=50,
-        help_text="String used on the packing list for the bag colour",
+        help_text="String used on the pick up list for the bag colour",
         null=True,
         default='',
         blank=True,

@@ -132,7 +132,7 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
         )
 
     packing_list.short_description = \
-        "Generated packing list for selected collection points"
+        "Generated pick up list for selected collection points"
 
 
 class UserAdmin(BaseUserAdmin):
