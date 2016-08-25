@@ -33,7 +33,7 @@ Feature: Change Order
       And I type "1" into "#id_form-2-quantity"
      When I click the "Confirm" button
      Then the browser is still at /dashboard/change-order
-      And I see "You must choose another bag too if you order small fruit" in ".errorlist"
+      And I see "Small fruit is a supplement" in ".errorlist"
 
   Scenario: Change order
     Given I navigate to /dashboard/change-order

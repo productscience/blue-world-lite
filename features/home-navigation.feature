@@ -11,7 +11,7 @@ Feature: Home - Navigation
     Given I navigate to /
      When I click the "Join the scheme" button
      Then the browser moves to /join/choose-bags
-      And I see "Which bags do you want to pick up each week?" in "h3"
+      And I see "Which bags do you want to collect each week?" in "h3"
 
   Scenario: Can login from homepage
     Given I navigate to /
