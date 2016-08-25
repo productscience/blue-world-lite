@@ -251,11 +251,11 @@ class AccountStatusListFilter(admin.SimpleListFilter):
 
         # Check for people on holiday
         if self.value() == "HOLIDAY":
-            ascs = AccountStatusChange.objects.order_by(
-                'customer', '-changed').distinct('customer')
+            # TODO check if we should move this into a separate filter
+            customer_ids = Skip.objects.filter(
+                billing_week=get_billing_week(timezone.now())
+            ).only('customer_id').values_list('customer_id')
 
-            # TODO see why this is such a slow query
-            customer_ids = [c.customer.id for c in ascs if c.customer.skipped]
         else:
             # otherwise
             customer_ids = self._by_status(self.value())
@@ -570,6 +570,9 @@ class PaymentAdmin(BlueWorldModelAdmin):
             payment=payment,
         )
         payment_status_change.save()
+
+
+
 
 
 class LineItemAdmin(BlueWorldModelAdmin):
