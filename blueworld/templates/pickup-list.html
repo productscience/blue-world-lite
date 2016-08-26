@@ -106,15 +106,15 @@ h1, #pickup-lists {
             <td class="quantity">{{ total }}</td>
           {% endfor %}
         </tr>
-      </table style="page-break-after:always;">
+      </table>
       </div>
-      <div>
+      <div style="page-break-before:always;">
         {% for collection_point, collection_point_info in pickup_list.items %}
           <h2>{{ collection_point.name }}</h2>
           {% if billing_week >= now_billing_week %}
           <p>Collection days: {{ collection_point.get_collection_day_display }}</p>
           {% endif %}
-          <table>
+          <table style="page-break-after:always;">
             <tr>
               <th>Customer</th>
               {% if billing_week >= now_billing_week %}
