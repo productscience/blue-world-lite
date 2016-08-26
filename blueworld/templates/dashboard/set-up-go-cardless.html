@@ -5,16 +5,26 @@
 {% block content %}
     <div class="row">
       <h1>Set up Go Cardless</h1>
-      <p>Now we need to set up a debit to take payments. Follow you hit the button below you'll be taken to the GoCardless secure site and asked to enter your payment details.</p>
+      <p>Now we need to set up a direct debit to take payments.</p>
+
+
+      <p>
+        When you hit the button below you'll be taken to the GoCardless secure site and asked to enter your payment details. (Payments are safe and protected by the <a href="https://gocardless.com/direct-debit/guarantee">Direct Debit Guarantee</a>)
+      </p>
 
       {% if number %}
       <p>Once you have completed this step we'll take a payment of £{{ amount }} for the next {{ number }} collection{{ number|pluralize}} this month.</p>
 
-      <p>After that we'll take payments near the beginning of every month for the collections coming up in that month.</p>
-
       {% else %}
       <p>We'll start taking payments on {{ first_bw.start|date:"DATE_FORMAT" }} for the collections in {{ first_bw.start|date:"F" }}.</p>
       {% endif %}
+
+      <p>After that we'll take payments near the beginning of every month for the collections coming up in that month.</p>
+
+      <p>
+        Please note, direct debits can only be paid from UK bank accounts. If you can't pay by direct debit, or you receive Healthy Start vouchers and would like to use them to pay for your bags, please contact us on 020 7502 7588 or email <a href="mailto:growcomm@growingcommunities.org?subject=Alterntive Payment">growcomm@growingcommunities.org</a>
+      </p>
+
 
       {% comment %}
           <p>You can see the upcoming billing dates in each month at any time by <a href="{% url 'billing_dates' %}">visiting the billing dates page</a>.</p>
