@@ -72,6 +72,7 @@ h1, #pickup-lists {
       <h2>Summary</h2>
 
       <table style="page-break-after:always;">
+        <thead>
         <tr>
           <th>Pickup</th>
           {% for bag_type in bag_types %}
@@ -87,8 +88,10 @@ h1, #pickup-lists {
           <th>Collecting Bags</th>
           <th>Skipping Bags</th>
         </tr>
+        </thead>
         {% for collection_point, collection_point_info in pickup_list.items %}
         <tr>
+
            <td>{{ collection_point.name }}</td>
           {% for bag_type, total in collection_point_info.collecting_bag_totals_by_type.items %}
             <td class="quantity">{{ total }}</td>
@@ -115,6 +118,7 @@ h1, #pickup-lists {
           <p>Collection days: {{ collection_point.get_collection_day_display }}</p>
           {% endif %}
           <table style="page-break-after:always;">
+            <thead>
             <tr>
               <th>Customer</th>
               {% if billing_week >= now_billing_week %}
@@ -129,6 +133,7 @@ h1, #pickup-lists {
               </th>
               {% endfor %}
             </tr>
+            </thead>
             {% for customer, customer_info in collection_point_info.customers.items %}
             <tr>
               {% if billing_week >= now_billing_week %}
