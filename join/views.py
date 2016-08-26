@@ -1277,7 +1277,7 @@ def get_order_history_events(customer):
     # Get pickup dates since the account was created
     # pd = get_pickup_dates(created, timezone.now())
     res = OrderedDict()
-    for change in sorted(changes, key=itemgetter('date')):
+    for change in sorted(changes, key=itemgetter('date'), reverse=True):
         _add_change(res, change)
     return created, res
 
