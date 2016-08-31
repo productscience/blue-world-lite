@@ -277,6 +277,20 @@ class Customer(models.Model):
         return self.account_status_before()
     account_status = property(_get_latest_account_status)
 
+    def _leaving_date(self):
+        if self.has_left:
+            leaving_date = AccountStatusChange.objects.order_by(
+                '-changed'
+            ).filter(customer=self)[:1][0]
+            if leaving_date:
+                return leaving_date.changed.astimezone(london).strftime('%Y-%m-%d %H:%M')
+        else:
+            return None
+    leaving_date = property(_leaving_date)
+
+    def _start_date(self):
+        return self.created.astimezone(london).strftime('%Y-%m-%d %H:%M')
+    start_date = property(_start_date)
 
 
     def _has_left(self):
