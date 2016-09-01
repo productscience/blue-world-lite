@@ -10,9 +10,15 @@
       <p>Welcome {{ request.user.customer.nickname }}!</p>
 
         {% if skipped %}
-        <span>but your next collection is <a href="{% url 'dashboard_skip_weeks' %}">skipped</a> so there is nothing for you to pick up</span>
-        <span id="collection-date">{{ collection_date }}</span>.
-      </p>
+        <p>
+          There is nothing to pick up <span id="collection-date">{{ collection_date }}, as you marked this week as a holiday week.</span>
+        </p>
+        <p>
+          <a href="{% url 'dashboard_skip_weeks' %}">See your holiday weeks</a>
+        </p>
+
+
+
         {% else %}
 
 
