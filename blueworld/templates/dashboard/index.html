@@ -52,12 +52,14 @@
 
             <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
 
-            <div class="collection-point-info">
-              <a href="#">See collection point instructions </a>
-              <div class="instructions">
-                {{ collection_point.instructions|linebreaks }}
+            {% if collection_point.instructions %}
+              <div class="collection-point-info">
+                <a href="#">See collection point instructions </a>
+                <div class="instructions">
+                  {{ collection_point.instructions|linebreaks }}
+                </div>
               </div>
-            </div>
+            {% endif %}
           </div>
 
 
