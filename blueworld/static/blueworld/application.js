@@ -18995,3 +18995,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 // Trigger foundation to add the effects we want
 $(document).foundation();
+
+
+$(document).ready(function() {
+  $('.collection-point-info .instructions').hide()
+  $('.collection-point-info a').click(function(event) {
+
+    $(this).parent().find('.instructions').slideToggle("fast");
+
+  });
+});

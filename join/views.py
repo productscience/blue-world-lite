@@ -713,13 +713,22 @@ def dashboard(request):
         now = timezone.now()
         bw = get_billing_week(now)
         weekday = now.weekday()
-        skipped_billing_weeks = []
-        skipped = len(
-            Skip.objects.order_by('billing_week').filter(
-                customer=request.user.customer,
-                billing_week=str(bw),
-            ).all()
-        ) > 0
+        skipped_week = Skip.objects.order_by('billing_week').filter(
+            customer=request.user.customer,
+            billing_week=str(bw),
+        ).all().first()
+        skipped = False
+        # if we are past the wednesday of this billing week,
+        # we shouldn't show the billing week as skipped. So on Thursday,
+        # unless there is a billing week next week that is skipped as well,
+        # we should revert back to displaying normal behaviour
+
+        if skipped_week:
+            if now.date() <= parse_billing_week(skipped_week.billing_week).wed:
+                skipped = True
+
+            # TODO cover for when we have a skipped billing week *next* week
+        # import ptpdb; ptpdb.set_trace()
 
         dates = dates_affecting_collection(collection_point, now, bw)
 

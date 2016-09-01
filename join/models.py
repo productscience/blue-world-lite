@@ -73,6 +73,14 @@ class CollectionPoint(models.Model):
         default=FULL,
         null=True
     )
+
+    instructions = models.TextField(
+        null=True,
+        blank=True,
+        help_text=("If you have specific instructions for accessing the bags,"
+        " add them here, so users can see them in email or their dashboard")
+    )
+
     WED_THURS = 'WED_THURS'
     WED = 'WED'
     THURS = 'THURS'

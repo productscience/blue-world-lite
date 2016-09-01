@@ -10,28 +10,44 @@
       <p>Welcome {{ request.user.customer.nickname }}!</p>
 
         {% if skipped %}
-        <p class="skipped">
-          There is nothing to pick up <span id="skipped-collection-date">{{ collection_date }}, as you marked this week as a holiday week.</span>
-        </p>
-        <p>
-          <a href="{% url 'dashboard_skip_weeks' %}">See your holiday weeks</a>
-        </p>
+          <div class="this_week">
+            <p class="skipped">
+              There is nothing to pick up <span id="skipped-collection-date">{{ collection_date }}, as you marked this week as a holiday week.</span>
+            </p>
+            <p>
+              <a href="{% url 'dashboard_skip_weeks' %}">See your holiday weeks</a>
+            </p>
+          </div>
+
         {% else %}
 
-        <p>Your next collection is available on
-          <span id="collection-date">{{ collection_date }}</span>
-          from
-          <strong id="collection-point">{{ collection_point.name }}</strong>
-          :
-        </p>
+          <div class="this_week">
+            <p>Your next collection is available on
+              <span id="collection-date">{{ collection_date }}</span>
+              from
+              <strong id="collection-point">{{ collection_point.name }}</strong>
+              :
+            </p>
 
-        <ul id="order">
-        {% for bag_quantity in bag_quantities %}
-          <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
-        {% endfor %}
-        </ul>
+            <ul id="order">
+            {% for bag_quantity in bag_quantities %}
+              <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
+            {% endfor %}
+            </ul>
 
-      <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
+          </div>
+
+        <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
+
+        <div class="collection-point-info">
+          <a href="#">See collection point instructions </a>
+          <div class="instructions">
+            {{ collection_point.instructions|linebreaks }}
+          </div>
+
+</div>
+
+
         {% endif %}
       </div>
       </div>

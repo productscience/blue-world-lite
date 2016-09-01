@@ -29,7 +29,7 @@ Feature: Dashboard Collection Skips
       And I login with "dashboard-collection-skips@example.com" and "123123ab"
      When I navigate to /dashboard
      Then I see "nothing to pick up on" in "#message"
-      And I see "<skipped_collection_date>" in "#collection-date"
+      And I see "<skipped_collection_date>" in "#skipped-collection-date"
       And I see "<deadline>" in "#deadline"
       And I see "<changes_affect>" in "#changes-affect"
 
@@ -51,7 +51,29 @@ Feature: Dashboard Collection Skips
      | 2016-07-20 00:00:00 | Wednesday | Wednesday              | #id_form-0-skipped | Wednesday 20th July                        | 3pm this Sunday | next week's collection    |
      | 2016-07-20 00:00:00 | Wednesday | Thursday               | #id_form-0-skipped | Thursday 21st July                         | 3pm this Sunday | next week's collection    |
      | 2016-07-20 00:00:00 | Wednesday | Wednesday and Thursday | #id_form-0-skipped | Wednesday 20th July or Thursday 21st July  | 3pm this Sunday | next week's collection    |
-     # | 2016-07-21 00:00:00 | Thursday  | Wednesday              | #id_form-0-skipped | on Wednesday next week                     | 3pm this Sunday | next week's collection    |
+
+
+   @wip
+   Scenario Outline: Dashboard information with no skips
+     # Need to freeze time first, otherwise you get logged out because of the session time of 20 mins
+     Given I freeze time at <date>
+       And I switch to the admin browser
+       And I login as a member of staff
+       And I navigate to /admin/join/collectionpoint/
+       And I follow the "The Old Fire Station" link
+       And I choose "<collection_day>" from "#id_collection_day"
+       And I click the "Save" button
+       And I switch to the user browser
+       And I login with "dashboard-collection-skips@example.com" and "123123ab"
+      When I navigate to /dashboard
+      Then I see "your next collection in " in ".this_week"
+       And I see "<skipped_collection_date>" in "#skipped-collection-date"
+       And I see "<deadline>" in "#deadline"
+       And I see "<changes_affect>" in "#changes-affect"
+
+   Examples: Times where we shouldn't see a week as skipped
+     | date                | day       | collection_day         | week_to_skip       | skipped_collection_date                    | deadline        | changes_affect            |
+     | 2016-07-21 00:00:00 | Thursday  | Wednesday              | #id_form-0-skipped | on Wednesday next week                     | 3pm this Sunday | next week's collection    |
      # | 2016-07-21 00:00:00 | Thursday  | Thursday               | #id_form-0-skipped | today                                      | 3pm this Sunday | next week's collection    |
      # | 2016-07-21 00:00:00 | Thursday  | Wednesday and Thursday | #id_form-0-skipped | today                                      | 3pm this Sunday | next week's collection    |
      # | 2016-07-22 00:00:00 | Friday    | Wednesday              | #id_form-0-skipped | on Wednesday next week                     | 3pm this Sunday | next week's collection    |
