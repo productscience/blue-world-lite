@@ -33,7 +33,11 @@ from django.views.decorators.csrf import csrf_exempt
 import pytz
 
 from billing_week import first_wed_of_month as start_of_the_month
-from join.helper import get_pickup_dates, render_bag_quantities, calculate_weekly_fee
+from join.helper import (
+    get_pickup_dates,
+    render_bag_quantities,
+    calculate_weekly_fee,
+    dates_affecting_collection)
 from .models import (
     AccountStatusChange,
     BagType,
@@ -717,67 +721,11 @@ def dashboard(request):
             ).all()
         ) > 0
 
-        if weekday == 6:  # Sunday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday'
-            else:
-                collection_date = 'Wednesday and Thursday'
-            if timezone.now().hour < bw.end.hour:
-                deadline = '3pm today'
-                changes_affect = "next week's collection"
-            else:
-                deadline = '3pm next Sunday'
-                changes_affect = "the collection after next"
-        elif weekday == 0:  # Monday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday'
-            else:
-                collection_date = 'Wednesday and Thursday'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        elif weekday == 1:  # Tuesday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'tomorrow'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday'
-            else:
-                collection_date = 'tomorrow and Thursday'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        elif weekday == 2:  # Wednesday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'today'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'tomorrow'
-            else:
-                collection_date = 'today and tomorrow'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        elif weekday == 3:  # Thurs
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday next week'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'today'
-            else:
-                collection_date = 'today'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        else:
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday next week'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday next week'
-            else:
-                collection_date = 'Wednesday and Thursday next week'
-            if weekday == 4:  # Friday
-                deadline = '3pm this Sunday'
-            else:  # Saturday
-                deadline = '3pm tomorrow'
-            changes_affect = "next week's collection"
+        dates = dates_affecting_collection(collection_point, now, bw)
+
+        collection_date = dates['collection_date']
+        deadline = dates['deadline']
+        changes_affect = dates['changes_affect']
 
         # fall back for the case when we have a user just starting this week
         if request.user.customer.created_in_billing_week == bw:
@@ -802,7 +750,7 @@ def dashboard(request):
                 collection_date.startswith('today') or
                 collection_date.startswith('tomorrow')
             ):
-                collection_date = 'on '+ collection_date
+                collection_date = 'on ' + collection_date
         return render(
             request,
             'dashboard/index.html',

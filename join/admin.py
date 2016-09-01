@@ -98,8 +98,10 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
     def pickup_list(self, request, queryset):
         now = timezone.now()
         bw = get_billing_week(now)
+        # TODO show the next two billable weeks as shortcut options
+        # the day after a collection day (i.e. Thursday), default to show the next billable week, and the one after it
         initial = {
-            'billing_week': str(bw)
+            'billing_week': str(bw.next())
         }
         if '_generate' in request.POST:
             form = pickupListForm(request.POST, initial=initial)

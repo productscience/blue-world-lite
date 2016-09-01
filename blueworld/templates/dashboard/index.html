@@ -6,21 +6,33 @@
     <div class="row">
       <h1>Dashboard</h1>
 
+      <div id="message">
       <p>Welcome {{ request.user.customer.nickname }}!</p>
 
-      <p>Your collection point is
-        <strong id="collection-point">{{ collection_point.name }}</strong>
         {% if skipped %}
-        <span id="message">but your next collection is <a href="{% url 'dashboard_skip_weeks' %}">skipped</a> so there is nothing for you to pick up</span>
+        <span>but your next collection is <a href="{% url 'dashboard_skip_weeks' %}">skipped</a> so there is nothing for you to pick up</span>
         <span id="collection-date">{{ collection_date }}</span>.
       </p>
         {% else %}
-        <span id="message">and your next collection is</span>
-        <strong id="collection-date">{{ collection_date }}</strong>.
-      </p>
+
+
+
+        <p>Your next collection is available on
+          <span id="collection-date">{{ collection_date }}</span>
+          from
+          <strong id="collection-point">{{ collection_point.name }}</strong>
+          :
+        </p>
+
+        <ul id="order">
+        {% for bag_quantity in bag_quantities %}
+          <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
+        {% endfor %}
+        </ul>
+
       <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
         {% endif %}
-
+      </div>
       </div>
 
       <div class="row">
@@ -28,13 +40,8 @@
 
 
       <h4 class="font-display">Your Order</h4>
-      <ul id="order">
-      {% for bag_quantity in bag_quantities %}
-        <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
-      {% endfor %}
-      </ul>
 
-            <p>Any changes you make until <span id="deadline">{{ deadline }}</span> will affect <span id="changes-affect">{{ changes_affect }}</span></p>
+      <p>Any changes you make until <span id="deadline">{{ deadline }}</span> will affect <span id="changes-affect">{{ changes_affect }}</span></p>
 
       <ul class="menu">
         <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>

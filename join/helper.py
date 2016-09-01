@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from datetime import timedelta
 from django.utils import timezone
+from django.contrib.humanize.templatetags.humanize import ordinal
 import datetime
 import pytz
 import threading
@@ -73,3 +74,124 @@ def calculate_weekly_fee(bag_quantities):
     for bag_quantity in bag_quantities:
         amount += bag_quantity.quantity * bag_quantity.bag_type.weekly_cost
     return amount
+
+def friendly_date(date):
+    """
+    Accepts a datetime object and returns a string with ordinalised dates, like
+    Wednesday 20th July, or Thursday 21st August
+    """
+
+    friendly_date = "{} {} {}".format(
+        date.strftime("%A"),
+        ordinal(date.strftime("%d")),
+        date.strftime("%B"))
+
+    return friendly_date
+
+
+def dates_affecting_collection(collection_point, datetime, billing_week):
+    """
+    Takes a collection point, the time, and current billing week, and returns
+    strings for the collection date(s), the deadline for changes, and which
+    collection any changes affect, based on whether we have passed the
+    cut-off point
+    """
+
+    #   checks if we're past the cut off point in a billing week,
+    #   and shows the correct dates for the week
+    now = datetime
+    weekday = now.weekday()
+    bw = billing_week
+
+    if weekday == 6:  # Sunday
+        # dates = dates_affecting_collection(collection_point, now, bw)
+
+        if timezone.now().hour < bw.end.hour:
+            if collection_point.collection_day == 'WED':
+                collection_date = friendly_date(bw.next().wed)
+            elif collection_point.collection_day == 'THURS':
+                collection_date = friendly_date(bw.next().thurs)
+            else:
+                collection_date = "{} and {}".format(
+                    friendly_date(bw.next().wed),
+                    friendly_date(bw.next().thurs))
+            deadline = '3pm today'
+            changes_affect = "next week's collection"
+        else:
+            if collection_point.collection_day == 'WED':
+                collection_date = friendly_date(bw.wed)
+            elif collection_point.collection_day == 'THURS':
+                collection_date = friendly_date(bw.thurs)
+            else:
+                collection_date = "{} and {}".format(
+                    friendly_date(bw.wed),
+                    friendly_date(bw.thurs))
+            deadline = '3pm next Sunday'
+            changes_affect = "the collection after next"
+    elif weekday == 0:  # Monday
+        if collection_point.collection_day == 'WED':
+            collection_date = friendly_date(bw.wed)
+        elif collection_point.collection_day == 'THURS':
+            collection_date = friendly_date(bw.thurs)
+        else:
+            collection_date = "{} and {}".format(
+                friendly_date(bw.wed),
+                friendly_date(bw.thurs))
+        deadline = '3pm this Sunday'
+        changes_affect = "next week's collection"
+    elif weekday == 1:  # Tuesday
+        if collection_point.collection_day == 'WED':
+            collection_date = friendly_date(bw.wed)
+        elif collection_point.collection_day == 'THURS':
+            collection_date = friendly_date(bw.thurs)
+        else:
+            collection_date = "{} and {}".format(
+                friendly_date(bw.wed),
+                friendly_date(bw.thurs))
+        deadline = '3pm this Sunday'
+        changes_affect = "next week's collection"
+    elif weekday == 2:  # Wednesday
+        if collection_point.collection_day == 'WED':
+            collection_date = friendly_date(bw.wed)
+        elif collection_point.collection_day == 'THURS':
+            collection_date = friendly_date(bw.thurs)
+        else:
+            collection_date = "{} and {}".format(
+                friendly_date(bw.wed),
+                friendly_date(bw.thurs))
+        deadline = '3pm this Sunday'
+        changes_affect = "next week's collection"
+    elif weekday == 3:  # Thurs
+        if collection_point.collection_day == 'WED':
+            collection_date = friendly_date(bw.next().wed)
+        elif collection_point.collection_day == 'THURS':
+            collection_date = friendly_date(bw.thurs)
+        else:
+            # special case as it's open for two days
+            collection_date = friendly_date(bw.thurs)
+        deadline = '3pm this Sunday'
+        changes_affect = "next week's collection"
+    else:
+        if collection_point.collection_day == 'WED':
+            collection_date = friendly_date(bw.next().wed)
+            # collection_date = 'Wednesday next week'
+        elif collection_point.collection_day == 'THURS':
+            collection_date = friendly_date(bw.next().thurs)
+            # collection_date = 'Thursday next week'
+        else:
+            # collection_date = 'Wednesday and Thursday next week'
+            collection_date = "{} and {}".format(
+                friendly_date(bw.next().wed),
+                friendly_date(bw.next().thurs))
+        if weekday == 4:  # Friday
+            deadline = '3pm this Sunday'
+        else:  # Saturday
+            deadline = '3pm tomorrow'
+        changes_affect = "next week's collection"
+
+
+    return {
+        "collection_date": collection_date,
+        "deadline": deadline,
+        "changes_affect": changes_affect
+        }
