@@ -710,9 +710,11 @@ def dashboard(request):
             '-changed'
         ).filter(customer=request.user.customer)[:1]
         collection_point = latest_cp_change[0].collection_point
+
         now = timezone.now()
         bw = get_billing_week(now)
         weekday = now.weekday()
+
         skipped_week = Skip.objects.order_by('billing_week').filter(
             customer=request.user.customer,
             billing_week=str(bw),
@@ -722,6 +724,20 @@ def dashboard(request):
         # we shouldn't show the billing week as skipped. So on Thursday,
         # unless there is a billing week next week that is skipped as well,
         # we should revert back to displaying normal behaviour
+
+        # the order is sent on Sunday, so you can change up to that point
+        sent_to_growers = False
+
+        # if now > bw.wed and now < bw.next().start:
+            # pass
+        wed_as_datetime = timezone.make_aware(datetime.datetime(
+            year=bw.wed.year,
+            month=bw.wed.month,
+            day=bw.wed.day))
+
+        if now =< wed_as_datetime and now < bw.next().start:
+            sent_to_growers = True
+            # it's been sent already
 
         if skipped_week:
             if now.date() <= parse_billing_week(skipped_week.billing_week).wed:
@@ -770,6 +786,7 @@ def dashboard(request):
                 'deadline': deadline,
                 'changes_affect': changes_affect,
                 'skipped': skipped,
+                'sent_to_growers': sent_to_growers
             }
         )
     else:

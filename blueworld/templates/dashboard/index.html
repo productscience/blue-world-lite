@@ -7,6 +7,9 @@
 
       <h1>Dashboard</h1>
 
+      <h1>
+        {{ sent_to_growers }}
+      </h1>
       <div id="message">
 
         {% if skipped %}
@@ -40,6 +43,12 @@
               <li>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</li>
             {% endfor %}
             </ul>
+
+            {% if sent_to_growers %}
+              <p>
+                <em>We've now placed your order with the growers this week, so any changes to you make now will apply to next week's collection.</em>
+              </p>
+            {% endif %}
 
             <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
 
