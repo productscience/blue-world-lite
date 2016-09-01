@@ -4,13 +4,16 @@
 {% block extra_head %}{% endblock %}
 {% block content %}
     <div class="row">
+
       <h1>Dashboard</h1>
 
       <div id="message">
-      <p>Welcome {{ request.user.customer.nickname }}!</p>
 
         {% if skipped %}
           <div class="this_week">
+
+            <p>Hi {{ request.user.customer.nickname }}!</p>
+
             <p class="skipped">
               There is nothing to pick up <span id="skipped-collection-date">{{ collection_date }}, as you marked this week as a holiday week.</span>
             </p>
@@ -22,6 +25,9 @@
         {% else %}
 
           <div class="this_week">
+
+            <p>Hi {{ request.user.customer.nickname }}!</p>
+
             <p>Your next collection is available on
               <span id="collection-date">{{ collection_date }}</span>
               from
@@ -31,30 +37,26 @@
 
             <ul id="order">
             {% for bag_quantity in bag_quantities %}
-              <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
+              <li>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</li>
             {% endfor %}
             </ul>
 
+            <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
+
+            <div class="collection-point-info">
+              <a href="#">See collection point instructions </a>
+              <div class="instructions">
+                {{ collection_point.instructions|linebreaks }}
+              </div>
+            </div>
           </div>
-
-        <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
-
-        <div class="collection-point-info">
-          <a href="#">See collection point instructions </a>
-          <div class="instructions">
-            {{ collection_point.instructions|linebreaks }}
-          </div>
-
-</div>
 
 
         {% endif %}
-      </div>
+        </div>
       </div>
 
       <div class="row">
-
-
 
       <h4 class="font-display">Your Order</h4>
 
@@ -63,7 +65,7 @@
       <ul class="menu">
         <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
         {% if not user.customer.has_left %}
-          <li><a href="{% url 'dashboard_skip_weeks' %}">Skip Weeks</a></li>
+          <li><a href="{% url 'dashboard_skip_weeks' %}">Holidays</a></li>
         {% endif %}
         <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
         <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>

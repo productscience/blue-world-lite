@@ -3607,6 +3607,12 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
   padding: 0.5rem;
   margin-left: 0; }
 
+.this_week p {
+  font-size: 1.3rem; }
+
+.this_week ul li {
+  font-size: 1.5rem; }
+
 .instructions {
   padding: 1rem;
   font-size: 1rem;
