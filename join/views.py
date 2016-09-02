@@ -11,7 +11,9 @@ import json
 import uuid
 
 from allauth.account.views import signup as allauth_signup
-from billing_week import get_billing_week, parse_billing_week, billing_weeks_left_in_the_month
+from billing_week import (
+    get_billing_week, parse_billing_week, billing_weeks_left_in_the_month,
+    next_valid_billing_week, next_n_billing_weeks)
 from django import forms
 from django.conf import settings
 from django.contrib import messages
@@ -36,8 +38,7 @@ from billing_week import first_wed_of_month as start_of_the_month
 from join.helper import (
     get_pickup_dates,
     render_bag_quantities,
-    calculate_weekly_fee,
-    dates_affecting_collection)
+    calculate_weekly_fee)
 from .models import (
     AccountStatusChange,
     BagType,
@@ -703,90 +704,80 @@ def gocardless_callback(request):
 @gocardless_is_set_up
 def dashboard(request):
     if request.user.customer.account_status != AccountStatusChange.LEFT:
-        latest_cp_change = CustomerCollectionPointChange.objects.order_by(
-            '-changed'
-        ).filter(customer=request.user.customer)[:1]
-        latest_customer_order_change = CustomerOrderChange.objects.order_by(
-            '-changed'
-        ).filter(customer=request.user.customer)[:1]
-        collection_point = latest_cp_change[0].collection_point
 
         now = timezone.now()
         bw = get_billing_week(now)
         weekday = now.weekday()
 
-        skipped_week = Skip.objects.order_by('billing_week').filter(
-            customer=request.user.customer,
-            billing_week=str(bw),
-        ).all().first()
-        skipped = False
-        # if we are past the wednesday of this billing week,
-        # we shouldn't show the billing week as skipped. So on Thursday,
-        # unless there is a billing week next week that is skipped as well,
-        # we should revert back to displaying normal behaviour
+        # we want a list of billing weeks, so we can then pull out changes for them
+        next_bws = next_n_billing_weeks(5, bw)
 
-        # the order is sent on Sunday, so you can change up to that point
-        sent_to_growers = False
+        # billing weeks starting Sunday 3pm should reflect the latest change made this week
 
-        # if now > bw.wed and now < bw.next().start:
-            # pass
-        wed_as_datetime = timezone.make_aware(datetime.datetime(
-            year=bw.wed.year,
-            month=bw.wed.month,
-            day=bw.wed.day))
+        # the order in the current billing week should only reflect the last change made in the week before
 
-        if now =< wed_as_datetime and now < bw.next().start:
-            sent_to_growers = True
-            # it's been sent already
+        # if there was no change made in the before this week, then this is a
+        # new customer, and they won't have anything to pick up yet
 
-        if skipped_week:
-            if now.date() <= parse_billing_week(skipped_week.billing_week).wed:
-                skipped = True
+        # james new code
+        latest_cp_change = CustomerCollectionPointChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer, changed_in_billing_week__lt=bw)[:1]
+        #
+        # # need to allow for billing week here - this doesn't check what
+        # # billing week the change happened in, so if somoene has made a change
+        # # this billing week we apply it to the next one, but show the choices
+        # # for this billing week
+        latest_customer_order_change = CustomerOrderChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer, changed_in_billing_week__lt=bw)[:1]
 
-            # TODO cover for when we have a skipped billing week *next* week
-        # import ptpdb; ptpdb.set_trace()
+        # this will always get the latest collection point, even if they change it
+        # after an order is made
+        collection_point = latest_cp_change[0].collection_point
 
-        dates = dates_affecting_collection(collection_point, now, bw)
+        if not latest_cp_change or not latest_customer_order_change:
+            new_customer = True
+        else:
+            new_customer = False
 
-        collection_date = dates['collection_date']
-        deadline = dates['deadline']
-        changes_affect = dates['changes_affect']
 
-        # fall back for the case when we have a user just starting this week
-        if request.user.customer.created_in_billing_week == bw:
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday next week'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday next week'
-            else:
-                collection_date = 'Wednesday and Thursday next week'
-            if weekday == 4:  # Friday
-                deadline = '3pm this Sunday'
-            else:  # Saturday
-                deadline = '3pm tomorrow'
-            changes_affect = "next week's collection"
+
+
+
+        # skipped_billing_weeks = []
+        skipped = len(
+            Skip.objects.order_by('billing_week').filter(
+                customer=request.user.customer,
+                billing_week=str(bw),
+            ).all()
+        ) > 0
+
+        # /james new code
+
+        # before Wednesday, we show
 
         bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
             customer_order_change=latest_customer_order_change
         ).all()
-        if skipped:
-            collection_date = collection_date.replace(' and ', ' or ')
-            if not (
-                collection_date.startswith('today') or
-                collection_date.startswith('tomorrow')
-            ):
-                collection_date = 'on ' + collection_date
+
+
         return render(
             request,
             'dashboard/index.html',
             {
                 'bag_quantities': bag_quantities,
                 'collection_point': collection_point,
-                'collection_date': collection_date,
-                'deadline': deadline,
-                'changes_affect': changes_affect,
+                'bw': bw,
+                'new_customer': new_customer,
+                # 'collection_date': collection_date,
+                # 'deadline': deadline,
+                # 'changes_affect': changes_affect,
                 'skipped': skipped,
-                'sent_to_growers': sent_to_growers
+                # 'skipped_weeks': skipped_weeks,
+                # 'sent_to_growers': sent_to_growers,
+                # 'next_valid_collection_date': next_valid_collection_date,
+                # 'next_valid_billing_week': next_valid_collection
             }
         )
     else:

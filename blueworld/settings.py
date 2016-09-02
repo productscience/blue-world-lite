@@ -72,6 +72,7 @@ INSTALLED_APPS = [
 
 if DEBUG:
     INSTALLED_APPS.append('django_extensions')
+    INSTALLED_APPS.append('debug_toolbar')
 
 
 RQ_QUEUES = {

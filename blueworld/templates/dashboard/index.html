@@ -7,10 +7,14 @@
 
       <h1>Dashboard</h1>
 
-      <h1>
-        {{ sent_to_growers }}
-      </h1>
+
+
       <div id="message">
+        {% if new_customer %}
+          It looks like you're a new customer.
+        {% endif %}
+
+
 
         {% if skipped %}
           <div class="this_week">
@@ -23,6 +27,25 @@
             <p>
               <a href="{% url 'dashboard_skip_weeks' %}">See your holiday weeks</a>
             </p>
+          </div>
+
+          <div class="next_week">
+            <p>
+              next valid
+            </p>
+            <p>
+
+              {{ next_valid_collection_date }}
+              {{ next_valid_billing_week }}
+            </p>
+
+              <p>
+                skipped weeks:
+              </p>
+              <p>
+                {{ skipped_weeks }}
+
+              </p>
           </div>
 
         {% else %}

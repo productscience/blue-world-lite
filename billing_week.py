@@ -292,6 +292,35 @@ def parse_billing_week(billing_week_string):
         week,
     )
 
+def next_n_billing_weeks(n, bw, billing_weeks=[]):
+    """
+    Takes a number of billing weeks and a starting billing week, and returns
+    a list of billing weeks
+    """
+    if n > len(billing_weeks):
+        billing_weeks.append(bw)
+        return next_n_billing_weeks(n, bw.next(), billing_weeks)
+    else:
+        return billing_weeks
+
+def prev_n_billing_weeks(n, bw, billing_weeks=[]):
+    if n > len(billing_weeks):
+        billing_weeks.append(bw)
+        return next_n_billing_weeks(n, bw.prev(), billing_weeks)
+    else:
+        return billing_weeks
+
+
+def next_valid_billing_week(bw, billing_week_strings):
+    """
+    Takes a billing week, and a set of skipped billing weeks, and steps forward
+    until it finds a week that isni't in the skipped set
+    """
+    if str(bw) in billing_week_strings:
+        return next_valid_billing_week(bw.next(), billing_week_strings)
+    else:
+        return bw
+
 
 if __name__ == '__main__':
 
@@ -538,5 +567,8 @@ if __name__ == '__main__':
             # June
             self.assertEqual(len(
                 billing_weeks_left_in_the_month("2016-06 1")), 4)
+
+        # def test_next_n_billing_weeks(self):
+        #     2016-05 1
 
     unittest.main()

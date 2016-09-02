@@ -28,7 +28,7 @@ Feature: Dashboard Collection Skips
       And I switch to the user browser
       And I login with "dashboard-collection-skips@example.com" and "123123ab"
      When I navigate to /dashboard
-     Then I see "nothing to pick up on" in "#message"
+     Then I see "nothing to pick up" in "#message"
       And I see "<skipped_collection_date>" in "#skipped-collection-date"
       And I see "<deadline>" in "#deadline"
       And I see "<changes_affect>" in "#changes-affect"
