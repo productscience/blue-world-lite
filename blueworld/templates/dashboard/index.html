@@ -7,71 +7,33 @@
 
       <h1>Dashboard</h1>
 
-
-
       <div id="message">
-        {% if new_customer %}
-          It looks like you're a new customer.
-        {% endif %}
+        <p>Hi {{ request.user.customer.nickname }}!</p>
+      </div>
 
+      <h3>Your collections</h3>
 
+      {% for col in collections %}
 
-        {% if skipped %}
-          <div class="this_week">
+        <div class="billing_week {% if col.billing_week == this_bw %} this_week  {% endif %}">
+          <h5>{{ col.dates }}</h5>
+          <h5>{{ col.billing_week }}</h5>
+          <h5>{{ col.collection_point }}</h5>
+          <h5>{{ col.appended }}</h5>
 
-            <p>Hi {{ request.user.customer.nickname }}!</p>
+          <ul id="order">
+          {% for bag_quantity in col.bags %}
+            <li>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</li>
+          {% endfor %}
+          </ul>
 
-            <p class="skipped">
-              There is nothing to pick up <span id="skipped-collection-date">{{ collection_date }}, as you marked this week as a holiday week.</span>
-            </p>
-            <p>
-              <a href="{% url 'dashboard_skip_weeks' %}">See your holiday weeks</a>
-            </p>
-          </div>
+        </div>
+
+      {% endfor %}
+
 
           <div class="next_week">
-            <p>
-              next valid
-            </p>
-            <p>
-
-              {{ next_valid_collection_date }}
-              {{ next_valid_billing_week }}
-            </p>
-
-              <p>
-                skipped weeks:
-              </p>
-              <p>
-                {{ skipped_weeks }}
-
-              </p>
           </div>
-
-        {% else %}
-
-          <div class="this_week">
-
-            <p>Hi {{ request.user.customer.nickname }}!</p>
-
-            <p>Your next collection is available on
-              <span id="collection-date">{{ collection_date }}</span>
-              from
-              <strong id="collection-point">{{ collection_point.name }}</strong>
-              :
-            </p>
-
-            <ul id="order">
-            {% for bag_quantity in bag_quantities %}
-              <li>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</li>
-            {% endfor %}
-            </ul>
-
-            {% if sent_to_growers %}
-              <p>
-                <em>We've now placed your order with the growers this week, so any changes to you make now will apply to next week's collection.</em>
-              </p>
-            {% endif %}
 
             <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
 
@@ -86,7 +48,6 @@
           </div>
 
 
-        {% endif %}
         </div>
       </div>
 

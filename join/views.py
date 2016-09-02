@@ -38,7 +38,8 @@ from billing_week import first_wed_of_month as start_of_the_month
 from join.helper import (
     get_pickup_dates,
     render_bag_quantities,
-    calculate_weekly_fee)
+    calculate_weekly_fee,
+    collection_dates_for)
 from .models import (
     AccountStatusChange,
     BagType,
@@ -707,77 +708,79 @@ def dashboard(request):
 
         now = timezone.now()
         bw = get_billing_week(now)
-        weekday = now.weekday()
 
         # we want a list of billing weeks, so we can then pull out changes for them
-        next_bws = next_n_billing_weeks(5, bw)
+        next_bws = next_n_billing_weeks(5, bw.next())
 
         # billing weeks starting Sunday 3pm should reflect the latest change made this week
 
         # the order in the current billing week should only reflect the last change made in the week before
 
-        # if there was no change made in the before this week, then this is a
-        # new customer, and they won't have anything to pick up yet
-
-        # james new code
-        latest_cp_change = CustomerCollectionPointChange.objects.order_by(
-            '-changed'
-        ).filter(customer=request.user.customer, changed_in_billing_week__lt=bw)[:1]
-        #
-        # # need to allow for billing week here - this doesn't check what
-        # # billing week the change happened in, so if somoene has made a change
-        # # this billing week we apply it to the next one, but show the choices
-        # # for this billing week
-        latest_customer_order_change = CustomerOrderChange.objects.order_by(
+        last_used_ccpc = CustomerCollectionPointChange.objects.order_by(
             '-changed'
         ).filter(customer=request.user.customer, changed_in_billing_week__lt=bw)[:1]
 
-        # this will always get the latest collection point, even if they change it
-        # after an order is made
-        collection_point = latest_cp_change[0].collection_point
+        latest_ccpc = CustomerCollectionPointChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer)[:1][0]
 
-        if not latest_cp_change or not latest_customer_order_change:
-            new_customer = True
-        else:
-            new_customer = False
+        latest_collection_point = latest_ccpc.collection_point
 
+        last_used_order = CustomerOrderChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer, changed_in_billing_week__lt=bw)[:1]
 
+        # if someone changes their order this billing week, we capture this,
+        # so we can show it applying to future orders
+        latest_order = CustomerOrderChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer)[:1]
 
-
-
-        # skipped_billing_weeks = []
-        skipped = len(
-            Skip.objects.order_by('billing_week').filter(
-                customer=request.user.customer,
-                billing_week=str(bw),
-            ).all()
-        ) > 0
-
-        # /james new code
-
-        # before Wednesday, we show
-
-        bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
-            customer_order_change=latest_customer_order_change
+        last_used_bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
+            customer_order_change=last_used_order
         ).all()
 
+        latest_bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
+            customer_order_change=latest_order
+        ).all()
+
+        # if we don't have these, the the user hasn't been in
+        if not last_used_ccpc or not last_used_order:
+            new_customer = True
+            collections = [{
+                'billing_week': bw,
+            }]
+        else:
+            new_customer = False
+            last_used_collection_point = last_used_ccpc[0].collection_point
+
+        # the billing week object, the dates, and the order
+            collections = [{
+                'billing_week': bw,
+                'collection_point': last_used_collection_point,
+                'dates': collection_dates_for(bw, last_used_collection_point),
+                'bags': last_used_bag_quantities
+            }]
+
+        for bwk in next_bws:
+            collections.append({
+                'billing_week': bwk,
+                'collection_point': latest_collection_point,
+                'dates': collection_dates_for(bwk, latest_collection_point),
+                'bags': latest_bag_quantities,
+                'appended': 'appended'
+            })
 
         return render(
             request,
             'dashboard/index.html',
             {
-                'bag_quantities': bag_quantities,
-                'collection_point': collection_point,
-                'bw': bw,
                 'new_customer': new_customer,
-                # 'collection_date': collection_date,
+                'this_bw': bw,
+                'collections': collections,
+                'now': now
                 # 'deadline': deadline,
                 # 'changes_affect': changes_affect,
-                'skipped': skipped,
-                # 'skipped_weeks': skipped_weeks,
-                # 'sent_to_growers': sent_to_growers,
-                # 'next_valid_collection_date': next_valid_collection_date,
-                # 'next_valid_billing_week': next_valid_collection
             }
         )
     else:
