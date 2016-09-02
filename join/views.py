@@ -710,7 +710,7 @@ def dashboard(request):
         bw = get_billing_week(now)
 
         # we want a list of billing weeks, so we can then pull out changes for them
-        next_bws = next_n_billing_weeks(5, bw.next())
+        next_bws = next_n_billing_weeks(5, bw)
 
         # billing weeks starting Sunday 3pm should reflect the latest change made this week
 
@@ -778,7 +778,8 @@ def dashboard(request):
                 'new_customer': new_customer,
                 'this_bw': bw,
                 'collections': collections,
-                'now': now
+                'now': now,
+                'next_bws': next_bws
                 # 'deadline': deadline,
                 # 'changes_affect': changes_affect,
             }
