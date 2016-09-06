@@ -14,7 +14,13 @@ GC.locations = {{ locations|safe }}
     <div class="row">
       <h3 class="font-text">Where do you want to collect your bag from?</h3>
 
-      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d39696.91748585319!2d-0.09553839804747107!3d51.548847512570475!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761cefef8e8c05%3A0xc5b1fb59d8196f2c!2sLondon+Borough+of+Hackney%2C+Greater+London!5e0!3m2!1sen!2suk!4v1465560067568" width="600" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
+
+      <script src="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.js"></script>
+
+      <div id="collection-map" style="height:450px;width:600px;">
+
+      </div>
 
       {% if form.non_form_errors or form.errors %}
       <div id="errors" class="callout alert errors">
@@ -22,6 +28,9 @@ GC.locations = {{ locations|safe }}
       {{ form.errors }}
       </div>
       {% endif %}
+
+
+
 
 
 
@@ -52,4 +61,32 @@ GC.locations = {{ locations|safe }}
     </div>
 {% endblock %}
 {% block extra_body %}
+{% endblock %}
+
+{% block extra_scripts %}
+
+<script type="text/javascript">
+
+jQuery(document).ready(function($) {
+  var mymap = L.map('collection-map').setView([51.557853, -0.073096], 13);
+
+  L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoibXJjaHJpc2FkYW1zIiwiYSI6InFobnRZRzQifQ.jLPeG4HV4RiCL8RVNPBTwg', {
+    attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+    maxZoom: 18,
+  }).addTo(mymap);
+
+
+  jQuery.each(GC.locations, function(k, loc) {
+    L.marker([loc.latitude, loc.longitude])
+     .bindPopup(k)
+     .addTo(mymap);
+  })
+
+
+});
+
+
+
+</script>
+
 {% endblock %}

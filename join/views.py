@@ -37,6 +37,7 @@ import pytz
 from billing_week import first_wed_of_month as start_of_the_month
 from join.helper import (
     get_pickup_dates,
+    friendly_date,
     render_bag_quantities,
     calculate_weekly_fee,
     collection_dates_for)
@@ -709,6 +710,8 @@ def dashboard(request):
         now = timezone.now()
         bw = get_billing_week(now)
 
+
+
         # we want a list of billing weeks, so we can then pull out changes for them
         next_bws = next_n_billing_weeks(5, bw)
 
@@ -749,6 +752,9 @@ def dashboard(request):
             new_customer = True
             collections = [{
                 'billing_week': bw,
+                'collection_point': latest_collection_point,
+                'dates': [friendly_date(d) for d in collection_dates_for(bw, latest_collection_point)],
+                'bags': latest_bag_quantities,
             }]
         else:
             new_customer = False
@@ -758,7 +764,7 @@ def dashboard(request):
             collections = [{
                 'billing_week': bw,
                 'collection_point': last_used_collection_point,
-                'dates': collection_dates_for(bw, last_used_collection_point),
+                'dates': [friendly_date(d) for d in collection_dates_for(bw, last_used_collection_point)],
                 'bags': last_used_bag_quantities
             }]
 
@@ -766,9 +772,8 @@ def dashboard(request):
             collections.append({
                 'billing_week': bwk,
                 'collection_point': latest_collection_point,
-                'dates': collection_dates_for(bwk, latest_collection_point),
-                'bags': latest_bag_quantities,
-                'appended': 'appended'
+                'dates': [friendly_date(d) for d in collection_dates_for(bwk, latest_collection_point)],
+                'bags': latest_bag_quantities
             })
 
         return render(
@@ -779,7 +784,8 @@ def dashboard(request):
                 'this_bw': bw,
                 'collections': collections,
                 'now': now,
-                'next_bws': next_bws
+                'next_bws': next_bws,
+                'skips': "skips"
                 # 'deadline': deadline,
                 # 'changes_affect': changes_affect,
             }
