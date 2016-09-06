@@ -58,7 +58,10 @@ table#order-history td {
             {% endif %}
             {% elif event.type == 'COLLECTION_POINT_CHANGE' %}
             Collection point changed to <strong>{{ event.new_collection_point }}</strong>.<br>
-            Please start collecting here from {{ event.bw.next.wed|date:"DATE_FORMAT" }}.
+            {% comment %}
+                Please start collecting here from {{ event.bw.next.wed|date:"DATE_FORMAT" }}.
+            {% endcomment %}
+
             {% elif event.type == 'ACCOUNT_STATUS_CHANGE' %}
             Account status changed to <strong>{{ event.new_account_status }}</strong>.
             {% elif event.type == 'OUT_OF_CYCLE_PAYMENT' %}
