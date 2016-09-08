@@ -1,5 +1,5 @@
 import logging
-
+import datetime
 
 from collections import OrderedDict
 from datetime import timedelta
@@ -27,7 +27,14 @@ from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from hijack import settings as hijack_settings
-from join.helper import get_current_request, render_bag_quantities
+from join.helper import (
+    get_current_request,
+    render_bag_quantities,
+    customer_ids_on_holiday_for_billing_week,
+    effective_billing_week,
+    friendly_date,
+    customer_ids_by_status
+)
 from join.models import (
     AccountStatusChange,
     BagType,
@@ -50,6 +57,7 @@ from django.core.exceptions import ValidationError
 from billing_week import get_billing_week, parse_billing_week
 
 logger = logging.getLogger(__name__)
+
 
 
 class BlueWorldModelAdmin(admin.ModelAdmin):
@@ -101,7 +109,7 @@ class CollectionPointAdmin(BlueWorldModelAdmin):
         # TODO show the next two billable weeks as shortcut options
         # the day after a collection day (i.e. Thursday), default to show the next billable week, and the one after it
         initial = {
-            'billing_week': str(bw.next())
+            'billing_week': str(bw.next().wed)
         }
         if '_generate' in request.POST:
             form = pickupListForm(request.POST, initial=initial)
@@ -237,13 +245,7 @@ class AccountStatusListFilter(admin.SimpleListFilter):
         return choices
 
     def _by_status(self, query_value):
-        ascs = AccountStatusChange.objects.order_by(
-            'customer', '-changed'
-        ).distinct('customer')
-
-        customer_ids = [
-            c.customer_id for c in ascs if c.status == query_value
-        ]
+        customer_ids = customer_ids_by_status(query_value)
 
         return customer_ids
 
@@ -253,10 +255,12 @@ class AccountStatusListFilter(admin.SimpleListFilter):
 
         # Check for people on holiday
         if self.value() == "HOLIDAY":
-            # TODO check if we should move this into a separate filter
-            customer_ids = Skip.objects.filter(
-                billing_week=get_billing_week(timezone.now())
-            ).only('customer_id').values_list('customer_id')
+            now = timezone.now()
+            bw = get_billing_week(now)
+            billing_week_to_check = effective_billing_week(bw, now)
+
+            customer_ids = customer_ids_on_holiday_for_billing_week(
+                billing_week_to_check)
 
         else:
             # otherwise
@@ -527,6 +531,30 @@ class CustomerAdmin(BlueWorldModelAdmin):
         return super(CustomerAdmin, self).change_view(request, object_id,
             extra_context=my_context)
 
+    def changelist_view(self, request, extra_context=None):
+        """
+        Overrides the customer change view to let us
+        extra context for high level stats
+        """
+
+        now = timezone.now()
+        bw = get_billing_week(now)
+        billing_week_to_check = effective_billing_week(bw, now)
+
+        dashboard_billing_weeks = [
+            billing_week_to_check,
+            billing_week_to_check.next()
+        ]
+
+        # bww - billing week wednesdays
+        bww = [fetch_bw_dashboard_stats(dbw) for dbw in dashboard_billing_weeks]
+
+        my_context = {
+            'billing_week_wednesdays': bww
+        }
+        return super(CustomerAdmin, self).changelist_view(request,
+            extra_context=my_context)
+
 
 class CustomerOrderChangeAdmin(BlueWorldModelAdmin):
     pass
@@ -609,6 +637,41 @@ admin.site.register(Skip, SkipAdmin)
 # admin.site.unregister(User)
 # admin.site.register(User, UserAdmin)
 admin.site.disable_action('delete_selected')
+
+
+def fetch_bw_dashboard_stats(billing_week):
+    """
+    Takes a billing week, and returns headline stats about the number
+    of bags and customers for that week, along with a formatted
+    date representation.
+    """
+
+    active_customer_ids = customer_ids_by_status('ACTIVE')
+    holidaying_customers = customer_ids_on_holiday_for_billing_week(
+        billing_week)
+
+    total_bags = 0
+
+    customers_this_week = Customer.objects.filter(
+        pk__in=active_customer_ids).exclude(
+            pk__in=holidaying_customers)
+
+    for c in customers_this_week:
+        coc = CustomerOrderChange.objects.select_related().filter(customer=c)
+        cocbq = CustomerOrderChangeBagQuantity.objects.filter(
+            customer_order_change=coc)
+        # TODO this is a very expensive query!
+        for bq in cocbq:
+            total_bags += bq.quantity
+
+    dbw_stats = {
+        'bw': billing_week,
+        'date': friendly_date(billing_week.wed),
+        'customers': customers_this_week.count(),
+        'bags': total_bags
+    }
+
+    return dbw_stats
 
 
 def pickup_list(collection_points, billing_week):

@@ -1392,3 +1392,27 @@ def billing_dates(request):
             'current_billing_week': bw_today
         }
     )
+
+from billing_week import get_billing_week
+from join.admin import pickup_list
+
+def generate_pickup_list(request, year=None, month=None, day=None):
+
+    now = timezone.now()
+
+    if year and month and day:
+        time = datetime.datetime(int(year), int(month), int(day),
+            tzinfo=timezone.get_current_timezone())
+        billing_week_time = time
+    else:
+        billing_week_time = now
+
+    bw = get_billing_week(billing_week_time)
+    queryset = CollectionPoint.objects.all()
+    context = pickup_list(
+        queryset,
+        bw
+    )
+    context['now_billing_week'] = bw
+    context['now'] = now
+    return render(request, 'pickup-list.html', context)

@@ -75,6 +75,11 @@ urlpatterns = [
         admin.site.urls,
     ),
     url(
+        r'^admin/pickup_list/(?P<year>[0-9]{4})/(?P<month>[0-9]{1,2})/(?P<day>[0-9]{1,2})/$',
+        join.views.generate_pickup_list,
+        name='generate_pickup_list',
+    ),
+    url(
         r'^hijack/',
         include('hijack.urls')
     ),

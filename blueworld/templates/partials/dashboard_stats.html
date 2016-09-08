@@ -1,0 +1,19 @@
+<ul class="bag_stats">
+{% for dbw in billing_week_wednesdays %}
+  <li>
+    <a href="{% url 'generate_pickup_list' year=dbw.bw.year month=dbw.bw.month day=dbw.bw.wed.day %}">
+    Pickup List ({{ dbw.date }}):
+    <strong>{{ dbw.bags }} bags for {{ dbw.customers}} customers</strong>
+  </a>
+  </li>
+{% endfor %}
+</ul>
+
+
+<style media="screen">
+  ul.bag_stats li{
+    display: inline;
+    list-style-type: none;
+    margin-right: 2rem;
+  }
+</style>
