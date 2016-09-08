@@ -379,6 +379,21 @@ class Customer(models.Model):
 
     skipped = property(_get_skipped)
 
+    def is_skipped_for_billing_week(self, billing_week):
+        """
+        Returns true or false for a given billing week passed into it
+        """
+        bw_str = str(billing_week)
+        prev_bw_str = str(billing_week.prev())
+
+        has_valid_skip = Skip.objects.filter(customer=self,
+            billing_week=bw_str).all()
+
+        if has_valid_skip:
+            return True
+
+        return False
+
     def __str__(self):
         return '{} ({})'.format(self.full_name, self.nickname)
 

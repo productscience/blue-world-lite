@@ -3608,8 +3608,10 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
   padding: 0.5rem;
   margin-left: 0; }
 
-.this_week p {
-  font-size: 1.3rem; }
+.this_week p,
+.this_week h5{
+  font-size: 1.5rem;
+}
 
 .this_week ul li {
   font-size: 1.5rem; }
@@ -3633,3 +3635,13 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
   width: 90%;
   margin-left: auto;
   margin-right: auto; }
+
+
+div.skipped h5,
+div.skipped li{
+  color: #999;
+}
+
+.greeting{
+  font-size:2em;
+}

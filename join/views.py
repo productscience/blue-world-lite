@@ -767,7 +767,8 @@ def dashboard(request):
                 'billing_week': bw,
                 'collection_point': last_used_collection_point,
                 'dates': [friendly_date(d) for d in collection_dates_for(bw, last_used_collection_point)],
-                'bags': last_used_bag_quantities
+                'bags': last_used_bag_quantities,
+                'skipped': request.user.customer.is_skipped_for_billing_week(bw)
             }]
 
         for bwk in next_bws:
@@ -775,7 +776,8 @@ def dashboard(request):
                 'billing_week': bwk,
                 'collection_point': latest_collection_point,
                 'dates': [friendly_date(d) for d in collection_dates_for(bwk, latest_collection_point)],
-                'bags': latest_bag_quantities
+                'bags': latest_bag_quantities,
+                'skipped': request.user.customer.is_skipped_for_billing_week(bwk)
             })
 
         return render(
