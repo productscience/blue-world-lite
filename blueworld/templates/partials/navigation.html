@@ -1,10 +1,8 @@
 {% if user.is_authenticated %}
 <ul id="navigation" class="dropdown menu expanded global-nav" data-dropdown-menu>
   <li><a href="{% url 'dashboard' %}">Home</a></li>
-  <li><span class="your_order">Your Order</span>
+  <li><span class="your_order">Your Bags</span>
     <ul class="menu">
-      <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
-      <li><a href="{% url 'dashboard_billing_history' %}">Billing History</a></li>
       {% if not user.customer.has_left %}
         <li><a href="{% url 'dashboard_skip_weeks' %}">Holidays</a></li>
         <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
@@ -13,6 +11,7 @@
           <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
         {% endif %}
       {% endif %}
+      <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
     </ul>
   </li>
   <li><span class="your_account">Your Account</span>
@@ -23,6 +22,7 @@
         {% if user.customer.gocardless_current_mandate.gocardless_mandate_id %}
           <li><a href="{% url 'dashboard_bank_details' %}">Bank Details</a></li>
         {% endif %}
+        <li><a href="{% url 'dashboard_billing_history' %}">Payment history</a></li>
       {% endif %}
       <li><a href="{% url 'account_logout' %}">Log Out</a></li>
     </ul>

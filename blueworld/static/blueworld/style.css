@@ -3613,6 +3613,9 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
 .this_week h4{
   font-size: 1.5rem;
 }
+.this_week .instructions p{
+  font-size: 1rem;
+}
 
 .this_week ul li {
   font-size: 1.5rem; }
