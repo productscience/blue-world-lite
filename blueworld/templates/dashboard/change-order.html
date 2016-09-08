@@ -6,11 +6,18 @@
     <div class="row">
       <h1>Change Order</h1>
 
-      <p>Your current order is:</p>
+      <h5>If we haven't yet placed the week's order with our growers, you can change your order below, and we'll use that instead.</h5>
+      <h5>If the week's order has already been sent, changes will affect the following week.</h5>
+
+
+      <div class="current-choice">
+
+
+      <h4>Your current order is:</h4>
       <ul id="order">
       {% for bag_quantity in request.user.customer.bag_quantities %}
         <li>
-          <strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong>
+          <h4><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></h4>
           {% if not bag_quantity.bag_type.active %}
           (note this item is no longer available so if you change your order below, you will not be able to re-select it in future)
           {% endif %}
@@ -18,8 +25,9 @@
       {% endfor %}
       </ul>
 
-      <h3>New Order</h3>
+      </div>
 
+      <h3>New Order</h3>
       <p>Note: You can only order a small fruit bag if you are also ordering another bag.</p>
 
       <div id="errors">

@@ -14,13 +14,21 @@ GC.locations = {{ locations|safe }}
 
       <h1>Change Collection Point</h1>
 
-      <p>Your current collection point is <strong id="collection-point">{{ current_collection_point.name }}</strong>.</p>
+      <div class="current-choice">
+
+
+
+      <h4>Your current collection point is <strong id="collection-point">{{ current_collection_point.name }}</strong>.</h4>
 
       {% if not current_collection_point.active %}
       <p id="collection-point-not-active-warning">Please be aware that {{ current_collection_point.name }} is currently {{ current_collection_point.get_inactive_reason_display|lower }} so if you switch to another collection point you won't be able to change back to {{ current_collection_point.name }} afterwards.</p>
       {% endif %}
 
-      <p>Where do you want to pick up from?</p>
+      </div>
+
+      <h4 class="font-display">New collection point</h4>
+
+      <h5>Where do you want to pick up from?</h5>
 
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
 

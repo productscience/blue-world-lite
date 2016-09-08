@@ -3578,6 +3578,7 @@ a {
 h3.font-text {
   max-width: 30em; }
 
+.current-choice,
 .this_week {
   background: #EEE;
   padding: 1rem;
