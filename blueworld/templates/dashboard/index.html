@@ -33,6 +33,17 @@
 
       }
 
+      .order-menu, .account-menu{
+        background-color: #EEE;
+        padding: 0.5rem;
+        margin-bottom: 1.5em;
+        border-top: 1px solid #cacaca;
+      }
+      .order-menu a, .account-menu a{
+        font-weight: bold;
+      }
+
+
     </style>
 
 
@@ -54,7 +65,9 @@
 
 
             {% if new_customer and col.billing_week == this_bw %}
-            <h5>Welcome aboard! This week's order has already gone to the farmers, and your collections will start next week.</h5>
+            <h4>Welcome aboard! This week's order has already gone to the farmers, and your collections will start next week.</h4>
+            <h5>In the meantime, we'd love to know a bit more about how you found us.</h5>
+            <h5>Perhaps you could help us with this <a href="#">new member survey here</a>?</h5>
             {% elif col.skipped %}
 
             <h5>
@@ -94,7 +107,7 @@
         {% endif %}
 
       {% endfor %}
-            <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
+
 
             {% if collection_point.instructions %}
               <div class="collection-point-info">
@@ -110,16 +123,21 @@
         </div>
 
       <div class="row">
+        <div class="order-menu">
+          <h5>On holiday soon? Want to try a different bag? Let us know when you're away, or change your order below.</h5>
 
-        <ul class="menu">
-          <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
-          {% if not user.customer.has_left %}
-            <li><a href="{% url 'dashboard_skip_weeks' %}">Holidays</a></li>
-          {% endif %}
-          <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
-          <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
-          <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
-        </ul>
+          <ul class="menu ">
+
+            {% if not user.customer.has_left %}
+              <li><a href="{% url 'dashboard_skip_weeks' %}">Holidays</a></li>
+            {% endif %}
+            <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
+            <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
+            <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
+            <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
+          </ul>
+
+        </div>
 
       </div>
 
@@ -127,7 +145,7 @@
 
         <h4 class="font-display">your Account</h4>
 
-        <ul class="menu">
+        <ul class="menu account-menu">
           {% if not user.customer.has_left %}
             <li><a href="{% url 'account_email' %}">E-mail Addresses</a></li>
             <li><a href="{% url 'account_change_password' %}">Change Password</a></li>

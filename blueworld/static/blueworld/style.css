@@ -3609,7 +3609,7 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
   margin-left: 0; }
 
 .this_week p,
-.this_week h5{
+.this_week h4{
   font-size: 1.5rem;
 }
 
