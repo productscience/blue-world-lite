@@ -292,18 +292,22 @@ def parse_billing_week(billing_week_string):
         week,
     )
 
-def next_n_billing_weeks(n, bw, billing_weeks=[]):
+def next_n_billing_weeks(n, bw, billing_weeks=None):
     """
     Takes a number of billing weeks and a starting billing week, and returns
     a list of billing weeks
     """
+    if billing_weeks is None:
+        billing_weeks = []
     if n > len(billing_weeks):
         billing_weeks.append(bw.next())
         return next_n_billing_weeks(n, bw.next(), billing_weeks)
     else:
         return billing_weeks
 
-def prev_n_billing_weeks(n, bw, billing_weeks=[]):
+def prev_n_billing_weeks(n, bw, billing_weeks=None):
+    if billing_weeks is None:
+        billing_weeks = []
     if n > len(billing_weeks):
         billing_weeks.append(bw.prev())
         return prev_n_billing_weeks(n, bw.prev(), billing_weeks)
@@ -589,8 +593,5 @@ if __name__ == '__main__':
             last_bw_in_aug = get_billing_week(s)
             self.assertEqual(
                 len(prev_n_billing_weeks(5, last_bw_in_aug)), 5)
-
-
-
 
     unittest.main()
