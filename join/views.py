@@ -520,6 +520,8 @@ def collection_point(request):
         locations['id_collection_point_{}'.format(i)] = {
             "longitude": escape(collection_point.longitude),
             "latitude": escape(collection_point.latitude),
+            "name": escape(collection_point.name),
+            "location": escape(collection_point.location),
         }
     return render(
         request,
@@ -948,6 +950,8 @@ def dashboard_change_collection_point(request):
         locations['id_collection_point_{}'.format(i)] = {
             "longitude": escape(collection_point.longitude),
             "latitude": escape(collection_point.latitude),
+            "name": escape(collection_point.name),
+            "location": escape(collection_point.location),
         }
     return render(
         request,
