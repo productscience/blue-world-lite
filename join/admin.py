@@ -650,25 +650,25 @@ def fetch_bw_dashboard_stats(billing_week):
     holidaying_customers = customer_ids_on_holiday_for_billing_week(
         billing_week)
 
-    total_bags = 0
+    # total_bags = 0
 
     customers_this_week = Customer.objects.filter(
         pk__in=active_customer_ids).exclude(
             pk__in=holidaying_customers)
 
-    for c in customers_this_week:
-        coc = CustomerOrderChange.objects.select_related().filter(customer=c)
-        cocbq = CustomerOrderChangeBagQuantity.objects.filter(
-            customer_order_change=coc)
-        # TODO this is a very expensive query!
-        for bq in cocbq:
-            total_bags += bq.quantity
+    # for c in customers_this_week:
+    #     coc = CustomerOrderChange.objects.select_related().filter(customer=c)
+    #     cocbq = CustomerOrderChangeBagQuantity.objects.filter(
+    #         customer_order_change=coc)
+    #     # TODO this is a very expensive query!
+    #     for bq in cocbq:
+    #         total_bags += bq.quantity
 
     dbw_stats = {
         'bw': billing_week,
         'date': friendly_date(billing_week.wed),
         'customers': customers_this_week.count(),
-        'bags': total_bags
+        'bags': "TBC"
     }
 
     return dbw_stats
