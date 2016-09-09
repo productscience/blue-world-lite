@@ -292,6 +292,39 @@ def parse_billing_week(billing_week_string):
         week,
     )
 
+def next_n_billing_weeks(n, bw, billing_weeks=None):
+    """
+    Takes a number of billing weeks and a starting billing week, and returns
+    a list of billing weeks
+    """
+    if billing_weeks is None:
+        billing_weeks = []
+    if n > len(billing_weeks):
+        billing_weeks.append(bw.next())
+        return next_n_billing_weeks(n, bw.next(), billing_weeks)
+    else:
+        return billing_weeks
+
+def prev_n_billing_weeks(n, bw, billing_weeks=None):
+    if billing_weeks is None:
+        billing_weeks = []
+    if n > len(billing_weeks):
+        billing_weeks.append(bw.prev())
+        return prev_n_billing_weeks(n, bw.prev(), billing_weeks)
+    else:
+        return billing_weeks
+
+
+def next_valid_billing_week(bw, billing_week_strings):
+    """
+    Takes a billing week, and a set of skipped billing weeks, and steps forward
+    until it finds a week that isni't in the skipped set
+    """
+    if str(bw) in billing_week_strings:
+        return next_valid_billing_week(bw.next(), billing_week_strings)
+    else:
+        return bw
+
 
 if __name__ == '__main__':
 
@@ -538,5 +571,27 @@ if __name__ == '__main__':
             # June
             self.assertEqual(len(
                 billing_weeks_left_in_the_month("2016-06 1")), 4)
+
+        def test_next_n_billing_weeks_returns_right_no_of_billing_weeks(self):
+            utc = pytz.timezone("UTC")
+            s = utc.localize(datetime.datetime(2016, 9, 2, 0))
+            last_bw_in_aug = get_billing_week(s)
+            self.assertEqual(
+                len(next_n_billing_weeks(5, last_bw_in_aug)), 5)
+
+        def test_prev_n_billing_weeks_returns_next_billing_week(self):
+            utc = pytz.timezone("UTC")
+            s = utc.localize(datetime.datetime(2016, 9, 2, 0))
+            last_bw_in_aug = get_billing_week(s)
+            self.assertNotIn(
+                last_bw_in_aug,
+                prev_n_billing_weeks(5, last_bw_in_aug))
+
+        def test_prev_n_billing_weeks_returns_right_no_of_billing_weeks(self):
+            utc = pytz.timezone("UTC")
+            s = utc.localize(datetime.datetime(2016, 9, 2, 0))
+            last_bw_in_aug = get_billing_week(s)
+            self.assertEqual(
+                len(prev_n_billing_weeks(5, last_bw_in_aug)), 5)
 
     unittest.main()

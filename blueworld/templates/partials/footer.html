@@ -9,9 +9,9 @@
       {% if not request.user.username and request.path_info == '/' %}
         <a href="{% url "admin:login" %}">Staff Login</a>.
       {% endif %}
-      It is {% now "jS F Y H:i" %} UTC.
+      It is {% now "D jS F Y H:i" %} UTC.
       {% timezone "Europe/London" %}
-      Local time: {% now "jS F Y H:i" %}.
+      Local time: {% now "D jS F Y H:i" %}.
       {% endtimezone %}
     </p>
   </div>

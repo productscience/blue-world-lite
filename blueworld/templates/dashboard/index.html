@@ -4,55 +4,160 @@
 {% block extra_head %}{% endblock %}
 {% block content %}
     <div class="row">
+
+    <style media="screen">
+      .week-commencing{
+        margin-bottom: 1em;
+        font-size: 0.9em;
+        font-weight: 400;
+      }
+
+      ul.order{
+        margin-left: 1em;
+      }
+      ul.order li{
+        display: inline;
+      }
+
+      div.billing_week{
+        /*margin-left: 1rem;*/
+        /*margin-top: 2rem;*/
+        border-top:1px solid #cacaca;
+        min-height: 3em;
+        padding: 1rem 1rem 0rem 1rem;
+      }
+      div.this_week{
+        margin-left:0;
+        padding-bottom: 1em;
+        border-bottom:1px solid #cacaca;
+
+      }
+
+      .order-menu, .account-menu{
+        background-color: #EEE;
+        padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+        margin-bottom: 1.5em;
+        border-top: 1px solid #cacaca;
+      }
+      .order-menu h5, .account-menu h5{
+        margin-top:1em;
+      }
+      .order-menu a, .account-menu a{
+        font-weight: bold;
+      }
+
+      .your-bags h5{
+        margin-top: 2rem;
+      }
+
+
+
+    </style>
+
+
       <h1>Dashboard</h1>
 
-      <p>Welcome {{ request.user.customer.nickname }}!</p>
-
-      <p>Your collection point is
-        <strong id="collection-point">{{ collection_point.name }}</strong>
-        {% if skipped %}
-        <span id="message">but your next collection is <a href="{% url 'dashboard_skip_weeks' %}">skipped</a> so there is nothing for you to pick up</span>
-        <span id="collection-date">{{ collection_date }}</span>.
-      </p>
-        {% else %}
-        <span id="message">and your next collection is</span>
-        <strong id="collection-date">{{ collection_date }}</strong>.
-      </p>
-      <p><em>Please check the opening days and hours of your collection point before collecting your order</em>.</p>
-        {% endif %}
-
+      <div id="message" class="greeting">
+        <p>Hi {{ request.user.customer.nickname }}!</p>
       </div>
 
-      <div class="row">
+
+      <h4 class="font-display">Your Bags</h4>
+
+      {% for col in collections %}
+
+        <div class="billing_week {% if col.billing_week == this_bw %} this_week  {% endif %} {% if col.skipped %} skipped {% endif %}">
+            <div class="week-commencing">
+              Week commencing {{ col.billing_week.mon }}:
+            </div>
 
 
+            {% if new_customer and col.billing_week == this_bw %}
+            <h4>Welcome aboard! This week's order has already gone to the farmers, and your collections will start next week.</h4>
+            <h5>In the meantime, we'd love to know a bit more about how you found us.</h5>
+            <h5>Perhaps you could help us with this <a href="#">new member survey here</a>?</h5>
+            {% elif col.skipped %}
 
-      <h4 class="font-display">Your Order</h4>
-      <ul id="order">
-      {% for bag_quantity in bag_quantities %}
-        <li><strong>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</strong></li>
+            <h5>
+              You've marked this week as on holiday, so there's no collection to pick up.
+            </h5>
+
+            {% else %}
+
+            <h5>
+              Available on
+              <strong>
+              {% for d in col.dates %}
+                {% if forloop.counter == 2 %}
+                  and
+                {% endif %}
+              {{ d }}{% endfor %},
+
+              </strong>
+                from
+              <strong>{{ col.collection_point }}</strong>:
+            </h5>
+
+
+            <ul class="order">
+            {% for bag_quantity in col.bags %}
+              <li>{{ bag_quantity.quantity }} x {{ bag_quantity.bag_type.name }}</li>
+            {% endfor %}
+            </ul>
+
+            {% endif %}
+
+            {% if col.collection_point.instructions and col.billing_week == this_bw %}
+              {% if not new_customer %}
+              <div class="collection-point-info">
+                <a href="#">See collection point instructions </a>
+                <div class="instructions">
+                  {{ col.collection_point.instructions|linebreaks }}
+                </div>
+              </div>
+              {% endif %}
+            {% endif %}
+
+        </div>
+
+        {% if forloop.first %}
+          <h5 class="font-display">Upcoming collections</h5>
+        {% endif %}
+
       {% endfor %}
-      </ul>
 
-            <p>Any changes you make until <span id="deadline">{{ deadline }}</span> will affect <span id="changes-affect">{{ changes_affect }}</span></p>
 
-      <ul class="menu">
-        <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
-        {% if not user.customer.has_left %}
-          <li><a href="{% url 'dashboard_skip_weeks' %}">Skip Weeks</a></li>
-        {% endif %}
-        <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
-        <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
-        <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
-      </ul>
+
+
+
+        </div>
+
+      <div class="row your-bags">
+
+        <h5>On holiday soon? Want to try a different bag? Let us know when you're away, or change your order below.</h5>
+        <div class="order-menu">
+
+
+          <ul class="menu ">
+
+            {% if not user.customer.has_left %}
+              <li><a href="{% url 'dashboard_skip_weeks' %}">Holidays</a></li>
+            {% endif %}
+            <li><a href="{% url 'dashboard_change_order' %}">Change Order</a></li>
+            <li><a href="{% url 'dashboard_change_collection_point' %}">Change Collection Point</a></li>
+            <li><a href="{% url 'dashboard_order_history' %}">Order History</a></li>
+            <li><a href="{% url 'dashboard_leave' %}">Leave</a></li>
+          </ul>
+
+        </div>
 
       </div>
 
-      <div class="row">
+      <div class="row your-account">
 
         <h4 class="font-display">your Account</h4>
 
-        <ul class="menu">
+        <ul class="menu account-menu">
           {% if not user.customer.has_left %}
             <li><a href="{% url 'account_email' %}">E-mail Addresses</a></li>
             <li><a href="{% url 'account_change_password' %}">Change Password</a></li>
@@ -60,9 +165,9 @@
               <li><a href="{% url 'dashboard_bank_details' %}">Bank Details</a></li>
             {% endif %}
           {% endif %}
+          <li><a href="{% url 'dashboard_billing_history' %}">Payment History</a></li>
           <li><a href="{% url 'account_logout' %}">Log Out</a></li>
         </ul>
-
 
       </div>
 

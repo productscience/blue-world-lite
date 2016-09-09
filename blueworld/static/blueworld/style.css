@@ -2000,6 +2000,7 @@ select {
         display: block;
         margin-right: 0; } }
 
+.errorlist,
 .callout {
   margin: 0 0 1rem 0;
   padding: 1rem;
@@ -3519,7 +3520,7 @@ table.hover tr:nth-of-type(even):hover {
 
 h1, h2, h3, .font-display {
   font-family: "GC Display", "Impact", "Arial", sans-serif;
-}
+  text-transform: uppercase; }
 
 .font-text {
   font-family: "Domaine Text Regular", "Times New Roman", Georgia, serif;
@@ -3543,6 +3544,9 @@ a {
 .global-nav {
   margin-bottom: 1rem; }
 
+#billing-dates li.past p {
+  color: #e6e6e6; }
+
 .tagline {
   display: inline; }
 
@@ -3554,13 +3558,14 @@ a {
     text-align: center; }
   .header .logo {
     max-width: 75px;
-    margin-right: 30px;
-    margin-left: 20px;
-    margin-top: 20px; }
+    margin-right: 1rem;
+    margin-left: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem; }
   .header h2 {
     text-transform: uppercase;
     display: inline-block;
-    font-size: 200%;
+    font-size: 3rem;
     margin-top: 0.5em; }
   .header nav .menu {
     background-color: #ccc; }
@@ -3572,6 +3577,15 @@ a {
 
 h3.font-text {
   max-width: 30em; }
+
+.current-choice,
+.this_week {
+  background: #EEE;
+  padding: 1rem;
+  margin-bottom: 1rem; }
+
+.next_week {
+  padding: 1rem; }
 
 fieldset.collection-points label {
   font-size: 120%;
@@ -3595,6 +3609,26 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
   padding: 0.5rem;
   margin-left: 0; }
 
+.this_week p,
+.this_week h4{
+  font-size: 1.5rem;
+}
+.this_week .instructions p{
+  font-size: 1rem;
+}
+
+.this_week ul li {
+  font-size: 1.5rem; }
+
+.instructions {
+  padding: 1rem;
+  font-size: 1rem;
+  max-width: 40rem;
+  border-top: 1px solid #cacaca;
+  background-color: #e6e6e6; }
+  .instructions p {
+    max-width: 40em; }
+
 .callout {
   background-color: #e6e6e6; }
 
@@ -3607,6 +3641,11 @@ fieldset.collection-points ul > li.columns:last-child:not(:first-child) {
   margin-right: auto; }
 
 
-#billing-dates li.past p{
-  color:grey;
+div.skipped h5,
+div.skipped li{
+  color: #999;
+}
+
+.greeting{
+  font-size:2em;
 }

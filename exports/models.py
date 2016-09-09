@@ -104,13 +104,15 @@ class DataExport(models.Model):
         Returns header for for mailchimp export
         """
         header_row = [
-            'first_name',
-            'surname',
+            'full_name',
+            'nickname',
             'email',
             'status',
-            'pickup',
+            'collection',
             'bags',
-            'on_holiday'
+            'on_holiday',
+            'start_date',
+            'stop_date'
         ]
         for bag_type in BagType.objects.all():
             header_row.append(bag_type.name)
@@ -139,6 +141,10 @@ class DataExport(models.Model):
                 render_bag_quantities(bq),
                 # on_holiday
                 customer.skipped,
+                # start_date
+                customer.start_date,
+                # stop date
+                customer.leaving_date
             ]
             quantities = {}
             for bq_ in bq:

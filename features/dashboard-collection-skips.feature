@@ -28,39 +28,63 @@ Feature: Dashboard Collection Skips
       And I switch to the user browser
       And I login with "dashboard-collection-skips@example.com" and "123123ab"
      When I navigate to /dashboard
-     Then I see "but your next collection is skipped so there is nothing for you to pick up" in "#message"
-      And I see "<skipped_collection_date>" in "#collection-date"
+     Then I see "nothing to pick up" in "#message"
+      And I see "<skipped_collection_date>" in "#skipped-collection-date"
       And I see "<deadline>" in "#deadline"
       And I see "<changes_affect>" in "#changes-affect"
+
+  # you'
 
    # 17th is a Sunday. IMPORTANT: Notice the behaviour on Thursday depends on the collection point chosen.
    # NOTE: All the times are in UTC, so are an hour behind what you'd expect in BST for July
    Examples: Times where you can make changes for the next collection
-     | date                | day       | collection_day         | week_to_skip       | skipped_collection_date            | deadline        | changes_affect            |
-     | 2016-07-17 14:00:00 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                       | 3pm next Sunday | the collection after next |
-     | 2016-07-17 14:00:00 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                        | 3pm next Sunday | the collection after next |
-     | 2016-07-17 14:00:00 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday           | 3pm next Sunday | the collection after next |
-     | 2016-07-18 00:00:00 | Monday    | Wednesday              | #id_form-0-skipped | on Wednesday                       | 3pm this Sunday | next week's collection    |
-     | 2016-07-18 00:00:00 | Monday    | Thursday               | #id_form-0-skipped | on Thursday                        | 3pm this Sunday | next week's collection    |
-     | 2016-07-18 00:00:00 | Monday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday           | 3pm this Sunday | next week's collection    |
-     | 2016-07-19 00:00:00 | Tuesday   | Wednesday              | #id_form-0-skipped | tomorrow                           | 3pm this Sunday | next week's collection    |
-     | 2016-07-19 00:00:00 | Tuesday   | Thursday               | #id_form-0-skipped | on Thursday                        | 3pm this Sunday | next week's collection    |
-     | 2016-07-19 00:00:00 | Tuesday   | Wednesday and Thursday | #id_form-0-skipped | tomorrow or Thursday               | 3pm this Sunday | next week's collection    |
-     | 2016-07-20 00:00:00 | Wednesday | Wednesday              | #id_form-0-skipped | today                              | 3pm this Sunday | next week's collection    |
-     | 2016-07-20 00:00:00 | Wednesday | Thursday               | #id_form-0-skipped | tomorrow                           | 3pm this Sunday | next week's collection    |
-     | 2016-07-20 00:00:00 | Wednesday | Wednesday and Thursday | #id_form-0-skipped | today or tomorrow                  | 3pm this Sunday | next week's collection    |
-     | 2016-07-21 00:00:00 | Thursday  | Wednesday              | #id_form-0-skipped | on Wednesday next week             | 3pm this Sunday | next week's collection    |
-     | 2016-07-21 00:00:00 | Thursday  | Thursday               | #id_form-0-skipped | today                              | 3pm this Sunday | next week's collection    |
-     | 2016-07-21 00:00:00 | Thursday  | Wednesday and Thursday | #id_form-0-skipped | today                              | 3pm this Sunday | next week's collection    |
-     | 2016-07-22 00:00:00 | Friday    | Wednesday              | #id_form-0-skipped | on Wednesday next week             | 3pm this Sunday | next week's collection    |
-     | 2016-07-22 00:00:00 | Friday    | Thursday               | #id_form-0-skipped | on Thursday next week              | 3pm this Sunday | next week's collection    |
-     | 2016-07-22 00:00:00 | Friday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday next week | 3pm this Sunday | next week's collection    |
-     | 2016-07-23 00:00:00 | Saturday  | Wednesday              | #id_form-0-skipped | on Wednesday next week             | 3pm tomorrow    | next week's collection    |
-     | 2016-07-23 00:00:00 | Saturday  | Thursday               | #id_form-0-skipped | on Thursday next week              | 3pm tomorrow    | next week's collection    |
-     | 2016-07-23 00:00:00 | Saturday  | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday next week | 3pm tomorrow    | next week's collection    |
-     | 2016-07-24 13:59:59 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                       | 3pm today       | next week's collection    |
-     | 2016-07-24 13:59:59 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                        | 3pm today       | next week's collection    |
-     | 2016-07-24 13:59:59 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday           | 3pm today       | next week's collection    |
+     | date                | day       | collection_day         | week_to_skip       | skipped_collection_date                    | deadline        | changes_affect            |
+     | 2016-07-17 14:00:00 | Sunday    | Wednesday              | #id_form-0-skipped | Wednesday 20th July                        | 3pm next Sunday | the collection after next |
+     | 2016-07-17 14:00:00 | Sunday    | Thursday               | #id_form-0-skipped | Thursday 21st July                         | 3pm next Sunday | the collection after next |
+     | 2016-07-17 14:00:00 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | Wednesday 20th July or Thursday 21st July  | 3pm next Sunday | the collection after next |
+     | 2016-07-18 00:00:00 | Monday    | Wednesday              | #id_form-0-skipped | Wednesday 20th July                        | 3pm this Sunday | next week's collection    |
+     | 2016-07-18 00:00:00 | Monday    | Thursday               | #id_form-0-skipped | Thursday 21st July                         | 3pm this Sunday | next week's collection    |
+     | 2016-07-18 00:00:00 | Monday    | Wednesday and Thursday | #id_form-0-skipped | Wednesday 20th July or Thursday 21st July  | 3pm this Sunday | next week's collection    |
+     | 2016-07-19 00:00:00 | Tuesday   | Wednesday              | #id_form-0-skipped | Wednesday 20th July                        | 3pm this Sunday | next week's collection    |
+     | 2016-07-19 00:00:00 | Tuesday   | Thursday               | #id_form-0-skipped | on Thursday                                | 3pm this Sunday | next week's collection    |
+     | 2016-07-19 00:00:00 | Tuesday   | Wednesday and Thursday | #id_form-0-skipped | Wednesday 20th July or Thursday 21st July  | 3pm this Sunday | next week's collection    |
+     | 2016-07-20 00:00:00 | Wednesday | Wednesday              | #id_form-0-skipped | Wednesday 20th July                        | 3pm this Sunday | next week's collection    |
+     | 2016-07-20 00:00:00 | Wednesday | Thursday               | #id_form-0-skipped | Thursday 21st July                         | 3pm this Sunday | next week's collection    |
+     | 2016-07-20 00:00:00 | Wednesday | Wednesday and Thursday | #id_form-0-skipped | Wednesday 20th July or Thursday 21st July  | 3pm this Sunday | next week's collection    |
+
+
+   @wip
+   Scenario Outline: Dashboard information with no skips
+     # Need to freeze time first, otherwise you get logged out because of the session time of 20 mins
+     Given I freeze time at <date>
+       And I switch to the admin browser
+       And I login as a member of staff
+       And I navigate to /admin/join/collectionpoint/
+       And I follow the "The Old Fire Station" link
+       And I choose "<collection_day>" from "#id_collection_day"
+       And I click the "Save" button
+       And I switch to the user browser
+       And I login with "dashboard-collection-skips@example.com" and "123123ab"
+      When I navigate to /dashboard
+      Then I see "your next collection in " in ".this_week"
+       And I see "<skipped_collection_date>" in "#skipped-collection-date"
+       And I see "<deadline>" in "#deadline"
+       And I see "<changes_affect>" in "#changes-affect"
+
+   Examples: Times where we shouldn't see a week as skipped
+     | date                | day       | collection_day         | week_to_skip       | skipped_collection_date                    | deadline        | changes_affect            |
+     | 2016-07-21 00:00:00 | Thursday  | Wednesday              | #id_form-0-skipped | on Wednesday next week                     | 3pm this Sunday | next week's collection    |
+     # | 2016-07-21 00:00:00 | Thursday  | Thursday               | #id_form-0-skipped | today                                      | 3pm this Sunday | next week's collection    |
+     # | 2016-07-21 00:00:00 | Thursday  | Wednesday and Thursday | #id_form-0-skipped | today                                      | 3pm this Sunday | next week's collection    |
+     # | 2016-07-22 00:00:00 | Friday    | Wednesday              | #id_form-0-skipped | on Wednesday next week                     | 3pm this Sunday | next week's collection    |
+     # | 2016-07-22 00:00:00 | Friday    | Thursday               | #id_form-0-skipped | on Thursday next week                      | 3pm this Sunday | next week's collection    |
+     # | 2016-07-22 00:00:00 | Friday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday next week         | 3pm this Sunday | next week's collection    |
+     # | 2016-07-23 00:00:00 | Saturday  | Wednesday              | #id_form-0-skipped | on Wednesday next week                     | 3pm tomorrow    | next week's collection    |
+     # | 2016-07-23 00:00:00 | Saturday  | Thursday               | #id_form-0-skipped | on Thursday next week                      | 3pm tomorrow    | next week's collection    |
+     # | 2016-07-23 00:00:00 | Saturday  | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday next week         | 3pm tomorrow    | next week's collection    |
+     # | 2016-07-24 13:59:59 | Sunday    | Wednesday              | #id_form-0-skipped | on Wednesday                               | 3pm today       | next week's collection    |
+     # | 2016-07-24 13:59:59 | Sunday    | Thursday               | #id_form-0-skipped | on Thursday                                | 3pm today       | next week's collection    |
+     # | 2016-07-24 13:59:59 | Sunday    | Wednesday and Thursday | #id_form-0-skipped | on Wednesday or Thursday                   | 3pm today       | next week's collection    |
 
   Scenario: _teardown
     Given I return to the current time

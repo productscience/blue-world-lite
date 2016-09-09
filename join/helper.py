@@ -1,15 +1,14 @@
 from collections import OrderedDict
 from datetime import timedelta
 from django.utils import timezone
+from django.contrib.humanize.templatetags.humanize import ordinal
 import datetime
 import pytz
 import threading
 
 from billing_week import (
-    current_billing_week,
-    get_billing_week,
+    get_billing_week
 )
-
 
 _thread_locals = threading.local()
 
@@ -73,3 +72,83 @@ def calculate_weekly_fee(bag_quantities):
     for bag_quantity in bag_quantities:
         amount += bag_quantity.quantity * bag_quantity.bag_type.weekly_cost
     return amount
+
+def friendly_date(date):
+    """
+    Accepts a datetime object and returns a string with ordinalised dates, like
+    Wednesday 20th July, or Thursday 21st August
+    """
+
+    friendly_date = "{} {} {}".format(
+        date.strftime("%A"),
+        ordinal(date.strftime("%d")),
+        date.strftime("%B"))
+
+    return friendly_date
+
+
+def collection_dates_for(bw, collection_point):
+    """
+    Returns a list of zero or more collection dates for a given collection point,
+    and billing week.
+    """
+
+    collection_dates = []
+
+    if collection_point.collection_day == 'WED':
+        collection_dates.append(bw.wed)
+    elif collection_point.collection_day == 'THURS':
+        collection_dates.append(bw.thurs)
+    elif collection_point.collection_day == "WED_THURS":
+        collection_dates.append(bw.wed)
+        collection_dates.append(bw.thurs)
+
+    return collection_dates
+
+
+def customer_ids_by_status(query_value):
+    """
+    Should this be part of a model manager?
+    We're having to import inside a method, so probably
+    """
+    from join.models import AccountStatusChange
+
+    ascs = AccountStatusChange.objects.order_by(
+        'customer', '-changed'
+    ).distinct('customer')
+
+    customer_ids = [
+        c.customer_id for c in ascs if c.status == query_value
+    ]
+
+    return customer_ids
+
+def customer_ids_on_holiday_for_billing_week(billing_week):
+    """
+    Accepts a list of customer ids, and returns the list of ids where
+    the customer is away for the given billing week
+    """
+    from join.models import Skip
+
+    skipped_customer_ids = Skip.objects.filter(
+        billing_week=billing_week
+    ).only('customer_id').values_list('customer_id')
+
+    return skipped_customer_ids
+
+def effective_billing_week(billing_week, time):
+    """
+    Accepts a billing week, and a date, and returns the 'effective' billing week
+    based on whether we're before or after the Wednesday in the week.
+    """
+
+    wednesday = datetime.datetime(
+        billing_week.wed.year,
+        billing_week.wed.month,
+        billing_week.wed.day,
+        tzinfo=timezone.get_current_timezone())
+
+    if time < wednesday:
+        return billing_week
+    else:
+        return billing_week.next()

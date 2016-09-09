@@ -45,8 +45,11 @@
 
     </div>
   </div>
-    {% include "partials/footer.html" %}
     <script src="{% static 'blueworld/application.js' %}" charset="utf-8"></script>
-    
+    {% include "partials/footer.html" %}
+
+    {% block extra_scripts %}
+    {% endblock %}
+
   </body>
 </html>

@@ -1,12 +1,20 @@
 {% extends "base.html" %}
 
-{% block head_title %}Skip Weeks{% endblock %}
+{% block head_title %}Holidays{% endblock %}
 {% block extra_head %}{% endblock %}
 {% block content %}
     <div class="row">
-      <h1>Skip Weeks</h1>
+      <h1>Holidays</h1>
 
-      <p>If you want to skip a week further in the future than those listed below. Please contact help@growingcommunities.org.</p>
+      <style media="screen">
+        h4{
+          max-width:40em;
+          margin-top:1rem;
+          margin-bottom:1rem;
+        }
+      </style>
+
+      <h4>Won't be able to make a collection because you're away on holiday? Mark the weeks you wont be around, and we'll refund the cost of those weeks in your next bill.</h4>
 
       <div id="errors">
       {{ formset.non_form_errors }}
@@ -18,7 +26,7 @@
           <thead>
             <tr>
               <th></th>
-              <th>Skip collection the week starting:</th>
+              <th>Skip my collection for the weeks starting:</th>
             </tr>
           </thead>
           <tbody>
@@ -49,6 +57,9 @@
           {% endfor %}
           </tbody>
         </table>
+
+        <p>If you want to skip a week further in the future than those listed below, let us know at <a href="mailto:help@growingcommunities.org?subject=Holiday booking">help@growingcommunities.org</a></a>.</p>
+
         <div class="row">
           <div class="action-group column">
             <input type="submit" name="cancel" value="Cancel" class="button font-display large">

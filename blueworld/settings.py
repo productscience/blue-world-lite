@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.humanize',
     'django.contrib.staticfiles',
     # The Django sites framework is required for allauth
     'django.contrib.sites',
@@ -71,6 +72,7 @@ INSTALLED_APPS = [
 
 if DEBUG:
     INSTALLED_APPS.append('django_extensions')
+    INSTALLED_APPS.append('debug_toolbar')
 
 
 RQ_QUEUES = {

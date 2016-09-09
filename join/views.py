@@ -11,7 +11,9 @@ import json
 import uuid
 
 from allauth.account.views import signup as allauth_signup
-from billing_week import get_billing_week, parse_billing_week, billing_weeks_left_in_the_month
+from billing_week import (
+    get_billing_week, parse_billing_week, billing_weeks_left_in_the_month,
+    next_valid_billing_week, next_n_billing_weeks)
 from django import forms
 from django.conf import settings
 from django.contrib import messages
@@ -33,7 +35,12 @@ from django.views.decorators.csrf import csrf_exempt
 import pytz
 
 from billing_week import first_wed_of_month as start_of_the_month
-from join.helper import get_pickup_dates, render_bag_quantities, calculate_weekly_fee
+from join.helper import (
+    get_pickup_dates,
+    friendly_date,
+    render_bag_quantities,
+    calculate_weekly_fee,
+    collection_dates_for)
 from .models import (
     AccountStatusChange,
     BagType,
@@ -513,6 +520,8 @@ def collection_point(request):
         locations['id_collection_point_{}'.format(i)] = {
             "longitude": escape(collection_point.longitude),
             "latitude": escape(collection_point.latitude),
+            "name": escape(collection_point.name),
+            "location": escape(collection_point.location),
         }
     return render(
         request,
@@ -699,120 +708,90 @@ def gocardless_callback(request):
 @gocardless_is_set_up
 def dashboard(request):
     if request.user.customer.account_status != AccountStatusChange.LEFT:
-        latest_cp_change = CustomerCollectionPointChange.objects.order_by(
-            '-changed'
-        ).filter(customer=request.user.customer)[:1]
-        latest_customer_order_change = CustomerOrderChange.objects.order_by(
-            '-changed'
-        ).filter(customer=request.user.customer)[:1]
-        collection_point = latest_cp_change[0].collection_point
+
         now = timezone.now()
         bw = get_billing_week(now)
-        weekday = now.weekday()
-        skipped_billing_weeks = []
-        skipped = len(
-            Skip.objects.order_by('billing_week').filter(
-                customer=request.user.customer,
-                billing_week=str(bw),
-            ).all()
-        ) > 0
 
-        if weekday == 6:  # Sunday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday'
-            else:
-                collection_date = 'Wednesday and Thursday'
-            if timezone.now().hour < bw.end.hour:
-                deadline = '3pm today'
-                changes_affect = "next week's collection"
-            else:
-                deadline = '3pm next Sunday'
-                changes_affect = "the collection after next"
-        elif weekday == 0:  # Monday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday'
-            else:
-                collection_date = 'Wednesday and Thursday'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        elif weekday == 1:  # Tuesday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'tomorrow'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday'
-            else:
-                collection_date = 'tomorrow and Thursday'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        elif weekday == 2:  # Wednesday
-            if collection_point.collection_day == 'WED':
-                collection_date = 'today'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'tomorrow'
-            else:
-                collection_date = 'today and tomorrow'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        elif weekday == 3:  # Thurs
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday next week'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'today'
-            else:
-                collection_date = 'today'
-            deadline = '3pm this Sunday'
-            changes_affect = "next week's collection"
-        else:
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday next week'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday next week'
-            else:
-                collection_date = 'Wednesday and Thursday next week'
-            if weekday == 4:  # Friday
-                deadline = '3pm this Sunday'
-            else:  # Saturday
-                deadline = '3pm tomorrow'
-            changes_affect = "next week's collection"
 
-        # fall back for the case when we have a user just starting this week
-        if request.user.customer.created_in_billing_week == bw:
-            if collection_point.collection_day == 'WED':
-                collection_date = 'Wednesday next week'
-            elif collection_point.collection_day == 'THURS':
-                collection_date = 'Thursday next week'
-            else:
-                collection_date = 'Wednesday and Thursday next week'
-            if weekday == 4:  # Friday
-                deadline = '3pm this Sunday'
-            else:  # Saturday
-                deadline = '3pm tomorrow'
-            changes_affect = "next week's collection"
 
-        bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
-            customer_order_change=latest_customer_order_change
+        # we want a list of billing weeks, so we can then pull out changes for them
+        next_bws = next_n_billing_weeks(3, bw)
+
+        # billing weeks starting Sunday 3pm should reflect the latest change made this week
+
+        # the order in the current billing week should only reflect the last change made in the week before
+
+        last_used_ccpc = CustomerCollectionPointChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer, changed_in_billing_week__lt=bw)[:1]
+
+        latest_ccpc = CustomerCollectionPointChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer)[:1][0]
+
+        latest_collection_point = latest_ccpc.collection_point
+
+        last_used_order = CustomerOrderChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer, changed_in_billing_week__lt=bw)[:1]
+
+        # if someone changes their order this billing week, we capture this,
+        # so we can show it applying to future orders
+        latest_order = CustomerOrderChange.objects.order_by(
+            '-changed'
+        ).filter(customer=request.user.customer)[:1]
+
+        last_used_bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
+            customer_order_change=last_used_order
         ).all()
-        if skipped:
-            collection_date = collection_date.replace(' and ', ' or ')
-            if not (
-                collection_date.startswith('today') or
-                collection_date.startswith('tomorrow')
-            ):
-                collection_date = 'on '+ collection_date
+
+        latest_bag_quantities = CustomerOrderChangeBagQuantity.objects.filter(
+            customer_order_change=latest_order
+        ).all()
+
+        # if we don't have these, the the user hasn't been in
+        if not last_used_ccpc or not last_used_order:
+            new_customer = True
+            collections = [{
+                'billing_week': bw,
+                'collection_point': latest_collection_point,
+                'dates': [friendly_date(d) for d in collection_dates_for(bw, latest_collection_point)],
+                'bags': latest_bag_quantities,
+            }]
+        else:
+            new_customer = False
+            last_used_collection_point = last_used_ccpc[0].collection_point
+
+        # the billing week object, the dates, and the order
+            collections = [{
+                'billing_week': bw,
+                'collection_point': last_used_collection_point,
+                'dates': [friendly_date(d) for d in collection_dates_for(bw, last_used_collection_point)],
+                'bags': last_used_bag_quantities,
+                'skipped': request.user.customer.is_skipped_for_billing_week(bw)
+            }]
+
+        for bwk in next_bws:
+            collections.append({
+                'billing_week': bwk,
+                'collection_point': latest_collection_point,
+                'dates': [friendly_date(d) for d in collection_dates_for(bwk, latest_collection_point)],
+                'bags': latest_bag_quantities,
+                'skipped': request.user.customer.is_skipped_for_billing_week(bwk)
+            })
+
         return render(
             request,
             'dashboard/index.html',
             {
-                'bag_quantities': bag_quantities,
-                'collection_point': collection_point,
-                'collection_date': collection_date,
-                'deadline': deadline,
-                'changes_affect': changes_affect,
-                'skipped': skipped,
+                'new_customer': new_customer,
+                'this_bw': bw,
+                'collections': collections,
+                'now': now,
+                'next_bws': next_bws,
+                'skips': "skips"
+                # 'deadline': deadline,
+                # 'changes_affect': changes_affect,
             }
         )
     else:
@@ -973,6 +952,8 @@ def dashboard_change_collection_point(request):
         locations['id_collection_point_{}'.format(i)] = {
             "longitude": escape(collection_point.longitude),
             "latitude": escape(collection_point.latitude),
+            "name": escape(collection_point.name),
+            "location": escape(collection_point.location),
         }
     return render(
         request,
@@ -1413,3 +1394,27 @@ def billing_dates(request):
             'current_billing_week': bw_today
         }
     )
+
+from billing_week import get_billing_week
+from join.admin import pickup_list
+
+def generate_pickup_list(request, year=None, month=None, day=None):
+
+    now = timezone.now()
+
+    if year and month and day:
+        time = datetime.datetime(int(year), int(month), int(day),
+            tzinfo=timezone.get_current_timezone())
+        billing_week_time = time
+    else:
+        billing_week_time = now
+
+    bw = get_billing_week(billing_week_time)
+    queryset = CollectionPoint.objects.all()
+    context = pickup_list(
+        queryset,
+        bw
+    )
+    context['now_billing_week'] = bw
+    context['now'] = now
+    return render(request, 'pickup-list.html', context)

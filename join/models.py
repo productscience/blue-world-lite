@@ -73,6 +73,14 @@ class CollectionPoint(models.Model):
         default=FULL,
         null=True
     )
+
+    instructions = models.TextField(
+        null=True,
+        blank=True,
+        help_text=("If you have specific instructions for accessing the bags,"
+        " add them here, so users can see them in email or their dashboard")
+    )
+
     WED_THURS = 'WED_THURS'
     WED = 'WED'
     THURS = 'THURS'
@@ -277,6 +285,20 @@ class Customer(models.Model):
         return self.account_status_before()
     account_status = property(_get_latest_account_status)
 
+    def _leaving_date(self):
+        if self.has_left:
+            leaving_date = AccountStatusChange.objects.order_by(
+                '-changed'
+            ).filter(customer=self)[:1][0]
+            if leaving_date:
+                return leaving_date.changed.astimezone(london).strftime('%Y-%m-%d %H:%M')
+        else:
+            return None
+    leaving_date = property(_leaving_date)
+
+    def _start_date(self):
+        return self.created.astimezone(london).strftime('%Y-%m-%d %H:%M')
+    start_date = property(_start_date)
 
 
     def _has_left(self):
@@ -356,6 +378,21 @@ class Customer(models.Model):
         return False
 
     skipped = property(_get_skipped)
+
+    def is_skipped_for_billing_week(self, billing_week):
+        """
+        Returns true or false for a given billing week passed into it
+        """
+        bw_str = str(billing_week)
+        prev_bw_str = str(billing_week.prev())
+
+        has_valid_skip = Skip.objects.filter(customer=self,
+            billing_week=bw_str).all()
+
+        if has_valid_skip:
+            return True
+
+        return False
 
     def __str__(self):
         return '{} ({})'.format(self.full_name, self.nickname)
