@@ -804,12 +804,6 @@ class LineItem(models.Model):
 
         We will create line items for August, and adjustments due during July.
 
-
-        XXX What happens if someone leaves - should we automatically set skip weeks
-            until the end of the month -> Then Leave status only applies on the month
-            following and skip weeks is what causes the refund
-
-        XXX Also need to make sure that collection points don't show up for LEAVEs
         '''
         # e.g. 31st July 2016
         now = timezone.now()

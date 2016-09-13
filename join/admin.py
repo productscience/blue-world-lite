@@ -757,37 +757,40 @@ def pickup_list(collection_points, billing_week):
     for change in _latest_collection_points:
         cp = change.collection_point
         customer = change.customer
-        if cp not in pickup_list:
-            pickup_list[cp] = {
-                'customers': OrderedDict(),
-                'collecting_bag_totals_by_type': _no_bags.copy(),
-                'user_totals_by_category': _user_totals.copy(),
-                'holiday_bag_total': 0,
-                'collecting_bag_total': 0,
+        
+        if customer.account_status == 'ACTIVE':
+
+            if cp not in pickup_list:
+                pickup_list[cp] = {
+                    'customers': OrderedDict(),
+                    'collecting_bag_totals_by_type': _no_bags.copy(),
+                    'user_totals_by_category': _user_totals.copy(),
+                    'holiday_bag_total': 0,
+                    'collecting_bag_total': 0,
+                }
+            # XXX Outside the tests, all customers should have at least one bag
+            _bags = _bags_by_customer.get(customer, _no_bags)
+            holiday = customer.id in _is_on_holiday and True or False
+            for bag_type, quantity in _bags.items():
+                if not holiday:
+                    pickup_list[cp]['collecting_bag_totals_by_type'][bag_type] += quantity
+                    pickup_list[cp]['collecting_bag_total'] += quantity
+                    summary_totals[bag_type] += quantity
+                    summary_totals['collecting_bags'] += quantity
+                else:
+                    pickup_list[cp]['holiday_bag_total'] += quantity
+                    summary_totals['holidaying_bags'] += quantity
+            pickup_list[cp]['customers'][customer] = {
+                'bags': _bags,
+                'new': customer.id in _is_starter and True or False,
+                'holiday': holiday,
             }
-        # XXX Outside the tests, all customers should have at least one bag
-        _bags = _bags_by_customer.get(customer, _no_bags)
-        holiday = customer.id in _is_on_holiday and True or False
-        for bag_type, quantity in _bags.items():
-            if not holiday:
-                pickup_list[cp]['collecting_bag_totals_by_type'][bag_type] += quantity
-                pickup_list[cp]['collecting_bag_total'] += quantity
-                summary_totals[bag_type] += quantity
-                summary_totals['collecting_bags'] += quantity
+            if pickup_list[cp]['customers'][customer]['holiday']:
+                 pickup_list[cp]['user_totals_by_category']['holiday'] += 1
+                 summary_totals['holidaying_users'] += 1
             else:
-                pickup_list[cp]['holiday_bag_total'] += quantity
-                summary_totals['holidaying_bags'] += quantity
-        pickup_list[cp]['customers'][customer] = {
-            'bags': _bags,
-            'new': customer.id in _is_starter and True or False,
-            'holiday': holiday,
-        }
-        if pickup_list[cp]['customers'][customer]['holiday']:
-             pickup_list[cp]['user_totals_by_category']['holiday'] += 1
-             summary_totals['holidaying_users'] += 1
-        else:
-             pickup_list[cp]['user_totals_by_category']['collecting'] += 1
-             summary_totals['collecting_users'] += 1
+                 pickup_list[cp]['user_totals_by_category']['collecting'] += 1
+                 summary_totals['collecting_users'] += 1
     return {
         'billing_week': billing_week,
         'bag_types': bag_types,
