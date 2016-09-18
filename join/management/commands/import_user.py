@@ -125,15 +125,16 @@ class Command(BaseCommand):
 
                 customer.collection_point = cf['pickup']
 
-                old_pre_auth = [preauth
+                old_pre_auths = [preauth
                                 for preauth in gc_subs
                                 if self._is_valid_preauth(preauth, c)]
 
-                assert(len(old_pre_auth) == 1)
+                mandates = []
 
-                for opa in old_pre_auth:
+                for opa in old_pre_auths:
 
                     opa_date = timezone.make_aware(datetime.datetime.strptime(opa['fields']['created'], "%Y-%m-%d %H:%M:%S"))
+
                     opa_bw = get_billing_week(opa_date)
                     mandate = BillingGoCardlessMandate(
                         customer=customer,
@@ -144,10 +145,15 @@ class Command(BaseCommand):
                         completed=opa_date,
                         completed_in_billing_week=opa_bw,
                     )
-
-                    mandate.in_use_for_customer = customer
                     mandate.save()
 
+                active_mandate = BillingGoCardlessMandate.objects.filter(customer=customer).order_by('-created').first()
+
+                assert(active_mandate)
+
+                active_mandate.in_use_for_customer = customer
+                active_mandate.save()
+                customer.save()
 
                 # if we now have a working mandate, add them to the list
                 if customer.gocardless_current_mandate:
