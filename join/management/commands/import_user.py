@@ -90,76 +90,94 @@ class Command(BaseCommand):
 
             total_customers = len(customers)
             for (index, c) in enumerate(customers):
-                user = self._make_user(c)
-
-                now = timezone.now()
-                bw = get_billing_week(now)
-                cf = c['fields']
-
-                customer = Customer(
-                    created=now,
-                    created_in_billing_week=str(bw),
-                    full_name="{} {}".format(cf['first_name'], cf['surname']),
-                    nickname=cf['first_name'],
-                    mobile=cf['telephone_1'],
-                    user=user,
-                    id=c['pk']
-                )
-
-                customer.save()
-
-                account_status_change = AccountStatusChange(
-                    changed=now,
-                    changed_in_billing_week=str(bw),
-                    customer=customer,
-                    status=AccountStatusChange.ACTIVE,
-                )
-                account_status_change.save()
-
-                old_bag_choices = [b
-                                   for b in bag_choices
-                                   if b['fields']['customer'] == c['pk']]
-
-                customer.bag_quantities = self._convert_bag_choices(old_bag_choices)
-
-
-                customer.collection_point = cf['pickup']
 
                 old_pre_auths = [preauth
                                 for preauth in gc_subs
                                 if self._is_valid_preauth(preauth, c)]
 
-                mandates = []
+                if old_pre_auths:
 
-                for opa in old_pre_auths:
 
-                    opa_date = timezone.make_aware(datetime.datetime.strptime(opa['fields']['created'], "%Y-%m-%d %H:%M:%S"))
+                    user = self._make_user(c)
 
-                    opa_bw = get_billing_week(opa_date)
-                    mandate = BillingGoCardlessMandate(
-                        customer=customer,
-                        amount_notified=Decimal("200.00"),
-                        gocardless_mandate_id=opa['pk'],
-                        created=opa_date,
-                        created_in_billing_week=opa_bw,
-                        completed=opa_date,
-                        completed_in_billing_week=opa_bw,
+                    now = timezone.now()
+                    bw = get_billing_week(now)
+                    cf = c['fields']
+
+                    customer = Customer(
+                        created=now,
+                        created_in_billing_week=str(bw),
+                        full_name="{} {}".format(cf['first_name'], cf['surname']),
+                        nickname=cf['first_name'],
+                        mobile=cf['telephone_1'],
+                        user=user,
+                        id=c['pk']
                     )
-                    mandate.save()
 
-                active_mandate = BillingGoCardlessMandate.objects.filter(customer=customer).order_by('-created').first()
+                    customer.save()
 
-                assert(active_mandate)
+                    account_status_change = AccountStatusChange(
+                        changed=now,
+                        changed_in_billing_week=str(bw),
+                        customer=customer,
+                        status=AccountStatusChange.ACTIVE,
+                    )
+                    account_status_change.save()
 
-                active_mandate.in_use_for_customer = customer
-                active_mandate.save()
-                customer.save()
+                    old_bag_choices = [b
+                                       for b in bag_choices
+                                       if b['fields']['customer'] == c['pk']]
 
-                # if we now have a working mandate, add them to the list
-                if customer.gocardless_current_mandate:
-                    imported_customers += 1
+                    customer.bag_quantities = self._convert_bag_choices(old_bag_choices)
 
-                self.stdout.write(self.style.SUCCESS("Imported {} of {}: {}".format(
-                    imported_customers,
-                    total_customers,
-                    customer.full_name)))
+
+                    customer.collection_point = cf['pickup']
+
+                    old_pre_auths = [preauth
+                                    for preauth in gc_subs
+                                    if self._is_valid_preauth(preauth, c)]
+
+                    mandates = []
+
+                    for opa in old_pre_auths:
+
+                        opa_date = timezone.make_aware(datetime.datetime.strptime(opa['fields']['created'], "%Y-%m-%d %H:%M:%S"))
+
+                        opa_bw = get_billing_week(opa_date)
+                        mandate = BillingGoCardlessMandate(
+                            customer=customer,
+                            amount_notified=Decimal("200.00"),
+                            gocardless_mandate_id=opa['pk'],
+                            created=opa_date,
+                            created_in_billing_week=opa_bw,
+                            completed=opa_date,
+                            completed_in_billing_week=opa_bw,
+                        )
+                        mandate.save()
+
+                    active_mandate = BillingGoCardlessMandate.objects.filter(customer=customer).order_by('-created').first()
+
+                    assert(active_mandate)
+
+                    active_mandate.in_use_for_customer = customer
+                    active_mandate.save()
+                    customer.save()
+
+                    # if we now have a working mandate, add them to the list
+                    if customer.gocardless_current_mandate:
+                        imported_customers += 1
+
+                    self.stdout.write(self.style.SUCCESS("Imported {} of {}: {}".format(
+                        imported_customers,
+                        total_customers,
+                        customer.full_name)))
+                else:
+
+                    customer = "{} {} {}".format(
+                        c['fields']['first_name'],
+                        c['fields']['surname'],
+                        c['fields']['email']
+                    )
+
+                    self.stdout.write(self.style.SUCCESS("Skipping: {} - no active mandate".format(
+                        customer)))

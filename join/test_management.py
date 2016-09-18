@@ -29,11 +29,18 @@ class ImportUserWithManagementTestCase(TransactionTestCase):
 
         self.customer = Customer.objects.all().first()
 
-    def test_customer_was_imported(self):
+    def test_active_customer_was_imported(self):
 
         # we should only have one customer here, and it should be joseph bloggs,
         # who we imported
         self.assertEqual("Joseph Bloggs", Customer.objects.all().first().full_name)
+
+    def test_inactive_customer_was_not_imported(self):
+        self.assertEqual(
+            0,
+            Customer.objects.filter(full_name="Francisco Rosa").count()
+        )
+
 
     def test_imported_customer_has_collection_point(self):
 
