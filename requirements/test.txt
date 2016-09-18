@@ -4,3 +4,8 @@ lathermail==0.2.0
 python-dateutil==2.2
 requests==2.10.0
 selenium==2.53.6
+
+factory-boy==2.7.0
+pytest==3.0.2
+pytest-django==3.0.0
+pytest-watch==4.1.0

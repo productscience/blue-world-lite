@@ -1,0 +1,73 @@
+[
+  {
+      "pk": 5374,
+      "model": "customers.customer",
+      "fields": {
+          "telephone_2": null,
+          "telephone_1": "07979 123456",
+          "surname": "Bloggs",
+          "payment_method": 3,
+          "labels": [],
+          "link_id": "wHVdLyNpBB",
+          "legacy": null,
+          "postcode": "N1 12X",
+          "first_name": "Joseph",
+          "group": 1,
+          "billed_until": null,
+          "where_heard_other": "",
+          "source": null,
+          "pickup": 2,
+          "legacy_id": null,
+          "start_date": null,
+          "status": 4,
+          "date_requested_payment": "2016-05-23",
+          "stop_date": null,
+          "so_details": null,
+          "date_of_last_payment": "1970-01-01 00:00:00",
+          "discount": null,
+          "so_day_of_month": null,
+          "dd_day_of_month": null,
+          "mobile": null,
+          "where_heard": "int",
+          "email": "joe.bloggs@realaddress.com",
+          "weird_balance": false,
+          "address_1": "22 Some Address, Local Estate,",
+          "address_2": "",
+          "address_3": "",
+          "date_created": "2016-05-23 00:00:00",
+          "balance": 0.00
+      }
+  },
+  {
+      "pk": 8416,
+      "model": "customers.bagchoice",
+      "fields": {
+          "customer": 5374,
+          "bag_type": 51,
+          "price": 65.00,
+          "quantity": 1
+      }
+  },
+  {
+      "pk": "MD0001ZPR1F2EZ",
+      "model": "customers.gcsubscription",
+      "fields": {
+          "customer": 5374,
+          "status": "active",
+          "pre_auth": true,
+          "name": "Growing Communities veg-box scheme",
+          "created": "2016-05-23 13:48:37"
+      }
+  },
+  {
+      "pk": "MD0001ZPR112EX",
+      "model": "customers.gcsubscription",
+      "fields": {
+          "customer": 5374,
+          "status": "active",
+          "pre_auth": true,
+          "name": "Growing Communities veg-box scheme",
+          "created": "2016-04-14 13:48:37"
+      }
+  }
+]
