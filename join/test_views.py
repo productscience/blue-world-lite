@@ -11,9 +11,11 @@ from .factories import (
     GoCardlessMandateFactory
 )
 
-from .models import AccountStatusChange, CustomerTag
+from .models import AccountStatusChange, CustomerTag, Reminder
 
+from freezegun import freeze_time
 
+@freeze_time("2016-08-14")
 class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
     """
     We set up a user, with:
@@ -24,11 +26,11 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
     They sign in and request to leave.
 
     We want to test:
-        they have the correct tag applied
-        their dashboard is showing something different
-        they don't have collection beyond their leave date
-        they don't see collections beyond their date
-        a reminder exists for the correct date
+        they have the correct tag applied DONE
+        their dashboard is showing something different DONE
+        they don't have collection beyond their leave date DONE
+        they don't see collections beyond their date DONE
+        a reminder exists for the correct date DONE
         they can rejoin
 
     """
@@ -93,25 +95,37 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
 
     def test_leaving_tag_is_applied(self):
         # log us in
-        login_res = self.client.post(reverse("account_login"), self.creds)
-
-        leave_get = self.client.get(reverse("dashboard_leave"), follow=True)
-
-        leaving_reasons = {
-            'reason': 'hard_to_pickup',
-            'comments': "It's difficult getting there in time."
-        }
-
-        leave_post = self.client.post(reverse('dashboard_leave'),
-            leaving_reasons)
-
+        leave_res = self._login_and_leave()
         leaving_tag = CustomerTag.objects.get(tag='Leaving')
 
         assert(leaving_tag in self.customer.tags.all())
 
-    def test_reminder_is_created(self):
+    def test_reminder_on_last_collection_dayt_is_created(self):
 
-        # log us in
+        leave_res = self._login_and_leave()
+        # we want to place a reminder before the last week,
+        # so staff have time to remove them the list
+
+        assert(Reminder.objects.filter(customer=self.customer).count() > 0)
+
+        reminder = Reminder.objects.filter(customer=self.customer).first()
+
+        # the reminder should be the last collection Wednesday for the customer
+        assert(reminder.date.month == 8)
+        assert(reminder.date.day == 31)
+
+
+    def test_dashboard_only_shows_collections_til_leaving_date(self):
+        leave_res = self._login_and_leave()
+
+        # we want to see the last collection date passed into the context
+        # so we can compare against it in templates
+
+        res = self.client.get(reverse("dashboard"))
+        assert(len(res.context['next_bws']) == 2)
+
+
+    def _login_and_leave(self):
         login_res = self.client.post(reverse("account_login"), self.creds)
         leave_get = self.client.get(reverse("dashboard_leave"), follow=True)
 
@@ -122,5 +136,4 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
         leave_post = self.client.post(reverse('dashboard_leave'),
             leaving_reasons)
 
-        # this has to be the week before the billing week ends
-        Reminder.objects.filter(customer=self.customer )
+        return leave_post

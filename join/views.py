@@ -57,6 +57,7 @@ from .models import (
     Payment,
     PaymentStatusChange,
     Skip,
+    Reminder,
 )
 
 
@@ -719,7 +720,15 @@ def dashboard(request):
         bw = get_billing_week(now)
 
         # we want a list of billing weeks, so we can then pull out changes for them
-        next_bws = next_n_billing_weeks(3, bw)
+
+        if "Leaving" in [t.tag for t in request.user.customer.tags.all()]:
+            no_of_bws = len(billing_weeks_left_in_the_month(str(bw)))
+            if no_of_bws:
+                next_bws = next_n_billing_weeks((no_of_bws - 1), bw)
+            else:
+                next_bws = []
+        else:
+            next_bws = next_n_billing_weeks(3, bw)
 
         # billing weeks starting Sunday 3pm should reflect the latest change made this week
 
@@ -1070,15 +1079,28 @@ def dashboard_leave(request):
                 fail_silently=False,
             )
             # add leaving tag to customer
-            leaving_tag = CustomerTag.objects.get(tag='Leaving')
 
+            now = timezone.now()
+            bw = get_billing_week(now)
+
+            leaving_tag = CustomerTag.objects.get(tag='Leaving')
 
             request.user.customer.tags.add(leaving_tag)
             request.user.customer.save()
 
+
+            # add Reminder
+            last_bw_start = billing_weeks_left_in_the_month(
+                str(bw))[-1].wed
+            rem = Reminder(
+                title="Request to leave - reason: {}".format(reason),
+                details="Comments:\n\n{}".format(form.cleaned_data['comments']),
+                customer=request.user.customer,
+                created_by=request.user,
+                date=last_bw_start
+            )
+            rem.save()
             # Only save changes now in case there is a problem with the email
-            now = timezone.now()
-            bw = get_billing_week(now)
 
             #
             # account_status_change = AccountStatusChange(
