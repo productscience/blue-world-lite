@@ -182,7 +182,7 @@ class BagTypeCostChange(models.Model):
     )
 
     def __str__(self):
-        return '{} {} {}'.format(
+        return '{} {}'.format(
             self.bag_type.name,
             self.changed.strftime('%Y-%m-%d'),
         )
@@ -265,7 +265,7 @@ class Customer(models.Model):
     gocardless_current_mandate = models.OneToOneField(
         BillingGoCardlessMandate,
         # XXX Not sure about this yet
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name='in_use_for_customer',
         null=True,
     )
@@ -329,6 +329,7 @@ class Customer(models.Model):
             collection_point_id=collection_point_id,
         )
         collection_point_change.save()
+        
     collection_point = property(
         _get_latest_collection_point,
         _set_collection_point,
@@ -341,6 +342,11 @@ class Customer(models.Model):
         return latest_order.bag_quantities.all()
 
     def _set_bag_quantities(self, bag_quantities, reason='CHANGE'):
+        """
+        Accepts a dict bag_quantities of the bag_type and quantity, of the form:
+        { '1': 3 }
+
+        """
         now = timezone.now()
         bw = get_billing_week(now)
         customer_order_change = CustomerOrderChange(
