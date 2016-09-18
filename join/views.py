@@ -18,6 +18,7 @@ from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
 from django.forms import BaseFormSet
@@ -118,6 +119,9 @@ def not_staff(func):
 
 def gocardless_is_set_up(func):
     def _decorated(request, *args, **kwargs):
+        """
+
+        """
         if not request.user.customer.gocardless_current_mandate:
             return redirect(reverse('dashboard_gocardless'))
         return func(request, *args, **kwargs)
@@ -450,6 +454,8 @@ def valid_bag_type_in_session(func):
 @valid_bag_type_in_session
 @valid_collection_point_in_session
 def signup(request):
+    # See forms.SignupForm for how collection point and bags are associated with
+    # user signing up
     return allauth_signup(request)
 
 
@@ -711,8 +717,6 @@ def dashboard(request):
 
         now = timezone.now()
         bw = get_billing_week(now)
-
-
 
         # we want a list of billing weeks, so we can then pull out changes for them
         next_bws = next_n_billing_weeks(3, bw)
@@ -984,6 +988,13 @@ def bank_details(request):
 
 LEAVE_REASON_CHOICES = (
     ('moving', 'Moving away from the area'),
+    ('growing_own', 'Growing own'),
+    ('want_choice', 'Want more choice'),
+    ('other', 'Other'),
+    ('too_expensive', 'Value / too expensive'),
+    ('quality', 'Quality'),
+    ('getting_right_bag', 'Problems getting right bag'),
+    ('hard_to_pickup', 'Hard to pick up'),
 )
 
 
@@ -1058,16 +1069,25 @@ def dashboard_leave(request):
                 settings.LEAVER_EMAIL_TO,
                 fail_silently=False,
             )
+            # add leaving tag to customer
+            leaving_tag = CustomerTag.objects.get(tag='Leaving')
+
+
+            request.user.customer.tags.add(leaving_tag)
+            request.user.customer.save()
+
             # Only save changes now in case there is a problem with the email
             now = timezone.now()
             bw = get_billing_week(now)
-            account_status_change = AccountStatusChange(
-                changed=now,
-                changed_in_billing_week=str(bw),
-                customer=request.user.customer,
-                status=AccountStatusChange.LEFT,
-            )
-            account_status_change.save()
+
+            #
+            # account_status_change = AccountStatusChange(
+            #     changed=now,
+            #     changed_in_billing_week=str(bw),
+            #     customer=request.user.customer,
+            #     status=AccountStatusChange.LEFT,
+            # )
+            # account_status_change.save()
             return redirect(reverse('dashboard_bye'))
     # if a GET (or any other method) we'll create a blank form
     else:

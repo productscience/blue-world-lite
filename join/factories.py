@@ -4,6 +4,7 @@ import uuid
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 
 from factory.django import DjangoModelFactory
@@ -19,6 +20,8 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = get_user_model()
 
+    is_active = True
+    password = make_password('password')
 
 class CustomerFactory(DjangoModelFactory):
 
@@ -26,7 +29,7 @@ class CustomerFactory(DjangoModelFactory):
         model = models.Customer
 
     full_name = factory.Faker('name')
-    nickname = factory.LazyAttribute(lambda obj: obj.full_name.split(' ')[0])
+    nickname = factory.LazyAttribute(lambda obj: obj.full_name.lower().split(' ')[0])
     mobile = factory.Faker('phone_number')
 
     created = factory.LazyFunction(timezone.now)
@@ -37,6 +40,7 @@ class CustomerFactory(DjangoModelFactory):
         UserFactory,
         username=factory.SelfAttribute('..nickname'),
         email=factory.LazyAttribute(lambda u: "{}@example.com".format(u.username)))
+
 
 class BagTypeCostChangeFactory(DjangoModelFactory):
 

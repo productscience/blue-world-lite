@@ -12,11 +12,17 @@ import unittest; unittest.util._MAX_LENGTH = 1000
 from decimal import Decimal
 from pprint import pprint
 from django.test import TestCase, TransactionTestCase
+from django.test import Client
+from django.core.urlresolvers import reverse
+
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+
 from join.admin import pickup_list
 from join.models import CollectionPoint, CustomerCollectionPointChange, CustomerOrderChange
 from join.helper import calculate_weekly_fee
 from join.models import Customer, BagType, LineItem, Skip, PaymentStatusChange
 from join.models import LineItemRun, Payment, PaymentRun, AccountStatusChange
+
 from billing_week import get_billing_week, parse_billing_week
 from django.utils import timezone
 import freezegun

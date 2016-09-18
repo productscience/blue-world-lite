@@ -1,84 +1,126 @@
-
 from decimal import Decimal
 
-from django.test import TestCase
 from django.test import Client
+from django.core.urlresolvers import reverse
+
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+
+from .factories import (
+    CustomerFactory, BagTypeFactory, CollectionPointFactory,
+    AccountStatusChangeFactory, CompleteGoCardlessMandateFactory,
+    GoCardlessMandateFactory
+)
+
+from .models import AccountStatusChange, CustomerTag
 
 
-from django.utils import timezone
+class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
+    """
+    We set up a user, with:
+        a collection point,
+        an order, of a given bag type and quantity
+        a complete mandate
 
-from allauth.utils import get_user_model, get_current_site
-# we want two collection points
+    They sign in and request to leave.
 
-from .models import CollectionPoint
+    We want to test:
+        they have the correct tag applied
+        their dashboard is showing something different
+        they don't have collection beyond their leave date
+        they don't see collections beyond their date
+        a reminder exists for the correct date
+        they can rejoin
 
-# we also want at least one user
-from .models import (CollectionPoint, CustomerOrderChangeBagQuantity,
-    CustomerOrderChange, Customer, AccountStatusChange, BagType, CollectionPoint)
-
-
-from billing_week import get_billing_week
-
-
-
-
-class TestCollectionsShowsRightBillingWeeks(TestCase):
-
-    @classmethod
-    def setUpTestData(self):
+    """
 
 
-        self.user = get_user_model().objects.create(username="joe", email="joe@example.com", password="sekrit")
+    def setUp(self):
 
-        now = timezone.now()
-        bw = get_billing_week(now)
+        veg_bag_price = Decimal(16.25)
+        large_veg = BagTypeFactory()
+        # TODO
+        large_veg.weekly_cost = veg_bag_price
+        large_veg.save()
+        # now we have a user, we need to
 
-        self.joe = Customer(
-            created=now,
-            created_in_billing_week=str(bw),
-            full_name="Joseph Bloggs",
-            nickname="Joe",
-            user=self.user
-        )
+        col_point = CollectionPointFactory()
 
-        self.joe.save()
+        customer = CustomerFactory(full_name="Joe Bloggs")
+        customer.save()
+        user = customer.user
 
-        small_bags = BagType.objects.create(name="Med Veg", active=True)
-        small_bags.weekly_cost = Decimal('9.00')
-        small_bags.save()
+        start_status = AccountStatusChangeFactory(customer=customer,
+            status=AccountStatusChange.AWAITING_DIRECT_DEBIT)
 
-        ofs = CollectionPoint.objects.create(
-            location='61 Leswin Road, N16 7NX',
-            collection_day='WED',
-            active=True,
-            name='The Old Fire Station')
+        customer.collection_point = col_point
+        customer._set_bag_quantities({large_veg.id: 1})
 
-        ofs.save()
+        # presumably, we have this
+        complete_mandate = CompleteGoCardlessMandateFactory(customer=customer,
+            amount_notified=veg_bag_price)
 
-        self.joe.collection_point = ofs
-        self.joe._set_bag_quantities({small_bags.id: 1})
-
-        account_status_change = AccountStatusChange(
-            changed=now,
-            changed_in_billing_week=str(bw),
-            customer=self.joe,
-            status=AccountStatusChange.ACTIVE,
-        ).save()
+        # you can have more than one mandate for a user, but we should only
+        # have one mandate in use at a given time
+        complete_mandate.in_use_for_customer=customer
+        complete_mandate.save()
+        customer.save()
 
 
+        assert(customer.user.username == customer.full_name.lower().split(' ')[0])
+        assert(customer.account_status == AccountStatusChange.AWAITING_DIRECT_DEBIT)
+        assert(customer.gocardless_current_mandate)
 
+        self.client = Client()
+        self.customer = customer
 
-    def test_dates_of_collections(self):
+        # are we logged in? not sure if we can use the client.login() method
+        # with allauth
 
-        response = self.client.post('/login', { 'login':'joe@example.com', 'password':'sekrit'})
+        # why would logging in with an email address trigger it existing on a user?
+        self.creds = {'login': 'joe@example.com', 'password': 'password'}
+        res = self.client.post(reverse("account_login"), self.creds)
 
+        assert(len(self.customer.user.emailaddress_set.all()) > 0 )
+        email = self.customer.user.emailaddress_set.all().first()
+        email.verified = True
+        email.save()
+        self.customer.user.save()
 
+        leaving_tag = CustomerTag(tag='Leaving')
+        leaving_tag.save()
 
-        # Check that the response is 200 OK.
-        self.assertEqual(response.status_code, 200)
-        # import ptpdb; ptpdb.set_trace()
+        assert(len(CustomerTag.objects.filter(tag='Leaving')) > 0)
 
-        # Check that the rendered context contains 5 customers.
-        # self.assertEqual(len(response.context['customers']), 5)
-        #
-        #
+    def test_leaving_tag_is_applied(self):
+        # log us in
+        login_res = self.client.post(reverse("account_login"), self.creds)
+
+        leave_get = self.client.get(reverse("dashboard_leave"), follow=True)
+
+        leaving_reasons = {
+            'reason': 'hard_to_pickup',
+            'comments': "It's difficult getting there in time."
+        }
+
+        leave_post = self.client.post(reverse('dashboard_leave'),
+            leaving_reasons)
+
+        leaving_tag = CustomerTag.objects.get(tag='Leaving')
+
+        assert(leaving_tag in self.customer.tags.all())
+
+    def test_reminder_is_created(self):
+
+        # log us in
+        login_res = self.client.post(reverse("account_login"), self.creds)
+        leave_get = self.client.get(reverse("dashboard_leave"), follow=True)
+
+        leaving_reasons = {
+            'reason': 'hard_to_pickup',
+            'comments': "It's difficult getting there in time."
+        }
+        leave_post = self.client.post(reverse('dashboard_leave'),
+            leaving_reasons)
+
+        # this has to be the week before the billing week ends
+        Reminder.objects.filter(customer=self.customer )
