@@ -1090,14 +1090,18 @@ def dashboard_leave(request):
 
 
             # add Reminder
-            last_bw_start = billing_weeks_left_in_the_month(
-                str(bw))[-1].wed
+            bw_in_month = billing_weeks_left_in_the_month(str(bw))
+            if bw_in_month:
+                last_bw_wed = bw_in_month[-1].wed
+            else:
+                # is this correct? if someone leaves on the 29th,
+                last_bw_wed = bw.wed
             rem = Reminder(
                 title="Request to leave - reason: {}".format(reason),
                 details="Comments:\n\n{}".format(form.cleaned_data['comments']),
                 customer=request.user.customer,
                 created_by=request.user,
-                date=last_bw_start
+                date=last_bw_wed
             )
             rem.save()
             # Only save changes now in case there is a problem with the email

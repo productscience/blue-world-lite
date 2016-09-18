@@ -15,7 +15,7 @@ from .models import AccountStatusChange, CustomerTag, Reminder
 
 from freezegun import freeze_time
 
-@freeze_time("2016-08-14")
+
 class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
     """
     We set up a user, with:
@@ -35,7 +35,7 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
 
     """
 
-
+    @freeze_time("2016-08-14")
     def setUp(self):
 
         veg_bag_price = Decimal(16.25)
@@ -100,7 +100,8 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
 
         assert(leaving_tag in self.customer.tags.all())
 
-    def test_reminder_on_last_collection_dayt_is_created(self):
+    @freeze_time("2016-08-14")
+    def test_reminder_on_last_collection_day_is_created(self):
 
         leave_res = self._login_and_leave()
         # we want to place a reminder before the last week,
@@ -114,7 +115,7 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
         assert(reminder.date.month == 8)
         assert(reminder.date.day == 31)
 
-
+    @freeze_time("2016-08-14")
     def test_dashboard_only_shows_collections_til_leaving_date(self):
         leave_res = self._login_and_leave()
 
@@ -122,8 +123,26 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
         # so we can compare against it in templates
 
         res = self.client.get(reverse("dashboard"))
-        assert(len(res.context['next_bws']) == 2)
+        assert(len(res.context['collections']) == 3)
 
+    @freeze_time("2016-08-29")
+    def test_dashboard_shows_no_extra_collections_in_last_week_of_leaving(self):
+        leave_res = self._login_and_leave()
+
+        # we want to see the last collection date passed into the context
+        # so we can compare against it in templates
+
+        res = self.client.get(reverse("dashboard"))
+        assert(len(res.context['collections']) == 1)
+
+    @freeze_time("2016-09-01")
+    def test_dashboard_shows_further_collections_after_final_collection_date(self):
+        # We still show the collection, but we can say your collection *was*,
+        # because some are open over the weekend
+        leave_res = self._login_and_leave()
+
+        res = self.client.get(reverse("dashboard"))
+        assert(len(res.context['collections']) == 1)
 
     def _login_and_leave(self):
         login_res = self.client.post(reverse("account_login"), self.creds)
