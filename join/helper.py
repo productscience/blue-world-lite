@@ -7,7 +7,8 @@ import pytz
 import threading
 
 from billing_week import (
-    get_billing_week
+    get_billing_week,
+    billing_weeks_left_in_the_month
 )
 
 _thread_locals = threading.local()
@@ -152,3 +153,17 @@ def effective_billing_week(billing_week, time):
         return billing_week
     else:
         return billing_week.next()
+
+
+def get_next_billing_date(datetime):
+    """
+    Accepts a datetime,  and returns a datetime for the next month's billing date, based on
+    the month of the datetime object passed in.
+    """
+    bw = get_billing_week(datetime)
+    remaining_bws = billing_weeks_left_in_the_month(str(bw))
+    if remaining_bws:
+        next_billing_date = remaining_bws[-1].end
+    else:
+        next_billing_date = bw.next().end
+    return next_billing_date
