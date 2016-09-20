@@ -332,7 +332,7 @@ class Customer(models.Model):
             collection_point_id=collection_point_id,
         )
         collection_point_change.save()
-        
+
     collection_point = property(
         _get_latest_collection_point,
         _set_collection_point,
@@ -579,10 +579,17 @@ class Reminder(StaffUpdatedModel):
     def __unicode__(self):
         return self.title
 
+    def __str__(self):
+        return "{}: {} - created by: {}".format(self.date.strftime("%Y-%m-%d"),
+        self.title, self.created_by)
+
     class Meta:
         ordering = ['-date']
 
     def is_due(self):
+        # A reminder is due if it's the due date is greater than the start
+        # of a billing week
+        # a reminder for the 28th should show from Thursday 22nd onward
         return self.date <= timezone.now()
 
 
@@ -812,6 +819,12 @@ class LineItem(models.Model):
         August, the code should be run on Sunday 31 July 2016 just after 3pm GMT.
 
         We will create line items for August, and adjustments due during July.
+        in July, we'd call it on 31st July just after 3pm, for August
+        in August we'd call it on 8th August just after 3pm, for September
+
+
+        Returns a dict, our customers as the keys, and a list of line items
+        for every order for next month, or adjustment/skip from the previous month
 
         '''
         # e.g. 31st July 2016
@@ -832,10 +845,15 @@ class LineItem(models.Model):
         )
         line_item_run.save()
         line_items_by_customer = {}
+
+        # find all the billing weeks we need to sum up:
+        # we need adjustments for the last month,
+        # and we need to create payments for the new month
         now_bw = get_billing_week(now)
         # Find the last first billing week of the previous month
         billing_week = future_billing_week = parse_billing_week('{0}-{1:02d} {2}'.format(year, month, 1))
         assert now_bw >= billing_week, 'Cannot run line items for future weeks'
+
         billing_weeks_next_month = []
         while future_billing_week.month == month:
             billing_weeks_next_month.append(future_billing_week)
@@ -851,7 +869,8 @@ class LineItem(models.Model):
         print(billing_weeks_last_month)
         print(billing_weeks_next_month)
 
-        # For each customer
+        # For each customer, build a list of line items, for the prevous week's activity
+        # and the coming week's regular order
         customers = Customer.objects.order_by('pk').filter(created__lt=billing_weeks_next_month[0].start)
         print(customers.all())
         for customer in customers:
@@ -865,10 +884,17 @@ class LineItem(models.Model):
 
             if customer.account_status_before(billing_weeks_next_month[0].start) not in (AccountStatusChange.AWAITING_DIRECT_DEBIT,):
                 # For each billing week in the previous month...
+                # find the order, check what the line item recorded was
+                # (these line items will have been created in advance, one per week,
+                # to represent the collections
+
                 for past_billing_week in billing_weeks_last_month:
-                    # Look up what the order actually was
+                    # Look up what the order actually was, versus the line item,
+                    # so we can issue an adjustment for that week
+
                     bag_quantities = CustomerOrderChange.as_of(past_billing_week, customer=customer)
                     should_have_billed = calculate_weekly_fee(bag_quantities)
+
                     # Look up the line item for that week
                     lis = LineItem.objects.filter(
                         customer=customer,
@@ -880,6 +906,7 @@ class LineItem(models.Model):
                         billed = lis[0].amount
                     else:
                         billed = 0
+
                     print('Billed:', billed, 'Should have billed:', should_have_billed)
                     correction = should_have_billed - billed
                     if correction != 0:
@@ -893,11 +920,16 @@ class LineItem(models.Model):
                         )
                         cli.save()
                         line_items_by_customer.setdefault(customer, []).append(cli)
+
+                    # now we have calculated the adjusted fees for any changed orders
+                    # we want to see if we need to adjust for holidays
+
                     # If there is a skip week, refund the cost of the new order
                     skips = Skip.objects.filter(customer=customer, billing_week=past_billing_week).all()
                     assert len(skips) <= 1
                     if len(skips):
                         print('Skips:', skips, past_billing_week, -should_have_billed)
+                        # notice the negative amount
                         cli = LineItem(
                             amount=-should_have_billed,
                             created=now,
@@ -908,8 +940,14 @@ class LineItem(models.Model):
                         )
                         cli.save()
                         line_items_by_customer.setdefault(customer, []).append(cli)
+
+                    # Now  we have all our updated line items to balance out
+                    # payments in the previous month, we create the line items
+                    # for the next month
+
             # If the customer has left, or not set up don't bill them:
             if customer.account_status_before(billing_weeks_next_month[0].start) not in (AccountStatusChange.AWAITING_DIRECT_DEBIT, AccountStatusChange.LEFT):
+
                 # For each billing week in the next month, add a line item to the order
                 print('Adding in line items for next months order')
                 next_month_bag_quantities = CustomerOrderChange.as_of(
