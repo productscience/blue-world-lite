@@ -1417,6 +1417,13 @@ def deactivate_customer(request, customer_id=None):
                 status=AccountStatusChange.LEFT,
             )
             account_status_change.save()
+
+            # remove the leaving tag, as they will be 'left'
+            leaving_tag = CustomerTag.objects.filter(tag='Leaving').first()
+            if leaving_tag:
+                customer.tags.remove(leaving_tag)
+                customer.save()
+
             messages.add_message(
                 request,
                 messages.INFO,
