@@ -9,7 +9,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from .factories import (
     CustomerFactory, BagTypeFactory, CollectionPointFactory,
     AccountStatusChangeFactory, CompleteGoCardlessMandateFactory,
-    GoCardlessMandateFactory
+    GoCardlessMandateFactory, UserFactory
 )
 
 from .models import AccountStatusChange, CustomerTag, Reminder
@@ -38,7 +38,11 @@ class UserWantsToLeaveSchemeTestCase(TestCase):
 
     @freeze_time("2016-08-14")
     def setUp(self):
-
+        """
+        We don't need this much set up for each test.
+        moving this into setupClass will mean we don't run through all this
+        setup for each test method
+        """
         veg_bag_price = Decimal(16.25)
         large_veg = BagTypeFactory()
         # TODO
@@ -185,3 +189,26 @@ class UserWantsToLeaveSchemeTestCase(TestCase):
             leaving_reasons, follow=True)
 
         return leave_post
+
+
+class DeactivateCustomer(TestCase)
+
+    """
+    Checks that once we have a customer generated, we can deactivate the user
+    """
+
+    def setupClass(arg):
+        admin = UserFactory(is_staff)
+
+    def test_deactivating_user_updates_their_status(arg):
+        """
+        create a staff admin
+        setup a group with the appropriate permissions (create AccountStatusChange)
+        set up our user, as above
+        sign in as the staff admin
+        post to the deactivate user endpoint
+
+        check that customer's new state is LEFT
+        check that the customer is served the LEFT screen
+        """
+        pass

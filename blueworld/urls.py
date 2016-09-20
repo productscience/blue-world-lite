@@ -80,6 +80,11 @@ urlpatterns = [
         name='generate_pickup_list',
     ),
     url(
+        r'^admin/deactivate_customer/(?P<customer_id>\d+)',
+        join.views.deactivate_customer,
+        name='deactivate_customer',
+    ),
+    url(
         r'^hijack/',
         include('hijack.urls')
     ),

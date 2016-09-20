@@ -31,9 +31,18 @@
       {# allows for hikjack from a customer detail view as well #}
       <form action="/hijack/{{ customer_user }}/" method="post">
           {% csrf_token %}
-      <button type="submit">Become {{ name_for_helpscout }} </button>
+        <button type="submit">Become {{ name_for_helpscout }} </button>
       </form>
     </li>
+    {% if customer.account_status != "LEFT" %}
+
+    <li>
+      <form action="{% url 'deactivate_customer' object_id %}" method="post">
+          {% csrf_token %}
+          <button type="submit">Deactivate account</button>
+      </form>
+    </li>
+    {% endif %}
   {% if has_add_permission %}
       {% block object-tools-items %}
         <li>

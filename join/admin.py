@@ -59,6 +59,10 @@ from billing_week import get_billing_week, parse_billing_week
 logger = logging.getLogger(__name__)
 
 
+admin.site.site_header = _('Growing Communities Veg Scheme Admin')
+admin.site.index_title = _('Staff Admin Area')
+admin.site.site_title = _('Growing Communities Veg Scheme')
+
 
 class BlueWorldModelAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
@@ -383,7 +387,6 @@ class ReminderInlineFormset(forms.models.BaseInlineFormSet):
         if obj.done:
             result = self._make_new_note_from_reminder(obj)
 
-        logger.info(result)
         obj.save()
 
         return obj
@@ -434,6 +437,7 @@ class CustomerAdmin(BlueWorldModelAdmin):
         'collection_point',  # Dynamically generated latest value
         'hijack_field',  # Hijack button
     )
+    filter_horizontal = ['tags']
     list_filter = (
         ReminderDueListFilter,
         AccountStatusListFilter,
@@ -487,6 +491,9 @@ class CustomerAdmin(BlueWorldModelAdmin):
         return obj.gocardless_current_mandate.gocardless_mandate_id
     current_mandate.short_description = 'Gocardless current mandate'
 
+    def email(self, obj):
+        return obj.user.email
+
     def get_readonly_fields(self, request, obj=None):
         return [
             'user',
@@ -494,6 +501,7 @@ class CustomerAdmin(BlueWorldModelAdmin):
             'current_mandate',
             'collection_point',
             'bag_quantities',
+            'email'
         ]
         # result = list(self.readonly_fields) + \
         #        [field.name for field in obj._meta.fields] + \
@@ -509,6 +517,7 @@ class CustomerAdmin(BlueWorldModelAdmin):
         'full_name',
         'nickname',
         'mobile',
+        'email',
         'current_mandate',
         'collection_point',
         'bag_quantities',
@@ -526,7 +535,8 @@ class CustomerAdmin(BlueWorldModelAdmin):
 
         my_context = {
             'name_for_helpscout': obj.full_name,
-            'customer_user': obj.user.id
+            'customer_user': obj.user.id,
+            'customer': obj
         }
         return super(CustomerAdmin, self).change_view(request, object_id,
             extra_context=my_context)
@@ -638,7 +648,6 @@ admin.site.register(Skip, SkipAdmin)
 # admin.site.register(User, UserAdmin)
 admin.site.disable_action('delete_selected')
 
-
 def fetch_bw_dashboard_stats(billing_week):
     """
     Takes a billing week, and returns headline stats about the number
@@ -656,7 +665,8 @@ def fetch_bw_dashboard_stats(billing_week):
         pk__in=active_customer_ids).exclude(
             pk__in=holidaying_customers).values_list('id')
 
-    # start with this and work backwards
+    # we use customer_order_change__customer_id__in rather than looping,
+    # as looping is far slower
     cocbq = CustomerOrderChangeBagQuantity.objects.filter(
         customer_order_change__customer_id__in=customers_this_week).only('quantity')
 
@@ -757,7 +767,7 @@ def pickup_list(collection_points, billing_week):
     for change in _latest_collection_points:
         cp = change.collection_point
         customer = change.customer
-        
+
         if customer.account_status == 'ACTIVE':
 
             if cp not in pickup_list:

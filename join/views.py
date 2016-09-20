@@ -18,6 +18,7 @@ from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
@@ -1398,6 +1399,37 @@ def dashboard_rejoin_scheme(request):
         return redirect(reverse("dashboard"))
     else:
         return HttpResponseBadRequest()
+
+
+@login_required
+@staff_member_required
+def deactivate_customer(request, customer_id=None):
+    now = timezone.now()
+    bw = get_billing_week(now)
+    if request.method == 'POST':
+
+        customer = Customer.objects.get(pk=customer_id)
+        if customer.account_status != AccountStatusChange.LEFT:
+            account_status_change = AccountStatusChange(
+                changed=now,
+                changed_in_billing_week=str(bw),
+                customer=customer,
+                status=AccountStatusChange.LEFT,
+            )
+            account_status_change.save()
+            messages.add_message(
+                request,
+                messages.INFO,
+                "You've justed deactivated {}'s account. You can reach her at: {}".format(
+                    customer.full_name, customer.user.email),
+            )
+            return redirect(reverse('admin:join_customer_change',
+                args=(customer_id,)))
+        else:
+            return HttpResponseBadRequest()
+    else:
+        return HttpResponseBadRequest()
+
 
 
 @csrf_exempt
