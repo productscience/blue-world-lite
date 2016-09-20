@@ -25,6 +25,16 @@
       {% endfor %}
       </ul>
 
+      {% for mc in monthly_costs %}
+          <em><strong>£{{ mc.cost}}</strong> in a {{ mc.length }} week month</em>{% if forloop.first %}, or {% endif %}
+      {% endfor %}
+
+      <p>
+
+
+
+      </p>
+
       </div>
 
       <h3>New Order</h3>

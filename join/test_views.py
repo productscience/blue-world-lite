@@ -1,9 +1,10 @@
 from decimal import Decimal
 
-from django.test import Client
+from django.test import Client, TestCase
 from django.core.urlresolvers import reverse
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+
 
 from .factories import (
     CustomerFactory, BagTypeFactory, CollectionPointFactory,
@@ -16,7 +17,7 @@ from .models import AccountStatusChange, CustomerTag, Reminder
 from freezegun import freeze_time
 
 
-class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
+class UserWantsToLeaveSchemeTestCase(TestCase):
     """
     We set up a user, with:
         a collection point,
@@ -51,7 +52,8 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
         customer.save()
         user = customer.user
 
-        start_status = AccountStatusChangeFactory(customer=customer,
+        start_status = AccountStatusChangeFactory(
+            customer=customer,
             status=AccountStatusChange.AWAITING_DIRECT_DEBIT)
 
         customer.collection_point = col_point
@@ -67,10 +69,14 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
         complete_mandate.save()
         customer.save()
 
+        active_status = AccountStatusChangeFactory(
+            customer=customer,
+            status=AccountStatusChange.ACTIVE)
+
 
         assert(customer.user.username == customer.full_name.lower().split(' ')[0])
-        assert(customer.account_status == AccountStatusChange.AWAITING_DIRECT_DEBIT)
-        assert(customer.gocardless_current_mandate)
+        assert(customer.account_status == AccountStatusChange.ACTIVE)
+        assert(customer.gocardless_current_mandate is not None)
 
         self.client = Client()
         self.customer = customer
@@ -115,15 +121,23 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
         assert(reminder.date.month == 8)
         assert(reminder.date.day == 31)
 
-    @freeze_time("2016-08-14")
+
+
+    @freeze_time("2016-08-14 16:00")
     def test_dashboard_only_shows_collections_til_leaving_date(self):
         leave_res = self._login_and_leave()
 
         # we want to see the last collection date passed into the context
         # so we can compare against it in templates
 
+        # we should see:
+        # one pick up for the 16th
+        # one pick for the 24th
+        # one pick up 31st
+
         res = self.client.get(reverse("dashboard"))
         assert(len(res.context['collections']) == 3)
+
 
     @freeze_time("2016-08-29")
     def test_dashboard_shows_no_extra_collections_in_last_week_of_leaving(self):
@@ -144,15 +158,30 @@ class UserWantsToLeaveSchemeTestCase(StaticLiveServerTestCase):
         res = self.client.get(reverse("dashboard"))
         assert(len(res.context['collections']) == 1)
 
+    def test_dashboard_lets_you_rejoin(self):
+        leaving_tag = CustomerTag.objects.get(tag='Leaving')
+        assert(leaving_tag not in self.customer.tags.all())
+        leave_res = self._login_and_leave()
+
+
+
+        assert(leaving_tag in self.customer.tags.all())
+        rejoin_res = self.client.post(reverse("dashboard_rejoin_scheme"))
+
+        assert(self.customer.account_status == AccountStatusChange.ACTIVE)
+        assert(leaving_tag not in self.customer.tags.all())
+
     def _login_and_leave(self):
         login_res = self.client.post(reverse("account_login"), self.creds)
         leave_get = self.client.get(reverse("dashboard_leave"), follow=True)
+
+
 
         leaving_reasons = {
             'reason': 'hard_to_pickup',
             'comments': "It's difficult getting there in time."
         }
         leave_post = self.client.post(reverse('dashboard_leave'),
-            leaving_reasons)
+            leaving_reasons, follow=True)
 
         return leave_post

@@ -41,7 +41,9 @@ from join.helper import (
     friendly_date,
     render_bag_quantities,
     calculate_weekly_fee,
-    collection_dates_for)
+    collection_dates_for,
+    get_next_billing_date,
+)
 from .models import (
     AccountStatusChange,
     BagType,
@@ -57,6 +59,7 @@ from .models import (
     Payment,
     PaymentStatusChange,
     Skip,
+    Note,
     Reminder,
 )
 
@@ -156,8 +159,15 @@ def have_not_left_scheme(func):
 
 
 def have_left_scheme(func):
+    """
+    We have to check for two cases here, where we want to a user to rejoin.
+    A user may have left, in which case we let them through
+    Or the user my be leaving, in which case we don't want to
+    switch them back to being active
+    """
     def _decorated(request, *args, **kwargs):
-        if request.user.customer.account_status != AccountStatusChange.LEFT:
+        leaving_tag = CustomerTag.objects.get(tag='Leaving')
+        if request.user.customer.account_status != AccountStatusChange.LEFT and leaving_tag not in request.user.customer.tags.all():
             return redirect(reverse('dashboard'))
         return func(request, *args, **kwargs)
     return _decorated
@@ -718,17 +728,21 @@ def dashboard(request):
 
         now = timezone.now()
         bw = get_billing_week(now)
+        next_billing_date = get_next_billing_date(now)
 
-        # we want a list of billing weeks, so we can then pull out changes for them
-
-        if "Leaving" in [t.tag for t in request.user.customer.tags.all()]:
+        # we want a list of billing weeks, so we can then pull out changes for
+        # them
+        # # TODO put a test on this function
+        if request.user.customer.has_tag('Leaving'):
             no_of_bws = len(billing_weeks_left_in_the_month(str(bw)))
             if no_of_bws:
-                next_bws = next_n_billing_weeks((no_of_bws - 1), bw)
+                next_bws = next_n_billing_weeks((no_of_bws), bw)
             else:
                 next_bws = []
         else:
             next_bws = next_n_billing_weeks(3, bw)
+
+        # next_bws = next_n_billing_weeks(3, bw)
 
         # billing weeks starting Sunday 3pm should reflect the latest change made this week
 
@@ -802,7 +816,8 @@ def dashboard(request):
                 'collections': collections,
                 'now': now,
                 'next_bws': next_bws,
-                'skips': "skips"
+                'skips': "skips",
+                'next_billing_date': friendly_date(next_billing_date)
                 # 'deadline': deadline,
                 # 'changes_affect': changes_affect,
             }
@@ -831,9 +846,18 @@ def dashboard_change_order(request):
         formset=BaseOrderFormSet,
     )
     initial_bag_quantities = {}
-    for bag_quantity in request.user.customer.bag_quantities:
-        initial_bag_quantities[bag_quantity.bag_type.id] =\
-            bag_quantity.quantity
+    initial_bag_quantities_cost = 0
+
+    for bq in request.user.customer.bag_quantities:
+        initial_bag_quantities[bq.bag_type.id] = bq.quantity
+        initial_bag_quantities_cost += bq.quantity * bq.bag_type.weekly_cost
+
+    monthly_costs = [
+        {'length': 4, 'cost': initial_bag_quantities_cost * 4},
+        {'length': 5, 'cost': initial_bag_quantities_cost * 5}
+    ]
+
+
     available_bag_types = BagType.objects.order_by('display_order')
     bag_type_ids = [b.id for b in available_bag_types]
     active_bag_types = []
@@ -847,6 +871,8 @@ def dashboard_change_order(request):
                 "not_active_warning_needed": False,
             })
     active_bag_type_ids = [bt['id'] for bt in active_bag_types]
+
+
     if request.method == 'POST':
         formset = OrderFormSet(
             request.POST,
@@ -896,13 +922,16 @@ def dashboard_change_order(request):
                 messages.SUCCESS,
                 'Your order has been updated successfully'
             )
-            return redirect(reverse("dashboard"))
+            return redirect(reverse("dashboard_change_order"))
     else:
         formset = OrderFormSet(initial=active_bag_types)
     return render(
         request,
         'dashboard/change-order.html',
-        {'formset': formset}
+        {
+            'formset': formset,
+            'monthly_costs': monthly_costs
+        }
     )
 
 
@@ -1006,17 +1035,6 @@ LEAVE_REASON_CHOICES = (
     ('hard_to_pickup', 'Hard to pick up'),
 )
 
-
-# class FutureDateField(forms.DateField):
-#     def clean(self, value):
-#         if value < timezone.today().strftime('%Y-%m-%d'):
-#             raise forms.ValidationError(
-#                 "Please choose a leaving date that isn't in the past."
-#             )
-#         value = super().clean(value)
-#         return value
-
-
 class LeaveReasonForm(forms.Form):
     reason = forms.ChoiceField(
         label='Reason',
@@ -1028,11 +1046,9 @@ class LeaveReasonForm(forms.Form):
         widget=forms.Textarea,
         required=False,
     )
-    # leaving_date = FutureDateField(
-    #     initial=timezone.today,
-    #     widget=forms.SelectDateWidget(),
-    # )
-
+    alternative_date = forms.BooleanField(label=("I need to leave on a different"
+        " date. Please contact me to make alternative arrangments."),
+        required=False)
 
 @login_required
 @not_staff
@@ -1083,7 +1099,7 @@ def dashboard_leave(request):
             now = timezone.now()
             bw = get_billing_week(now)
 
-            leaving_tag = CustomerTag.objects.get(tag='Leaving')
+            leaving_tag, created = CustomerTag.objects.get_or_create(tag='Leaving')
 
             request.user.customer.tags.add(leaving_tag)
             request.user.customer.save()
@@ -1104,16 +1120,6 @@ def dashboard_leave(request):
                 date=last_bw_wed
             )
             rem.save()
-            # Only save changes now in case there is a problem with the email
-
-            #
-            # account_status_change = AccountStatusChange(
-            #     changed=now,
-            #     changed_in_billing_week=str(bw),
-            #     customer=request.user.customer,
-            #     status=AccountStatusChange.LEFT,
-            # )
-            # account_status_change.save()
             return redirect(reverse('dashboard_bye'))
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -1125,6 +1131,8 @@ def dashboard_leave(request):
             'form': form,
         }
     )
+
+
 
 
 @login_required
@@ -1352,17 +1360,40 @@ def dashboard_rejoin_scheme(request):
     if request.method == 'POST':
         now = timezone.now()
         bw = get_billing_week(now)
-        account_status_change = AccountStatusChange(
-            changed=now,
-            changed_in_billing_week=str(bw),
-            customer=request.user.customer,
-            status=AccountStatusChange.ACTIVE,
-        )
-        account_status_change.save()
+
+        # we remove the leaving tag, and add a note that they came back
+        leaving_tag = CustomerTag.objects.filter(tag='Leaving').first()
+        request.user.customer.tags.remove(leaving_tag)
+        request.user.customer.save()
+
+
+        if request.user.customer.account_status == AccountStatusChange.LEFT:
+            # we create the status change
+            account_status_change = AccountStatusChange(
+                changed=now,
+                changed_in_billing_week=str(bw),
+                customer=request.user.customer,
+                status=AccountStatusChange.ACTIVE,
+            )
+            account_status_change.save()
+        else:
+            # we don't need to change their status, but make a note that
+            # we should make a note that they rejoined
+            # writing this makes me think we need an Event or Log model,
+            # for events like this
+            # TODO check if we should have a rejoiner status
+            note = Note(
+                customer=request.user.customer,
+                created_at=now,
+                # TODO we should probably have a 'system' user,
+                created_by=request.user,
+                title="Customer rejoined through the website")
+            note.save()
+
         messages.add_message(
             request,
             messages.INFO,
-            'Successfully re-activated your account',
+            'Successfully re-activated your account. Thanks for coming back!',
         )
         return redirect(reverse("dashboard"))
     else:

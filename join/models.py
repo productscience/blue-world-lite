@@ -305,9 +305,12 @@ class Customer(models.Model):
         return self.account_status == AccountStatusChange.LEFT
     has_left = property(_has_left)
 
-    # def _is_leaving(self):
-    #     return self.account_status == AccountStatusChange.LEAVING
-    # is_leaving = property(_is_leaving)
+    def has_tag(self, tag):
+        return tag in [t.tag for t in self.tags.all()]
+
+    def _is_leaving(self):
+        return self.has_tag("Leaving")
+    is_leaving = property(_is_leaving)
 
     def _get_latest_collection_point(self):
         latest_cp = CustomerCollectionPointChange.objects.order_by(

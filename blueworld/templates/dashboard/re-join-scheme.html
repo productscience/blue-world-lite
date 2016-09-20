@@ -10,7 +10,7 @@
 
       <form action="{% url 'dashboard_rejoin_scheme' %}" method="post">
         {% csrf_token %}
-        <input type="submit" value="Re-Activate">
+        <input type="submit" value="Re-Activate" class="button success">
       </form>
     </div>
 {% endblock %}

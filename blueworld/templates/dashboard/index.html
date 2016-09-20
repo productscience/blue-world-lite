@@ -33,6 +33,14 @@
 
       }
 
+      div.please-come-back{
+        background: #EEE;
+        border-top:1px solid #cacaca;
+        border-bottom:1px solid #cacaca;
+        padding: 1rem 1rem 0rem 1rem;
+        margin-bottom: 1rem;
+      }
+
       .order-menu, .account-menu{
         background-color: #EEE;
         padding: 0.5rem 0.5rem 0.5rem 0.5rem;
@@ -120,8 +128,10 @@
 
         </div>
 
-        {% if forloop.first %}
+        {% if forloop.first  and collections|length > 1 %}
           <h5 class="font-display">Upcoming collections</h5>
+
+
         {% endif %}
 
       {% endfor %}
@@ -156,6 +166,26 @@
       <div class="row your-account">
 
         <h4 class="font-display">your Account</h4>
+
+        {% if request.user.customer.is_leaving %}
+          <h4>You're leaving the scheme at the end of the month.</h4>
+          <div class="please-come-back">
+            <h5>
+              If you've changed your mind, we'd love to have you back. We'll resume regular collections right where we left off.
+            </h5>
+
+            <form action="{% url 'dashboard_rejoin_scheme' %}" method="post">
+              {% csrf_token %}
+
+              <input type="submit" value="Re-join the scheme" class="button success font-display">
+            </form>
+          </div>
+
+        {% else %}
+          <h5>Your next billing date will be on {{ next_billing_date }}. <small><a href="{% url 'billing_dates' %}">see future billing dates</a></small></h5>
+        {% endif %}
+
+
 
         <ul class="menu account-menu">
           {% if not user.customer.has_left %}

@@ -112,3 +112,16 @@ class ConfirmedCustomerFactory(DjangoModelFactory):
     pass
         # like a signed up customer, but has a collection point, order set, a status change,
         # and a mandate
+
+
+class ReminderFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Reminder
+
+    date = factory.LazyFunction(timezone.now)
+    created_by = factory.SubFactory(UserFactory, username="staff")
+
+# factory.SubFactory(
+#     UserFactory,
+#     username=factory.SelfAttribute('..nickname'),
+#     email=factory.LazyAttribute(lambda u: "{}@example.com".format(u.username)))

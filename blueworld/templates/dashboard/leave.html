@@ -4,30 +4,40 @@
 {% block extra_head %}{% endblock %}
 {% block content %}
     <div class="row">
-      <h1>Leave</h1>
 
-      <p>We're sorry to see you go.</p>
-  
-      <p>We would really appreciate you telling us why you have decided
-to leave the scheme?</p>
+      <h2>We're sorry to see you go</h2>
 
-      <p>If you aren't ready to leave immedately, you can email us at help@growingcommunities.org with the date you want to leave and we'll arrange to close your account on that date.</p>
+      <h5>Sorry to hear we’ll be losing you from the scheme.</h5>
 
-      <p>For billing purposes, we'll treat your last month just like any other
-and then at the end of the month we'll refund you any money we owe from
-collections after your leaving date.</p>
+      <h5>We’ll deliver all the bags you have already paid for, so your last collection will be <strong>on 28th September</strong>.</h5>
+
+  		<h5>
+  			It's really useful for us to understand why members leave, so if you have time to let us know that would be great.
+      </h5>
 
       <form action="{% url 'dashboard_leave' %}" method="post">
         {% csrf_token %}
         {{ form }}
+
         <div class="row">
           <div class="action-group column">
-            <input type="submit" name="cancel" value="Cancel" class="button font-display large">
-            <input type="submit" name="action" value="Leave immediately" class="button font-display primary large">
+
+            <input type="submit" name="action" value="Leave the scheme" class="button font-display warning primary large">
           </div>
         </div>
       </form>
+
+
     </div>
 {% endblock %}
 {% block extra_body %}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script type="text/javascript">
+    $(document).ready(function($) {
+      var checkbox = $('#id_alternative_date');
+      checkbox.insertBefore(checkbox.prev());
+    });
+  </script>
 {% endblock %}
