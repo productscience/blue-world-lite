@@ -72,7 +72,7 @@ INSTALLED_APPS = [
 
 if DEBUG:
     INSTALLED_APPS.append('django_extensions')
-    INSTALLED_APPS.append('debug_toolbar')
+    # INSTALLED_APPS.append('debug_toolbar')
 
 
 RQ_QUEUES = {
@@ -259,7 +259,7 @@ if os.environ.get('ALLOWED_HOSTS'):
 ADMINS = []
 if os.environ.get('ADMINS'):
     ADMINS += [('admin', email.strip()) for email in os.environ['ADMINS'].split(',')]
-LEAVER_EMAIL_TO = []
+LEAVER_EMAIL_TO = ['vegscheme@growingcommunities.org']
 if os.environ.get('LEAVER_EMAIL_TO'):
     LEAVER_EMAIL_TO += [email.strip() for email in os.environ['LEAVER_EMAIL_TO'].split(',')]
 if not LEAVER_EMAIL_TO:

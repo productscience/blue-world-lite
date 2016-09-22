@@ -167,23 +167,25 @@ class UserWantsToLeaveSchemeTestCase(TestCase):
         assert(leaving_tag not in self.customer.tags.all())
         leave_res = self._login_and_leave()
 
-
-
         assert(leaving_tag in self.customer.tags.all())
         rejoin_res = self.client.post(reverse("dashboard_rejoin_scheme"))
 
         assert(self.customer.account_status == AccountStatusChange.ACTIVE)
         assert(leaving_tag not in self.customer.tags.all())
 
+    def test_email_is_sent_to_customer_about_leaving_request(self):
+        leave_res = self._login_and_leave()
+
+        email_subjects = [email.subject for email in mail.outbox]
+        subject = '[Growing Communities Veg Scheme] Sorry we’re losing you'
+        assert(subject in email_subjects)
 
     def test_email_is_sent_to_staff_about_leaving(self):
         leave_res = self._login_and_leave()
 
-        # for email in mail.outbox:
-
-        assert(mail.outbox[-1].subject == '[Growing Communities Veg Scheme] Leaver Notification')
-
-
+        email_subjects = [email.subject for email in mail.outbox]
+        subject = '[Growing Communities Veg Scheme] Leaver Notification'
+        assert(subject in email_subjects)
 
     def _login_and_leave(self):
         login_res = self.client.post(reverse("account_login"), self.creds)

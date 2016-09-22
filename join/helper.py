@@ -167,3 +167,18 @@ def get_next_billing_date(datetime):
     else:
         next_billing_date = bw.next().end
     return next_billing_date
+
+def get_last_collection_week(datetime):
+    """
+    Accepts a datetime, and customer, and returns the last billing week for the
+    customer. Used for showing a user their last collection date.
+    """
+    bw = get_billing_week(datetime)
+    remaining_bws = billing_weeks_left_in_the_month(str(bw))
+
+    if remaining_bws:
+        last_collection_week = remaining_bws[-1]
+    else:
+        last_collection_week = bw
+
+    return last_collection_week

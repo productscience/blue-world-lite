@@ -48,6 +48,7 @@ from join.helper import (
     calculate_weekly_fee,
     collection_dates_for,
     get_next_billing_date,
+    get_last_collection_week,
 )
 from .models import (
     AccountStatusChange,
@@ -1060,6 +1061,9 @@ class LeaveReasonForm(forms.Form):
 @gocardless_is_set_up
 @have_not_left_scheme
 def dashboard_leave(request):
+    now = timezone.now()
+    bw = get_billing_week(now)
+    last_collection_week = get_last_collection_week(now)
     if request.method == 'POST' and request.POST.get('cancel'):
         messages.add_message(
             request,
@@ -1069,8 +1073,6 @@ def dashboard_leave(request):
         return redirect(reverse("dashboard"))
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
-        now = timezone.now()
-        bw = get_billing_week(now)
 
         # create a form instance and populate it with data from the request:
         form = LeaveReasonForm(request.POST)
@@ -1082,12 +1084,14 @@ def dashboard_leave(request):
             comments = form.cleaned_data['comments']
             alternative_date = form.cleaned_data['alternative_date']
 
+
             customer_msg = build_message('email/request_to_leave.email', {
                 'customer': request.user.customer,
                 'user': request.user,
                 'reason': reason,
                 'comments': comments,
                 'alternative_date': alternative_date,
+                'last_collection_week': friendly_date(last_collection_week.mon),
             })
             customer_msg.send()
 
@@ -1131,6 +1135,7 @@ def dashboard_leave(request):
         'dashboard/leave.html',
         {
             'form': form,
+            'last_collection_week': friendly_date(last_collection_week.mon)
         }
     )
 

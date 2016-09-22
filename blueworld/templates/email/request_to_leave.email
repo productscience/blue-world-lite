@@ -2,16 +2,14 @@
 {% block to %}{{ user.email }}{% endblock %}
 {% block body %}
 Dear {{ customer.full_name }},
+
 Sorry to hear we will be losing you from the scheme.
-
 {% if alternative_date %}
-We'll be in touch to confirm the details.
+We'll confirm the details of your leaving date after speaking to you.
 {% else %}
-Your last collection will be on XXXX September
+Your last collection will be on the week beginning {{ last_collection_week }}
 {% endif %}
-
-
-We’ll cancel your payments through GoCardless and if we owe you a refund we’ll be in touch.
+We'll cancel your payments through GoCardless, and if we owe you a refund we'll be in touch.
 
 It's really useful for us to have feedback as to why members leave so if you have time to let us know that would be great.
 
