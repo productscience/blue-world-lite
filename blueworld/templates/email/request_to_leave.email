@@ -1,0 +1,28 @@
+{% block subject %}[Growing Communities Veg Scheme] Sorry we’re losing you{% endblock %}
+{% block to %}{{ user.email }}{% endblock %}
+{% block body %}
+Dear {{ customer.full_name }},
+Sorry to hear we will be losing you from the scheme.
+
+{% if alternative_date %}
+We'll be in touch to confirm the details.
+{% else %}
+Your last collection will be on XXXX September
+{% endif %}
+
+
+We’ll cancel your payments through GoCardless and if we owe you a refund we’ll be in touch.
+
+It's really useful for us to have feedback as to why members leave so if you have time to let us know that would be great.
+
+Good luck with your move. If you are interested in finding out about local food in your new area you could check our website for tips http://www.growingcommunities.org/faqs/links-and-resources/#Box%20schemes%20and%20buying%20local
+
+We'll pack a GC flyer in your last bag (so look out for the bag with your name on it your last week on the scheme) and we'd love to ask you to leave this for the next person moving into your home or pass it on to a friend before you leave Hackney - thank you!
+
+You may also be interested in visiting our weekly Farmers' Market which runs from 10am till 2.30pm every Saturday in Stoke Newington - many of the same farmers who supply our veg scheme have stalls at our market and it's a great chance to buy direct from them and choose exactly what you want.
+
+All best wishes,
+Sonia and Jo
+Growing Communities
+
+{% endblock %}

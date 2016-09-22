@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import Client, TestCase
 from django.core.urlresolvers import reverse
-
+from django.core import mail
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 
 
@@ -175,11 +175,19 @@ class UserWantsToLeaveSchemeTestCase(TestCase):
         assert(self.customer.account_status == AccountStatusChange.ACTIVE)
         assert(leaving_tag not in self.customer.tags.all())
 
+
+    def test_email_is_sent_to_staff_about_leaving(self):
+        leave_res = self._login_and_leave()
+
+        # for email in mail.outbox:
+
+        assert(mail.outbox[-1].subject == '[Growing Communities Veg Scheme] Leaver Notification')
+
+
+
     def _login_and_leave(self):
         login_res = self.client.post(reverse("account_login"), self.creds)
         leave_get = self.client.get(reverse("dashboard_leave"), follow=True)
-
-
 
         leaving_reasons = {
             'reason': 'hard_to_pickup',
@@ -191,8 +199,10 @@ class UserWantsToLeaveSchemeTestCase(TestCase):
         return leave_post
 
 
-class DeactivateCustomer(TestCase)
 
+
+
+class DeactivateCustomer(TestCase):
     """
     Checks that once we have a customer generated, we can deactivate the user
     """

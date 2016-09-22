@@ -11,6 +11,10 @@ import json
 import uuid
 
 from allauth.account.views import signup as allauth_signup
+
+
+from mail_builder.builder import build_message
+
 from billing_week import (
     get_billing_week, parse_billing_week, billing_weeks_left_in_the_month,
     next_valid_billing_week, next_n_billing_weeks)
@@ -1065,6 +1069,9 @@ def dashboard_leave(request):
         return redirect(reverse("dashboard"))
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
+        now = timezone.now()
+        bw = get_billing_week(now)
+
         # create a form instance and populate it with data from the request:
         form = LeaveReasonForm(request.POST)
         # check whether it's valid:
@@ -1072,34 +1079,28 @@ def dashboard_leave(request):
             reason = dict(form.fields['reason'].choices)[
                 form.cleaned_data['reason']
             ]
-            a = send_mail(
-                '[BlueWorld] Leaver Notification',
-                '''
-                Hello from BlueWorldLite,
+            comments = form.cleaned_data['comments']
+            alternative_date = form.cleaned_data['alternative_date']
 
-                {} has decided to leave the scheme. Here are the details:
+            customer_msg = build_message('email/request_to_leave.email', {
+                'customer': request.user.customer,
+                'user': request.user,
+                'reason': reason,
+                'comments': comments,
+                'alternative_date': alternative_date,
+            })
+            customer_msg.send()
 
-                Reason: {}\n
-                Comments:
-                {}
+            staff_msg = build_message('email/request_to_leave_staff.email', {
+                'customer': request.user.customer,
+                'reason': reason,
+                'comments': comments,
+                'alternative_date': alternative_date,
+                'staff_email_address': settings.LEAVER_EMAIL_TO,
+            })
+            staff_msg.send()
 
-                Thanks,
-
-                The BlueWorldLite system
-                '''.format(
-                    request.user.customer.full_name,
-                    reason,
-                    form.cleaned_data['comments'],
-                ),
-                settings.DEFAULT_FROM_EMAIL,
-                settings.LEAVER_EMAIL_TO,
-                fail_silently=False,
-            )
             # add leaving tag to customer
-
-            now = timezone.now()
-            bw = get_billing_week(now)
-
             leaving_tag, created = CustomerTag.objects.get_or_create(tag='Leaving')
 
             request.user.customer.tags.add(leaving_tag)

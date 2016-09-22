@@ -1,0 +1,20 @@
+{% block subject %}[Growing Communities Veg Scheme] Leaver Notification{% endblock %}
+{% block to %}{{ staff_email_address }}{% endblock %}
+{% block body %}
+Hello from BlueWorldLite,
+
+{{ customer }} has requested to leave the scheme. Here are the details:
+
+Reason:
+{{ reason }}
+
+Comments:
+{{ comments }}
+
+Callback requested: {{ alternative_date }}
+
+Thanks,
+
+The BlueWorldLite system
+
+{% endblock %}
