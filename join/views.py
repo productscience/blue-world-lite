@@ -1084,7 +1084,6 @@ def dashboard_leave(request):
             comments = form.cleaned_data['comments']
             alternative_date = form.cleaned_data['alternative_date']
 
-
             customer_msg = build_message('email/request_to_leave.email', {
                 'customer': request.user.customer,
                 'user': request.user,
@@ -1095,12 +1094,13 @@ def dashboard_leave(request):
             })
             customer_msg.send()
 
+            staff_email = email.strip() for email in settings.LEAVER_EMAIL_TO
             staff_msg = build_message('email/request_to_leave_staff.email', {
                 'customer': request.user.customer,
                 'reason': reason,
                 'comments': comments,
                 'alternative_date': alternative_date,
-                'staff_email_address': settings.LEAVER_EMAIL_TO,
+                'staff_email_address': staff_email,
             })
             staff_msg.send()
 
@@ -1109,7 +1109,6 @@ def dashboard_leave(request):
 
             request.user.customer.tags.add(leaving_tag)
             request.user.customer.save()
-
 
             # add Reminder
             bw_in_month = billing_weeks_left_in_the_month(str(bw))

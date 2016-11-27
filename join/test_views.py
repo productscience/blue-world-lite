@@ -5,6 +5,7 @@ from django.core.urlresolvers import reverse
 from django.core import mail
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 
+from django.conf import settings
 
 from .factories import (
     CustomerFactory, BagTypeFactory, CollectionPointFactory,
@@ -183,9 +184,16 @@ class UserWantsToLeaveSchemeTestCase(TestCase):
     def test_email_is_sent_to_staff_about_leaving(self):
         leave_res = self._login_and_leave()
 
-        email_subjects = [email.subject for email in mail.outbox]
         subject = '[Growing Communities Veg Scheme] Leaver Notification'
+        email_subjects = [email.subject for email in mail.outbox]
+        email_recipients = [email.to for email in mail.outbox
+            if email.subject == subject]
+        staff_email = [email.strip() for email in settings.LEAVER_EMAIL_TO]
+
         assert(subject in email_subjects)
+        for addr in staff_email:
+            for recipient in email_recipients:
+                assert(addr in recipient)
 
     def _login_and_leave(self):
         login_res = self.client.post(reverse("account_login"), self.creds)
